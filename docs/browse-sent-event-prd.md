@@ -413,7 +413,7 @@ interface BrowseSentEventOptions {
 - [ ] 메모리 사용량이 capacity 기반 예측값의 ±20% 이내
 
 **호환성:**
-- [ ] Vite 5.x, 6.x 공식 지원
+- [ ] Vite 5.x, 6.x, 7.x, 8.x 공식 지원
 - [ ] Chrome, Firefox, Safari 최신 버전 동작
 
 **문서:**
