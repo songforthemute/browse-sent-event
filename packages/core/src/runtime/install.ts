@@ -3,6 +3,7 @@ import type {
   BrowseSentEventInterceptorTarget,
   InstalledBrowseSentEventInterceptor,
 } from "../interceptors/types.js";
+import { installEventSourceInterceptor } from "../interceptors/eventsource.js";
 import { installFetchStreamInterceptor } from "../interceptors/fetch-stream.js";
 import { installWebSocketInterceptor } from "../interceptors/websocket.js";
 import type { BrowseSentEventOptions } from "./options.js";
@@ -72,6 +73,15 @@ export function installBrowseSentEvent(options?: BrowseSentEventOptions): Browse
 
   if (fetchStreamInterceptor) {
     installedInterceptors.push(fetchStreamInterceptor);
+  }
+
+  const eventSourceInterceptor = installEventSourceInterceptor({
+    engine: runtime.engine,
+    target,
+  });
+
+  if (eventSourceInterceptor) {
+    installedInterceptors.push(eventSourceInterceptor);
   }
 
   Reflect.set(target, runtimeKey, runtime);
