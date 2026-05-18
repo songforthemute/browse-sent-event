@@ -15,6 +15,11 @@ export {
   type BrowseSentEventUnsubscribe,
 } from "./runtime/engine.js";
 export {
+  mountDevtoolsPanel,
+  type MountedDevtoolsPanel,
+  type MountDevtoolsPanelOptions,
+} from "./ui/mount.js";
+export {
   resolveOptions,
   type BrowseSentEventOptions,
   type ResolvedBrowseSentEventOptions,
