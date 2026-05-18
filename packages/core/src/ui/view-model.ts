@@ -14,6 +14,7 @@ export interface BrowseSentEventConnectionViewModel {
   readonly protocol: string;
   readonly state: string;
   readonly messageCount: number;
+  readonly selected: boolean;
 }
 
 export interface BrowseSentEventMessageViewModel {
@@ -66,6 +67,7 @@ export function getPanelViewModel(
       state: connection.state,
       messageCount: snapshot.messages.filter((message) => message.connectionId === connection.id)
         .length,
+      selected: connection.id === state.selectedConnectionId,
     })),
     messages: snapshot.messages
       .filter((message) => matchesState(message, state))

@@ -71,4 +71,12 @@ describe("getPanelViewModel", () => {
       }),
     );
   });
+
+  it("marks the selected connection", () => {
+    const model = getPanelViewModel(snapshot, {
+      selectedConnectionId: "conn-1",
+    });
+
+    expect(model.connections[0]).toEqual(expect.objectContaining({ selected: true }));
+  });
 });
