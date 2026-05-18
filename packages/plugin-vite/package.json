@@ -17,6 +17,9 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
+  "dependencies": {
+    "@browse-sent-event/core": "workspace:*"
+  },
   "devDependencies": {
     "vite": "^8.0.13"
   },

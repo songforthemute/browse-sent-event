@@ -49,6 +49,10 @@ importers:
         version: 3.3.3
 
   packages/plugin-vite:
+    dependencies:
+      '@browse-sent-event/core':
+        specifier: workspace:*
+        version: link:../core
     devDependencies:
       vite:
         specifier: ^8.0.13
