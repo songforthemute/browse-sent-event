@@ -8,3 +8,14 @@ export {
   type BrowseSentEventOptions,
   type ResolvedBrowseSentEventOptions,
 } from "./runtime/options.js";
+export type {
+  BrowseSentEventConnection,
+  BrowseSentEventConnectionState,
+  BrowseSentEventDirection,
+  BrowseSentEventMessage,
+  BrowseSentEventMessageFilter,
+  BrowseSentEventMetrics,
+  BrowseSentEventPayload,
+  BrowseSentEventProtocol,
+  BrowseSentEventSearchQuery,
+} from "./runtime/events.js";
