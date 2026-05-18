@@ -3,16 +3,16 @@ import type { BrowseSentEventOptions } from "./options.js";
 
 const runtimeKey = "__browseSentEventRuntime__";
 
-type RuntimeWindow = Window & {
-  [runtimeKey]?: BrowseSentEventRuntime;
-};
-
-function getRuntimeWindow(): RuntimeWindow | undefined {
-  if (typeof window === "undefined") {
+function getRuntimeWindow(): Window | undefined {
+  if (typeof globalThis.window === "undefined") {
     return undefined;
   }
 
-  return window as RuntimeWindow;
+  return globalThis.window;
+}
+
+function isBrowseSentEventRuntime(value: unknown): value is BrowseSentEventRuntime {
+  return typeof value === "object" && value !== null && "capacity" in value && "installed" in value;
 }
 
 export function installBrowseSentEvent(options?: BrowseSentEventOptions): BrowseSentEventRuntime {
@@ -25,8 +25,10 @@ export function installBrowseSentEvent(options?: BrowseSentEventOptions): Browse
     };
   }
 
-  if (target[runtimeKey]) {
-    return target[runtimeKey];
+  const installedRuntime = Reflect.get(target, runtimeKey);
+
+  if (isBrowseSentEventRuntime(installedRuntime)) {
+    return installedRuntime;
   }
 
   const runtime: BrowseSentEventRuntime = {
@@ -34,7 +36,7 @@ export function installBrowseSentEvent(options?: BrowseSentEventOptions): Browse
     installed: true,
   };
 
-  target[runtimeKey] = runtime;
+  Reflect.set(target, runtimeKey, runtime);
 
   return runtime;
 }

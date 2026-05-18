@@ -1,4 +1,4 @@
-import type { Plugin, ResolvedConfig } from "vite";
+import type { Plugin, ResolvedConfig, Rolldown } from "vite";
 import {
   bootstrapModuleId,
   collectHtmlModuleEntries,
@@ -37,15 +37,19 @@ export default function browseSentEvent(options: BrowseSentEventVitePluginOption
       if (id === bootstrapModuleId) {
         return resolvedBootstrapModuleId;
       }
+
+      return undefined;
     },
     load(id) {
       if (id === resolvedBootstrapModuleId) {
         return createBootstrapModuleCode();
       }
+
+      return undefined;
     },
-    transform(code, id) {
+    transform(code, id): Rolldown.TransformResult {
       if (!enabled || !config || !isEntryModuleId(id, htmlEntries, config.root)) {
-        return;
+        return undefined;
       }
 
       return {

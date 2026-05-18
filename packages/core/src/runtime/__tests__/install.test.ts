@@ -3,7 +3,7 @@ import { installBrowseSentEvent } from "../install.js";
 
 describe("installBrowseSentEvent", () => {
   beforeEach(() => {
-    delete (window as unknown as Record<string, unknown>).__browseSentEventRuntime__;
+    Reflect.deleteProperty(globalThis.window, "__browseSentEventRuntime__");
   });
 
   it("installs the runtime once and returns the same runtime on repeated calls", () => {

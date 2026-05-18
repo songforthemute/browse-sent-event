@@ -1,5 +1,6 @@
 import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { cwd } from "node:process";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { build, createServer, type ViteDevServer } from "vite";
 import browseSentEvent from "../index.js";
@@ -35,7 +36,7 @@ async function readDistFiles(dir: string): Promise<string[]> {
 
 describe("browseSentEvent Vite integration", () => {
   beforeEach(async () => {
-    root = await mkdtemp(path.join(process.cwd(), ".tmp-vite-"));
+    root = await mkdtemp(path.join(cwd(), ".tmp-vite-"));
     await mkdir(path.join(root, "src"), { recursive: true });
     await writeFixture();
   });
