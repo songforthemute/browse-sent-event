@@ -1,3 +1,4 @@
+import { realpathSync } from "node:fs";
 import { resolve } from "node:path";
 import { normalizePath } from "vite";
 
@@ -32,14 +33,28 @@ export function createBootstrapModuleCode(): string {
   ].join("\n");
 }
 
+function normalizeRealPath(path: string): string {
+  try {
+    return normalizePath(realpathSync(path));
+  } catch {
+    return normalizePath(path);
+  }
+}
+
 export function isEntryModuleId(id: string, entries: Iterable<string>, root: string): boolean {
   const cleanId = normalizePath(id.split("?")[0] ?? id);
+  const realCleanId = normalizeRealPath(cleanId);
 
   for (const entry of entries) {
     const cleanEntry = entry.split("?")[0] ?? entry;
     const resolvedEntry = normalizePath(resolve(root, cleanEntry.replace(/^\//, "")));
+    const realResolvedEntry = normalizeRealPath(resolvedEntry);
 
-    if (cleanId === resolvedEntry) {
+    if (
+      cleanId === resolvedEntry ||
+      cleanId === realResolvedEntry ||
+      realCleanId === resolvedEntry
+    ) {
       return true;
     }
   }

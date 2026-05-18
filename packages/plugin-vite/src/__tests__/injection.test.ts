@@ -16,9 +16,7 @@ describe("vite injection helpers", () => {
   });
 
   it("matches an absolute transformed module id against an HTML entry", () => {
-    expect(isEntryModuleId("/repo/app/src/main.ts", ["/src/main.ts"], "/repo/app")).toBe(
-      true,
-    );
+    expect(isEntryModuleId("/repo/app/src/main.ts", ["/src/main.ts"], "/repo/app")).toBe(true);
   });
 
   it("creates the virtual bootstrap import", () => {

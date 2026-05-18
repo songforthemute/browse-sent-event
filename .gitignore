@@ -5,5 +5,7 @@ coverage
 playwright-report
 test-results
 .turbo
+.tmp-*
+packages/*/.tmp-*
 .DS_Store
 *.log

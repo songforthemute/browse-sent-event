@@ -15,9 +15,7 @@ function getRuntimeWindow(): RuntimeWindow | undefined {
   return window as RuntimeWindow;
 }
 
-export function installBrowseSentEvent(
-  options?: BrowseSentEventOptions,
-): BrowseSentEventRuntime {
+export function installBrowseSentEvent(options?: BrowseSentEventOptions): BrowseSentEventRuntime {
   const target = getRuntimeWindow();
 
   if (!target) {
