@@ -55,4 +55,66 @@ describe("mountDevtoolsPanel", () => {
 
     mounted.unmount();
   });
+
+  it("subscribes to engine snapshots while mounted", async () => {
+    const engine = createDevtoolsEngine({ capacity: 10 });
+    const mounted = mountDevtoolsPanel({
+      engine,
+      options: {
+        autoOpen: true,
+        hotkey: "cmd+shift+r",
+        position: "bottom-right",
+      },
+      target: globalThis.window,
+    });
+
+    const connection = engine.recordConnection({
+      protocol: "websocket",
+      url: "wss://example.test/socket",
+    });
+    engine.recordMessage({
+      connectionId: connection.id,
+      direction: "in",
+      protocol: "websocket",
+      payload: "hello",
+    });
+
+    await Reflect.get(mounted.element, "updateComplete");
+
+    expect(Reflect.get(mounted.element, "snapshot")?.messages).toHaveLength(1);
+
+    mounted.unmount();
+  });
+
+  it("unsubscribes from engine snapshots when unmounted", async () => {
+    const engine = createDevtoolsEngine({ capacity: 10 });
+    const mounted = mountDevtoolsPanel({
+      engine,
+      options: {
+        autoOpen: true,
+        hotkey: "cmd+shift+r",
+        position: "bottom-right",
+      },
+      target: globalThis.window,
+    });
+
+    const connection = engine.recordConnection({
+      protocol: "websocket",
+      url: "wss://example.test/socket",
+    });
+
+    await Reflect.get(mounted.element, "updateComplete");
+    const snapshotBeforeUnmount = Reflect.get(mounted.element, "snapshot");
+
+    mounted.unmount();
+
+    engine.recordMessage({
+      connectionId: connection.id,
+      direction: "in",
+      protocol: "websocket",
+      payload: "after unmount",
+    });
+
+    expect(Reflect.get(mounted.element, "snapshot")).toBe(snapshotBeforeUnmount);
+  });
 });

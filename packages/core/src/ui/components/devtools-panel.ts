@@ -6,7 +6,11 @@ import {
   type PropertyDeclarations,
   type TemplateResult,
 } from "lit";
-import type { BrowseSentEventEngine } from "../../runtime/engine.js";
+import type {
+  BrowseSentEventEngine,
+  BrowseSentEventEngineSnapshot,
+  BrowseSentEventUnsubscribe,
+} from "../../runtime/engine.js";
 
 export class BrowseSentEventDevtoolsPanelElement extends LitElement {
   static override shadowRootOptions: ShadowRootInit = {
@@ -75,14 +79,38 @@ export class BrowseSentEventDevtoolsPanelElement extends LitElement {
   static override properties: PropertyDeclarations = {
     engine: { attribute: false },
     open: { type: Boolean, reflect: true },
+    snapshot: { attribute: false },
   };
 
   declare engine?: BrowseSentEventEngine;
   declare open: boolean;
+  declare snapshot?: BrowseSentEventEngineSnapshot;
+
+  #unsubscribe?: BrowseSentEventUnsubscribe;
 
   constructor() {
     super();
     this.open = false;
+    this.snapshot = undefined;
+  }
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+
+    if (!this.engine || this.#unsubscribe) {
+      return;
+    }
+
+    this.snapshot = this.engine.getSnapshot();
+    this.#unsubscribe = this.engine.subscribe((snapshot) => {
+      this.snapshot = snapshot;
+    });
+  }
+
+  override disconnectedCallback(): void {
+    this.#unsubscribe?.();
+    this.#unsubscribe = undefined;
+    super.disconnectedCallback();
   }
 
   override render(): TemplateResult {
