@@ -14,4 +14,11 @@ describe("createBrowseSentEventRuntime", () => {
 
     expect(runtime.capacity).toBe(128);
   });
+
+  it("creates a devtools engine with the resolved capacity", () => {
+    const runtime = createBrowseSentEventRuntime({ capacity: 128 });
+
+    expect(runtime.engine.capacity).toBe(128);
+    expect(runtime.engine.getMessages()).toEqual([]);
+  });
 });

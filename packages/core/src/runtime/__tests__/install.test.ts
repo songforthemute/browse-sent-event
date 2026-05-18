@@ -14,4 +14,14 @@ describe("installBrowseSentEvent", () => {
     expect(first.capacity).toBe(123);
     expect(second).toBe(first);
   });
+
+  it("removes the installed runtime when uninstalled", () => {
+    const runtime = installBrowseSentEvent();
+
+    runtime.uninstall();
+
+    const next = installBrowseSentEvent();
+
+    expect(next).not.toBe(runtime);
+  });
 });

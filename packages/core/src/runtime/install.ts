@@ -12,7 +12,14 @@ function getRuntimeWindow(): Window | undefined {
 }
 
 function isBrowseSentEventRuntime(value: unknown): value is BrowseSentEventRuntime {
-  return typeof value === "object" && value !== null && "capacity" in value && "installed" in value;
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "capacity" in value &&
+    "engine" in value &&
+    "installed" in value &&
+    "uninstall" in value
+  );
 }
 
 export function installBrowseSentEvent(options?: BrowseSentEventOptions): BrowseSentEventRuntime {
@@ -31,10 +38,12 @@ export function installBrowseSentEvent(options?: BrowseSentEventOptions): Browse
     return installedRuntime;
   }
 
-  const runtime: BrowseSentEventRuntime = {
-    ...createBrowseSentEventRuntime(options),
+  const runtime = createBrowseSentEventRuntime(options, {
     installed: true,
-  };
+    uninstall() {
+      Reflect.deleteProperty(target, runtimeKey);
+    },
+  });
 
   Reflect.set(target, runtimeKey, runtime);
 
