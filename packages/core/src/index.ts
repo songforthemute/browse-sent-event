@@ -9,7 +9,10 @@ export {
   type BrowseSentEventConnectionPatch,
   type BrowseSentEventEngine,
   type BrowseSentEventEngineOptions,
+  type BrowseSentEventEngineSnapshot,
+  type BrowseSentEventEngineSubscriber,
   type BrowseSentEventMessageInput,
+  type BrowseSentEventUnsubscribe,
 } from "./runtime/engine.js";
 export {
   resolveOptions,

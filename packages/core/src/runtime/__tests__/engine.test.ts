@@ -83,4 +83,34 @@ describe("createDevtoolsEngine", () => {
       }),
     );
   });
+
+  it("notifies subscribers when the snapshot changes", () => {
+    const engine = createDevtoolsEngine({ capacity: 10 });
+    const snapshots: unknown[] = [];
+    const unsubscribe = engine.subscribe((snapshot) => {
+      snapshots.push(snapshot);
+    });
+
+    const connection = engine.recordConnection({
+      protocol: "websocket",
+      url: "wss://example.test/socket",
+    });
+    engine.recordMessage({
+      connectionId: connection.id,
+      direction: "in",
+      protocol: "websocket",
+      payload: "hello",
+    });
+
+    unsubscribe();
+    engine.clear();
+
+    expect(snapshots).toHaveLength(2);
+    expect(snapshots[1]).toEqual(
+      expect.objectContaining({
+        connections: [expect.objectContaining({ id: connection.id })],
+        messages: [expect.objectContaining({ payloadPreview: "hello" })],
+      }),
+    );
+  });
 });

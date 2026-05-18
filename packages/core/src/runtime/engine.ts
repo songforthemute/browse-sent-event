@@ -15,6 +15,18 @@ export interface BrowseSentEventEngineOptions {
   readonly capacity: number;
 }
 
+export interface BrowseSentEventEngineSnapshot {
+  readonly connections: readonly BrowseSentEventConnection[];
+  readonly messages: readonly BrowseSentEventMessage[];
+  readonly metrics: BrowseSentEventMetrics;
+}
+
+export type BrowseSentEventEngineSubscriber = (
+  snapshot: BrowseSentEventEngineSnapshot,
+) => void;
+
+export type BrowseSentEventUnsubscribe = () => void;
+
 export interface BrowseSentEventConnectionInput {
   readonly protocol: BrowseSentEventProtocol;
   readonly url: string;
@@ -48,6 +60,8 @@ export interface BrowseSentEventEngine {
     patch: BrowseSentEventConnectionPatch,
   ): BrowseSentEventConnection | undefined;
   recordMessage(input: BrowseSentEventMessageInput): BrowseSentEventMessage;
+  getSnapshot(): BrowseSentEventEngineSnapshot;
+  subscribe(subscriber: BrowseSentEventEngineSubscriber): BrowseSentEventUnsubscribe;
   getConnections(): BrowseSentEventConnection[];
   getMessages(filter?: BrowseSentEventMessageFilter): BrowseSentEventMessage[];
   getMetrics(connectionId?: string): BrowseSentEventMetrics;
@@ -75,6 +89,7 @@ function formatDirection(direction: "in" | "out"): string {
 export function createDevtoolsEngine(options: BrowseSentEventEngineOptions): BrowseSentEventEngine {
   const messages = new RingBuffer<BrowseSentEventMessage>(options.capacity);
   const connections = new Map<string, BrowseSentEventConnection>();
+  const subscribers = new Set<BrowseSentEventEngineSubscriber>();
 
   function getConnectionForMessage(
     message: BrowseSentEventMessage,
@@ -123,6 +138,30 @@ export function createDevtoolsEngine(options: BrowseSentEventEngineOptions): Bro
     return messages.toArray().filter((message) => matchesFilter(message, filter));
   }
 
+  function getSnapshot(): BrowseSentEventEngineSnapshot {
+    return {
+      connections: getConnections(),
+      messages: getMessages(),
+      metrics: getMetrics(),
+    };
+  }
+
+  function notify(): void {
+    const snapshot = getSnapshot();
+
+    for (const subscriber of subscribers) {
+      subscriber(snapshot);
+    }
+  }
+
+  function subscribe(subscriber: BrowseSentEventEngineSubscriber): BrowseSentEventUnsubscribe {
+    subscribers.add(subscriber);
+
+    return () => {
+      subscribers.delete(subscriber);
+    };
+  }
+
   function recordConnection(input: BrowseSentEventConnectionInput): BrowseSentEventConnection {
     const previousReconnects = [...connections.values()].filter(
       (connection) =>
@@ -141,6 +180,7 @@ export function createDevtoolsEngine(options: BrowseSentEventEngineOptions): Bro
     };
 
     connections.set(connection.id, connection);
+    notify();
 
     return connection;
   }
@@ -165,6 +205,7 @@ export function createDevtoolsEngine(options: BrowseSentEventEngineOptions): Bro
     };
 
     connections.set(id, next);
+    notify();
 
     return next;
   }
@@ -185,6 +226,7 @@ export function createDevtoolsEngine(options: BrowseSentEventEngineOptions): Bro
     };
 
     messages.push(message);
+    notify();
 
     return message;
   }
@@ -247,6 +289,7 @@ export function createDevtoolsEngine(options: BrowseSentEventEngineOptions): Bro
   function clear(): void {
     messages.clear();
     connections.clear();
+    notify();
   }
 
   return {
@@ -255,11 +298,13 @@ export function createDevtoolsEngine(options: BrowseSentEventEngineOptions): Bro
     exportJsonl,
     exportLog,
     getConnections,
+    getSnapshot,
     getMessages,
     getMetrics,
     recordConnection,
     recordMessage,
     search,
+    subscribe,
     updateConnection,
   };
 }
