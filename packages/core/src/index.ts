@@ -1,3 +1,4 @@
+export { installBrowseSentEvent } from "./runtime/install.js";
 export {
   createBrowseSentEventRuntime,
   type BrowseSentEventRuntime,
