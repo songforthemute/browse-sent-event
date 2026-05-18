@@ -1,0 +1,28 @@
+# browse-sent-event
+
+WebSocket, HTTP stream, EventSource의 실시간 메시지 흐름을 관찰하기 위한 프론트엔드 개발 도구.
+
+## 상태
+
+이 저장소는 Phase 1 기반 설정 단계에 있다.
+
+## Phase 1 목표
+
+Vite 전용, main thread 전용 개발 도구를 제공하고, 실시간 transport 활동을 브라우저 DevTools 스타일 패널에서 보여준다.
+
+## 문서
+
+- `docs/browse-sent-event-prd.md`
+- `docs/browse-sent-event-adr.md`
+- `docs/browse-sent-event-v2.md`
+
+## 개발
+
+```bash
+pnpm install
+pnpm build
+pnpm test
+pnpm typecheck
+pnpm lint
+pnpm format:check
+```

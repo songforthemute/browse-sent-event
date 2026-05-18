@@ -1,0 +1,28 @@
+{
+  "name": "browse-sent-event-monorepo",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "typecheck": "turbo run typecheck",
+    "lint": "oxlint --type-aware --type-check --deny-warnings",
+    "format": "oxfmt --write .",
+    "format:check": "oxfmt --check .",
+    "changeset": "changeset"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.31.0",
+    "@playwright/test": "^1.60.0",
+    "happy-dom": "^20.9.0",
+    "oxfmt": "^0.50.0",
+    "oxlint": "^1.65.0",
+    "oxlint-tsgolint": "^0.23.0",
+    "tsdown": "^0.22.0",
+    "turbo": "^2.9.14",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.6"
+  },
+  "packageManager": "pnpm@9.15.9"
+}
