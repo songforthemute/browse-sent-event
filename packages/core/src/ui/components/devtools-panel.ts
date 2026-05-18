@@ -101,11 +101,21 @@ export class BrowseSentEventDevtoolsPanelElement extends LitElement {
     `;
   }
 
+  setOpen(open: boolean): void {
+    this.open = open;
+
+    if (open) {
+      this.setAttribute("open", "");
+    } else {
+      this.removeAttribute("open");
+    }
+  }
+
   #open(): void {
-    this.open = true;
+    this.setOpen(true);
   }
 
   #close(): void {
-    this.open = false;
+    this.setOpen(false);
   }
 }

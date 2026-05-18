@@ -28,4 +28,31 @@ describe("mountDevtoolsPanel", () => {
 
     expect(globalThis.document.querySelector("bse-devtools-panel")).toBeNull();
   });
+
+  it("toggles the panel with the configured hotkey", () => {
+    const engine = createDevtoolsEngine({ capacity: 10 });
+    const mounted = mountDevtoolsPanel({
+      engine,
+      options: {
+        autoOpen: false,
+        hotkey: "cmd+shift+r",
+        position: "bottom-right",
+      },
+      target: globalThis.window,
+    });
+
+    expect(mounted.element.hasAttribute("open")).toBe(false);
+
+    globalThis.window.dispatchEvent(
+      new globalThis.KeyboardEvent("keydown", {
+        key: "r",
+        metaKey: true,
+        shiftKey: true,
+      }),
+    );
+
+    expect(mounted.element.hasAttribute("open")).toBe(true);
+
+    mounted.unmount();
+  });
 });
