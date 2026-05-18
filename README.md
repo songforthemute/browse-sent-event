@@ -10,6 +10,10 @@ WebSocket, HTTP stream, EventSource의 실시간 메시지 흐름을 관찰하�
 
 Vite 전용, main thread 전용 개발 도구를 제공하고, 실시간 transport 활동을 브라우저 DevTools 스타일 패널에서 보여준다.
 
+## 호환성 기준
+
+현재 개발/테스트 기준은 Vite 8.0.13이다. `packages/plugin-vite`는 Vite 공개 Plugin API만 사용하고, peer dependency 범위는 Vite 5.x부터 8.x까지로 둔다.
+
 ## 문서
 
 - `docs/browse-sent-event-prd.md`

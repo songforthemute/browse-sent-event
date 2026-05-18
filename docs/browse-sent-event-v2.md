@@ -116,6 +116,8 @@ Shadow DOM으로 앱 스타일과 격리된 플로팅 패널에 연결 목록, �
 
 **Vite first.** Vite 플러그인을 1차 지원하고, webpack/Rspack은 이후 지원 트랙에서 다룬다. unplugin을 기반으로 하되, 복잡한 번들러별 분기가 필요한 경우 번들러별 패키지로 분리한다. 초기에 "모든 번들러 완벽 지원"을 약속하지 않는다.
 
+현재 구현 기준은 Vite 8이다. Vite 8의 내부 경로는 Rolldown/Oxc로 바뀌었지만, browse-sent-event는 해당 내부 구현에 직접 붙지 않고 Vite 공개 Plugin API에만 의존한다. 따라서 Phase 1에서는 `transformWithEsbuild`, `optimizeDeps.esbuildOptions`, Rollup 전용 출력 옵션을 새로 도입하지 않는다.
+
 앱 진입점 최상단에 core를 물리적으로 삽입해서 **모든 앱 코드보다 먼저 실행되는 것을 보장**한다. `NODE_ENV === 'production'`이면 코드 자체를 주입하지 않는다.
 
 ```typescript
