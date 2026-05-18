@@ -4,6 +4,14 @@ export {
   type BrowseSentEventRuntime,
 } from "./runtime/create-engine.js";
 export {
+  createDevtoolsEngine,
+  type BrowseSentEventConnectionInput,
+  type BrowseSentEventConnectionPatch,
+  type BrowseSentEventEngine,
+  type BrowseSentEventEngineOptions,
+  type BrowseSentEventMessageInput,
+} from "./runtime/engine.js";
+export {
   resolveOptions,
   type BrowseSentEventOptions,
   type ResolvedBrowseSentEventOptions,
