@@ -381,7 +381,7 @@ interface Connection {
 ### 5.3 Configuration Options
 
 ```typescript
-interface RtDevtoolsOptions {
+interface BrowseSentEventOptions {
   capacity?: number;              // default: 10_000
   panel?: {
     autoOpen?: boolean;           // default: false (토글 버튼만 표시)
@@ -452,33 +452,38 @@ Phase 2는 **browse-sent-event를 대체 불가능한 도구로 만드는 분기
 
 ---
 
-## 8. Open Questions
+## 8. 결정 사항 및 남은 질문
 
-Phase 1 착수 전 결정이 필요한 항목.
+Phase 1 착수 전 혼선을 줄이기 위해, ADR에서 이미 확정된 항목과 실제로 남은 질문을 분리한다.
 
-**OQ1. 패키지 이름**
+### 8.1 확정된 결정
+
+**D1. 패키지 이름**
 - 결정: `browse-sent-event`
-- npm 배포 전 동일 패키지명 사용 가능성만 최종 확인 필요
+- 릴리스 전 확인: npm에 동일 패키지명을 사용할 수 있는지 최종 확인
 
-**OQ2. 라이선스**
-- MIT vs Apache 2.0
-- LunaTest의 라이선스 정책과 일관성 유지 권장
+**D2. 라이선스**
+- 결정: MIT
+- 근거: ADR-011. 프론트엔드 생태계의 표준 라이선스이며 기업 내부 도입 장벽이 낮다.
 
-**OQ3. Monorepo 도구**
-- pnpm workspace vs Turborepo vs Nx
-- LunaTest 구조 재사용 여부 결정
+**D3. Monorepo 도구**
+- 결정: pnpm workspace + Turborepo + Changesets
+- 근거: ADR-001. 패키지 경계를 유지하면서 빌드/테스트 캐싱과 독립 버전 관리를 제공한다.
 
-**OQ4. UI 프레임워크**
-- Vanilla (번들 크기 최소) vs Preact (개발 속도)
-- 패널 자체가 앱 번들에 포함되지 않지만, dev 환경 로드 성능 고려 필요
+**D4. UI 프레임워크**
+- 결정: Lit 3.x + Shadow DOM closed mode + Custom Elements
+- 근거: ADR-018. 앱 프레임워크와 충돌하지 않고, 패널 UI를 표준 Web Component로 재사용할 수 있다.
 
-**OQ5. 텔레메트리**
-- 익명 사용 통계 수집 여부 (opt-in)
-- 초기에는 수집 안 하는 것을 기본으로 권장
+### 8.2 남은 질문
 
-**OQ6. Phase 1 베타 기간**
-- alpha → beta → stable 각 단계 기간
-- 권장: alpha 2주 (내부), beta 4주 (공개), stable 릴리스
+**OQ1. 텔레메트리**
+- 기본값: 수집하지 않음
+- 결정 필요: opt-in을 제공할지, 제공한다면 어떤 이벤트와 환경 정보를 수집할지
+- 후속 문서: ADR-020에서 별도 결정
+
+**OQ2. Phase 1 릴리스 단계**
+- 권장안: alpha 2주(내부) → beta 4주(공개) → stable
+- 결정 필요: stable 전환 조건을 Release Criteria와 어떤 방식으로 연결할지
 
 ---
 

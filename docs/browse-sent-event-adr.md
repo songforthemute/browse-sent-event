@@ -126,7 +126,8 @@ browse-sent-event/
 ├── pnpm-workspace.yaml
 ├── turbo.json
 ├── tsconfig.base.json     ← 공통 TS 설정
-├── biome.json             ← ADR-005 참고
+├── .oxlintrc.json         ← ADR-016 참고
+├── .oxfmtrc.json          ← ADR-016 참고
 ├── CONTRIBUTING.md
 ├── LICENSE
 └── README.md
@@ -149,6 +150,8 @@ browse-sent-event/
 ## ADR-003: 언어 및 타입 시스템
 
 **Status:** Superseded by ADR-014
+
+현재 구현 기준은 ADR-014를 따른다. 이 섹션은 결정 이력 보존용이다.
 
 **Context:**
 
@@ -191,6 +194,8 @@ browse-sent-event/
 ## ADR-004: 빌드 도구
 
 **Status:** Superseded by ADR-015
+
+현재 구현 기준은 ADR-015를 따른다. 이 섹션은 결정 이력 보존용이다.
 
 **Context:**
 
@@ -241,6 +246,8 @@ export default defineConfig({
 ## ADR-005: Linter 및 Formatter
 
 **Status:** Superseded by ADR-016
+
+현재 구현 기준은 ADR-016을 따른다. 이 섹션은 결정 이력 보존용이다.
 
 **Context:**
 
@@ -342,7 +349,7 @@ browse-sent-event는 **개발 환경에서만 로드**되므로 번들 크기 �
 
 **Decision:**
 
-- **ESM-first**: 모든 패키지는 ESM을 primary export로 선언
+- **ESM-only**: 모든 패키지는 ESM export만 제공한다
 - **`sideEffects: false`**: package.json에 명시 (실제로 top-level side effect 없도록)
 - **인터셉트 주입은 명시적**: Proxy 패치는 plugin-vite가 주입하는 코드 경로에서만 실행, core를 단순 import한다고 자동 실행되지 않음
 - **번들 크기 예산**:
@@ -358,8 +365,7 @@ browse-sent-event는 **개발 환경에서만 로드**되므로 번들 크기 �
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
+      "import": "./dist/index.js"
     }
   }
 }
@@ -429,7 +435,8 @@ pnpm workspace + Changesets + Turborepo 조합을 CI에서 활용해야 한다. 
 jobs:
   lint:
     - pnpm install --frozen-lockfile
-    - pnpm biome check
+    - pnpm oxlint --type-aware --type-check --deny-warnings
+    - pnpm oxfmt --check
     - pnpm run typecheck
 
   test:
@@ -704,7 +711,7 @@ Claude Code skill ecosystem에서 정립한 원칙을 적용한다.
 | 004 | 빌드 | tsup (esbuild 기반) | **Superseded by 015** | 초기 |
 | 005 | Lint | Biome + typescript-eslint (하이브리드) | **Superseded by 016** | 초기 |
 | 006 | Test | Vitest + Playwright + happy-dom | Accepted | 초기 |
-| 007 | 번들 | ESM-first, `sideEffects: false` | Accepted | 초기 |
+| 007 | 번들 | ESM-only, `sideEffects: false` | Accepted | 초기 |
 | 008 | 어댑터 | 비공식 API 격리, confidence 표시 | Accepted | Phase 2+ |
 | 009 | CI/CD | GitHub Actions + Changesets 자동 배포 | Accepted | 초기 |
 | 010 | AI 하네스 | `.ai/` 디렉터리, AGENTS.md + contexts/ + tasks/ | Accepted | 초기 |
@@ -899,7 +906,7 @@ ADR-004에서 tsup을 선택했으나, 2026년 현재 tsup은 다음 이유로 �
 
 대체 후보:
 
-1. **tsdown** (VoidZero): Rolldown + Oxc 기반, ESM-first, isolatedDeclarations 네이티브 지원, tsup 설정 호환
+1. **tsdown** (VoidZero): Rolldown + Oxc 기반, ESM-only 배포 친화, isolatedDeclarations 네이티브 지원, tsup 설정 호환
 2. **Rslib** (ByteDance): Rspack 기반, Module Federation 네이티브
 3. **Rollup 직접 사용**: 유연하지만 설정 복잡도 증가
 
@@ -928,7 +935,7 @@ export default defineConfig({
 
 1. **Oxc 파서 공유**: Vite가 파싱한 AST를 tsdown도 공유 가능한 기반
 2. **isolatedDeclarations 네이티브**: tsc 없이 `.d.ts` 생성, 빌드 시간 대폭 단축
-3. **ESM-first**: 2026년 기준 ESM-only 배포가 현실적 (ADR-007)
+3. **ESM-only**: 2026년 기준 CJS 없이 ESM 배포만 제공해도 현실적 (ADR-007)
 4. **tsup 호환**: 기존 tsup 설정을 쉽게 마이그레이션 (롤백 안전망)
 
 **Rejected alternatives:**
@@ -942,7 +949,7 @@ export default defineConfig({
 - (+) VoidZero 생태계 완전 정렬
 - (+) Oxc 기반 빠른 빌드 (tsc 의존 없음)
 - (+) isolatedDeclarations 네이티브 지원
-- (+) ESM-first로 2026년 배포 표준에 맞춤
+- (+) ESM-only로 2026년 배포 표준에 맞춤
 - (−) tsdown은 2024년 출시된 비교적 새 도구 — 엣지 케이스 가능성
 - (−) CJS 배포 시 별도 설정 필요 (현재 불필요)
 
