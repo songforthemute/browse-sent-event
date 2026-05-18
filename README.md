@@ -4,7 +4,16 @@ WebSocket, HTTP stream, EventSource의 실시간 메시지 흐름을 관찰하�
 
 ## 상태
 
-이 저장소는 Phase 1 기반 설정 단계에 있다.
+이 저장소는 Phase 1 transport 수집 기반 구현 단계에 있다.
+
+## 현재 구현 상태
+
+- Vite 개발 서버 entry bootstrap 주입
+- core runtime 설치 API
+- WebSocket, fetch ReadableStream, EventSource 이벤트 수집
+- in-memory ring buffer, 단순 검색, JSONL/log export
+
+아직 DevTools UI는 구현 전이다.
 
 ## Phase 1 목표
 

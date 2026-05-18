@@ -24,3 +24,14 @@
 - webpack/Rspack/Next/Nuxt
 - IndexedDB cold storage
 - Schema inference
+
+구현됨:
+
+- Vite plugin injection
+- core runtime install
+- transport event collection
+
+남음:
+
+- Shadow DOM 플로팅 패널
+- 연결 목록, 메시지 타임라인, 메트릭 UI
