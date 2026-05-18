@@ -11,7 +11,7 @@ export interface SerializedArrayBufferPayload {
   readonly byteLength: number;
 }
 
-const textEncoder = new TextEncoder();
+const textEncoder = new globalThis.TextEncoder();
 const previewLength = 100;
 
 export function createPayloadSummary(

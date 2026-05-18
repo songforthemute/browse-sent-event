@@ -9,7 +9,7 @@ export class RingBuffer<T> {
       throw new RangeError("RingBuffer capacity must be a positive integer.");
     }
 
-    this.#items = new Array<T | undefined>(capacity);
+    this.#items = Array.from<T | undefined>({ length: capacity });
   }
 
   get length(): number {
