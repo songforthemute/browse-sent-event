@@ -1,7 +1,4 @@
-import type {
-  BrowseSentEventDirection,
-  BrowseSentEventMessage,
-} from "../runtime/events.js";
+import type { BrowseSentEventDirection, BrowseSentEventMessage } from "../runtime/events.js";
 import type { BrowseSentEventEngineSnapshot } from "../runtime/engine.js";
 import { formatByteSize, formatTimestamp } from "./format.js";
 
@@ -38,10 +35,7 @@ export interface BrowseSentEventPanelViewModel {
   readonly totalBytesLabel: string;
 }
 
-function matchesState(
-  message: BrowseSentEventMessage,
-  state: BrowseSentEventPanelState,
-): boolean {
+function matchesState(message: BrowseSentEventMessage, state: BrowseSentEventPanelState): boolean {
   if (state.selectedConnectionId && message.connectionId !== state.selectedConnectionId) {
     return false;
   }

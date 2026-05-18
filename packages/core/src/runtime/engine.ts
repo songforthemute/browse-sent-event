@@ -21,9 +21,7 @@ export interface BrowseSentEventEngineSnapshot {
   readonly metrics: BrowseSentEventMetrics;
 }
 
-export type BrowseSentEventEngineSubscriber = (
-  snapshot: BrowseSentEventEngineSnapshot,
-) => void;
+export type BrowseSentEventEngineSubscriber = (snapshot: BrowseSentEventEngineSnapshot) => void;
 
 export type BrowseSentEventUnsubscribe = () => void;
 
