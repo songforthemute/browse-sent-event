@@ -7,11 +7,17 @@ import {
   type TemplateResult,
 } from "lit";
 import type {
+  BrowseSentEventDirection,
+  BrowseSentEventMessageFilter,
+} from "../../runtime/events.js";
+import type {
   BrowseSentEventEngine,
   BrowseSentEventEngineSnapshot,
   BrowseSentEventUnsubscribe,
 } from "../../runtime/engine.js";
 import { getPanelViewModel } from "../view-model.js";
+
+type BrowseSentEventExportFormat = "jsonl" | "log";
 
 export class BrowseSentEventDevtoolsPanelElement extends LitElement {
   static override shadowRootOptions: ShadowRootInit = {
@@ -87,7 +93,7 @@ export class BrowseSentEventDevtoolsPanelElement extends LitElement {
 
     .layout {
       display: grid;
-      grid-template-rows: auto 1fr;
+      grid-template-rows: auto auto 1fr;
       height: calc(100% - 40px);
       min-height: 0;
     }
@@ -103,6 +109,55 @@ export class BrowseSentEventDevtoolsPanelElement extends LitElement {
     .metric {
       padding: 10px 12px;
       background: #111827;
+    }
+
+    .toolbar {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto auto;
+      gap: 8px;
+      align-items: center;
+      padding: 8px;
+      border-bottom: 1px solid #1e293b;
+      background: #020617;
+    }
+
+    .search {
+      min-width: 0;
+      height: 28px;
+      box-sizing: border-box;
+      border: 1px solid #334155;
+      border-radius: 6px;
+      background: #0f172a;
+      color: #e2e8f0;
+      font: inherit;
+      font-size: 12px;
+      outline: none;
+      padding: 0 8px;
+    }
+
+    .control-group {
+      display: inline-flex;
+      gap: 1px;
+      overflow: hidden;
+      border: 1px solid #334155;
+      border-radius: 6px;
+      background: #334155;
+    }
+
+    .control-group button {
+      height: 26px;
+      border: 0;
+      background: #111827;
+      color: #cbd5e1;
+      cursor: pointer;
+      font: inherit;
+      font-size: 11px;
+      padding: 0 8px;
+    }
+
+    .control-group button[aria-pressed="true"] {
+      background: #1d4ed8;
+      color: #f8fafc;
     }
 
     .content {
@@ -264,15 +319,19 @@ export class BrowseSentEventDevtoolsPanelElement extends LitElement {
   `;
 
   static override properties: PropertyDeclarations = {
+    direction: { attribute: false },
     engine: { attribute: false },
     open: { type: Boolean, reflect: true },
+    query: { attribute: false },
     selectedConnectionId: { attribute: false },
     selectedMessageId: { attribute: false },
     snapshot: { attribute: false },
   };
 
+  declare direction?: BrowseSentEventDirection;
   declare engine?: BrowseSentEventEngine;
   declare open: boolean;
+  declare query: string;
   declare selectedConnectionId?: string;
   declare selectedMessageId?: string;
   declare snapshot?: BrowseSentEventEngineSnapshot;
@@ -281,7 +340,9 @@ export class BrowseSentEventDevtoolsPanelElement extends LitElement {
 
   constructor() {
     super();
+    this.direction = undefined;
     this.open = false;
+    this.query = "";
     this.selectedConnectionId = undefined;
     this.selectedMessageId = undefined;
     this.snapshot = undefined;
@@ -313,6 +374,8 @@ export class BrowseSentEventDevtoolsPanelElement extends LitElement {
 
     const model = this.snapshot
       ? getPanelViewModel(this.snapshot, {
+          direction: this.direction,
+          query: this.query,
           selectedConnectionId: this.selectedConnectionId,
           selectedMessageId: this.selectedMessageId,
         })
@@ -337,6 +400,47 @@ export class BrowseSentEventDevtoolsPanelElement extends LitElement {
             <div class="metric">
               <strong>${model?.totalBytesLabel ?? "0 B"}</strong>
               <span>payload</span>
+            </div>
+          </section>
+          <section class="toolbar" aria-label="Timeline controls">
+            <input
+              class="search"
+              type="search"
+              .value=${this.query}
+              aria-label="Search payload"
+              placeholder="Search payload"
+              @input=${(event: Event) => {
+                if (event.target instanceof globalThis.HTMLInputElement) {
+                  this.setQuery(event.target.value);
+                }
+              }}
+            />
+            <div class="control-group" aria-label="Direction filter">
+              <button
+                type="button"
+                ?aria-pressed=${this.direction === undefined}
+                @click=${() => this.setDirection(undefined)}
+              >
+                All
+              </button>
+              <button
+                type="button"
+                ?aria-pressed=${this.direction === "in"}
+                @click=${() => this.setDirection("in")}
+              >
+                In
+              </button>
+              <button
+                type="button"
+                ?aria-pressed=${this.direction === "out"}
+                @click=${() => this.setDirection("out")}
+              >
+                Out
+              </button>
+            </div>
+            <div class="control-group" aria-label="Export controls">
+              <button type="button" @click=${() => this.requestExport("jsonl")}>JSONL</button>
+              <button type="button" @click=${() => this.requestExport("log")}>Log</button>
             </div>
           </section>
           <div class="content">
@@ -417,6 +521,40 @@ export class BrowseSentEventDevtoolsPanelElement extends LitElement {
     } else {
       this.removeAttribute("open");
     }
+  }
+
+  setQuery(query: string): void {
+    this.query = query;
+    this.selectedMessageId = undefined;
+  }
+
+  setDirection(direction: BrowseSentEventDirection | undefined): void {
+    this.direction = direction;
+    this.selectedMessageId = undefined;
+  }
+
+  requestExport(format: BrowseSentEventExportFormat): void {
+    if (!this.engine) {
+      return;
+    }
+
+    const filter: BrowseSentEventMessageFilter = {
+      connectionId: this.selectedConnectionId,
+      direction: this.direction,
+    };
+    const content =
+      format === "jsonl" ? this.engine.exportJsonl(filter) : this.engine.exportLog(filter);
+
+    this.dispatchEvent(
+      new globalThis.CustomEvent("bse-export", {
+        bubbles: false,
+        composed: false,
+        detail: {
+          content,
+          format,
+        },
+      }),
+    );
   }
 
   #open(): void {

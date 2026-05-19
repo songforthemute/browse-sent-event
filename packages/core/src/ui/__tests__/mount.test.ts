@@ -117,4 +117,47 @@ describe("mountDevtoolsPanel", () => {
 
     expect(Reflect.get(mounted.element, "snapshot")).toBe(snapshotBeforeUnmount);
   });
+
+  it("dispatches an export event with JSONL content", () => {
+    const engine = createDevtoolsEngine({ capacity: 10 });
+    const mounted = mountDevtoolsPanel({
+      engine,
+      options: {
+        autoOpen: true,
+        hotkey: "cmd+shift+r",
+        position: "bottom-right",
+      },
+      target: globalThis.window,
+    });
+    const connection = engine.recordConnection({
+      protocol: "websocket",
+      url: "wss://example.test/socket",
+    });
+
+    engine.recordMessage({
+      connectionId: connection.id,
+      direction: "in",
+      protocol: "websocket",
+      payload: "hello",
+    });
+
+    const exports: unknown[] = [];
+
+    mounted.element.addEventListener("bse-export", (event) => {
+      if (event instanceof globalThis.CustomEvent) {
+        exports.push(event.detail);
+      }
+    });
+
+    Reflect.get(mounted.element, "requestExport")?.call(mounted.element, "jsonl");
+
+    expect(exports).toEqual([
+      expect.objectContaining({
+        content: expect.stringContaining('"payload":"hello"'),
+        format: "jsonl",
+      }),
+    ]);
+
+    mounted.unmount();
+  });
 });
