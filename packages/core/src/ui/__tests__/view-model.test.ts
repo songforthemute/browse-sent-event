@@ -79,4 +79,17 @@ describe("getPanelViewModel", () => {
 
     expect(model.connections[0]).toEqual(expect.objectContaining({ selected: true }));
   });
+
+  it("returns selected message detail", () => {
+    const model = getPanelViewModel(snapshot, {
+      selectedMessageId: "msg-1",
+    });
+
+    expect(model.selectedMessage).toEqual(
+      expect.objectContaining({
+        id: "msg-1",
+        payloadPreview: "hello",
+      }),
+    );
+  });
 });

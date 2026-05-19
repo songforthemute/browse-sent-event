@@ -4,6 +4,7 @@ import { formatByteSize, formatTimestamp } from "./format.js";
 
 export interface BrowseSentEventPanelState {
   readonly selectedConnectionId?: string;
+  readonly selectedMessageId?: string;
   readonly query?: string;
   readonly direction?: BrowseSentEventDirection;
 }
@@ -31,6 +32,7 @@ export interface BrowseSentEventMessageViewModel {
 export interface BrowseSentEventPanelViewModel {
   readonly connections: readonly BrowseSentEventConnectionViewModel[];
   readonly messages: readonly BrowseSentEventMessageViewModel[];
+  readonly selectedMessage?: BrowseSentEventMessageViewModel;
   readonly activeConnectionCount: number;
   readonly totalMessageCount: number;
   readonly totalBytesLabel: string;
@@ -56,6 +58,20 @@ export function getPanelViewModel(
   snapshot: BrowseSentEventEngineSnapshot,
   state: BrowseSentEventPanelState = {},
 ): BrowseSentEventPanelViewModel {
+  const messages: BrowseSentEventMessageViewModel[] = snapshot.messages
+    .filter((message) => matchesState(message, state))
+    .toSorted((left, right) => right.timestamp - left.timestamp)
+    .map((message) => ({
+      id: message.id,
+      direction: message.direction,
+      directionLabel: message.direction === "in" ? "IN" : "OUT",
+      timestampLabel: formatTimestamp(message.timestamp),
+      protocol: message.protocol,
+      typeLabel: message.type ?? "message",
+      sizeLabel: formatByteSize(message.size),
+      payloadPreview: message.payloadPreview,
+    }));
+
   return {
     activeConnectionCount: snapshot.metrics.activeConnectionCount,
     totalMessageCount: snapshot.metrics.messageCount,
@@ -69,18 +85,7 @@ export function getPanelViewModel(
         .length,
       selected: connection.id === state.selectedConnectionId,
     })),
-    messages: snapshot.messages
-      .filter((message) => matchesState(message, state))
-      .toSorted((left, right) => right.timestamp - left.timestamp)
-      .map((message) => ({
-        id: message.id,
-        direction: message.direction,
-        directionLabel: message.direction === "in" ? "IN" : "OUT",
-        timestampLabel: formatTimestamp(message.timestamp),
-        protocol: message.protocol,
-        typeLabel: message.type ?? "message",
-        sizeLabel: formatByteSize(message.size),
-        payloadPreview: message.payloadPreview,
-      })),
+    messages,
+    selectedMessage: messages.find((message) => message.id === state.selectedMessageId),
   };
 }

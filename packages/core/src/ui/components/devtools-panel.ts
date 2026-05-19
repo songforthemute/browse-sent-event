@@ -105,6 +105,12 @@ export class BrowseSentEventDevtoolsPanelElement extends LitElement {
       background: #111827;
     }
 
+    .content {
+      display: grid;
+      grid-template-columns: 168px minmax(0, 1fr) 152px;
+      min-height: 0;
+    }
+
     .metric strong {
       display: block;
       font-size: 16px;
@@ -120,14 +126,15 @@ export class BrowseSentEventDevtoolsPanelElement extends LitElement {
 
     .connections {
       min-height: 0;
+      border-right: 1px solid #1e293b;
       overflow: auto;
     }
 
     .connection {
       display: grid;
-      grid-template-columns: 88px minmax(0, 1fr) 72px 44px;
+      grid-template-columns: minmax(0, 1fr) 32px;
       width: 100%;
-      gap: 8px;
+      gap: 6px;
       align-items: center;
       padding: 10px 12px;
       border: 0;
@@ -139,6 +146,14 @@ export class BrowseSentEventDevtoolsPanelElement extends LitElement {
       text-align: left;
     }
 
+    .connection small {
+      grid-column: 1 / -1;
+      color: #94a3b8;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
     .connection[aria-pressed="true"] {
       background: #172554;
     }
@@ -148,6 +163,87 @@ export class BrowseSentEventDevtoolsPanelElement extends LitElement {
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+    }
+
+    .timeline {
+      min-height: 0;
+      border-right: 1px solid #1e293b;
+      overflow: auto;
+    }
+
+    .message {
+      display: grid;
+      grid-template-columns: 34px 76px minmax(0, 1fr) 52px;
+      width: 100%;
+      gap: 6px;
+      align-items: center;
+      padding: 9px 10px;
+      border: 0;
+      border-bottom: 1px solid #1e293b;
+      background: #0f172a;
+      color: #e2e8f0;
+      cursor: pointer;
+      font: inherit;
+      font-size: 11px;
+      text-align: left;
+    }
+
+    .message[aria-pressed="true"] {
+      background: #1e293b;
+    }
+
+    .message[data-direction="out"] {
+      color: #bfdbfe;
+    }
+
+    .message span {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .message-preview {
+      grid-column: 1 / -1;
+      color: #94a3b8;
+    }
+
+    .detail {
+      min-width: 0;
+      padding: 12px;
+      overflow: auto;
+      background: #111827;
+    }
+
+    .detail dl {
+      display: grid;
+      grid-template-columns: 56px minmax(0, 1fr);
+      gap: 8px;
+      margin: 0;
+      font-size: 11px;
+    }
+
+    .detail dt {
+      color: #94a3b8;
+    }
+
+    .detail dd {
+      min-width: 0;
+      margin: 0;
+      overflow-wrap: anywhere;
+    }
+
+    .payload {
+      grid-column: 1 / -1;
+      margin: 4px 0 0;
+      padding: 8px;
+      border: 1px solid #334155;
+      border-radius: 6px;
+      background: #020617;
+      color: #e2e8f0;
+      font-family:
+        ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      white-space: pre-wrap;
     }
 
     .empty {
@@ -171,12 +267,14 @@ export class BrowseSentEventDevtoolsPanelElement extends LitElement {
     engine: { attribute: false },
     open: { type: Boolean, reflect: true },
     selectedConnectionId: { attribute: false },
+    selectedMessageId: { attribute: false },
     snapshot: { attribute: false },
   };
 
   declare engine?: BrowseSentEventEngine;
   declare open: boolean;
   declare selectedConnectionId?: string;
+  declare selectedMessageId?: string;
   declare snapshot?: BrowseSentEventEngineSnapshot;
 
   #unsubscribe?: BrowseSentEventUnsubscribe;
@@ -185,6 +283,7 @@ export class BrowseSentEventDevtoolsPanelElement extends LitElement {
     super();
     this.open = false;
     this.selectedConnectionId = undefined;
+    this.selectedMessageId = undefined;
     this.snapshot = undefined;
   }
 
@@ -215,6 +314,7 @@ export class BrowseSentEventDevtoolsPanelElement extends LitElement {
     const model = this.snapshot
       ? getPanelViewModel(this.snapshot, {
           selectedConnectionId: this.selectedConnectionId,
+          selectedMessageId: this.selectedMessageId,
         })
       : undefined;
 
@@ -239,27 +339,71 @@ export class BrowseSentEventDevtoolsPanelElement extends LitElement {
               <span>payload</span>
             </div>
           </section>
-          <section class="connections" aria-label="Connections">
-            ${model && model.connections.length > 0
-              ? model.connections.map(
-                  (connection) => html`
-                    <button
-                      class="connection"
-                      type="button"
-                      ?aria-pressed=${connection.selected}
-                      @click=${() => {
-                        this.selectedConnectionId = connection.id;
-                      }}
-                    >
-                      <span>${connection.protocol}</span>
-                      <span>${connection.label}</span>
-                      <span>${connection.state}</span>
-                      <span>${connection.messageCount}</span>
-                    </button>
-                  `,
-                )
-              : html`<p class="empty">Waiting for realtime connections...</p>`}
-          </section>
+          <div class="content">
+            <section class="connections" aria-label="Connections">
+              ${model && model.connections.length > 0
+                ? model.connections.map(
+                    (connection) => html`
+                      <button
+                        class="connection"
+                        type="button"
+                        ?aria-pressed=${connection.selected}
+                        @click=${() => {
+                          this.selectedConnectionId = connection.id;
+                          this.selectedMessageId = undefined;
+                        }}
+                      >
+                        <span>${connection.protocol}</span>
+                        <span>${connection.messageCount}</span>
+                        <small>${connection.label}</small>
+                        <small>${connection.state}</small>
+                      </button>
+                    `,
+                  )
+                : html`<p class="empty">No connections yet.</p>`}
+            </section>
+            <section class="timeline" aria-label="Messages">
+              ${model && model.messages.length > 0
+                ? model.messages.map(
+                    (message) => html`
+                      <button
+                        class="message"
+                        type="button"
+                        data-direction=${message.direction}
+                        ?aria-pressed=${message.id === this.selectedMessageId}
+                        @click=${() => {
+                          this.selectedMessageId = message.id;
+                        }}
+                      >
+                        <span>${message.directionLabel}</span>
+                        <span>${message.timestampLabel}</span>
+                        <span>${message.typeLabel}</span>
+                        <span>${message.sizeLabel}</span>
+                        <span class="message-preview">${message.payloadPreview}</span>
+                      </button>
+                    `,
+                  )
+                : html`<p class="empty">No messages yet.</p>`}
+            </section>
+            <aside class="detail" aria-label="Message detail">
+              ${model?.selectedMessage
+                ? html`
+                    <dl>
+                      <dt>dir</dt>
+                      <dd>${model.selectedMessage.directionLabel}</dd>
+                      <dt>proto</dt>
+                      <dd>${model.selectedMessage.protocol}</dd>
+                      <dt>type</dt>
+                      <dd>${model.selectedMessage.typeLabel}</dd>
+                      <dt>size</dt>
+                      <dd>${model.selectedMessage.sizeLabel}</dd>
+                      <dt>payload</dt>
+                      <dd class="payload">${model.selectedMessage.payloadPreview}</dd>
+                    </dl>
+                  `
+                : html`<p class="empty">No selection.</p>`}
+            </aside>
+          </div>
         </main>
       </section>
     `;
