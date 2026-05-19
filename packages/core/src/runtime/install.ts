@@ -6,7 +6,8 @@ import type {
 import { installEventSourceInterceptor } from "../interceptors/eventsource.js";
 import { installFetchStreamInterceptor } from "../interceptors/fetch-stream.js";
 import { installWebSocketInterceptor } from "../interceptors/websocket.js";
-import type { BrowseSentEventOptions } from "./options.js";
+import { mountDevtoolsPanel, type MountedDevtoolsPanel } from "../ui/mount.js";
+import { resolveOptions, type BrowseSentEventOptions } from "./options.js";
 
 const runtimeKey = "__browseSentEventRuntime__";
 
@@ -45,10 +46,15 @@ export function installBrowseSentEvent(options?: BrowseSentEventOptions): Browse
     return installedRuntime;
   }
 
+  const resolvedOptions = resolveOptions(options);
   const installedInterceptors: InstalledBrowseSentEventInterceptor[] = [];
+  let mountedPanel: MountedDevtoolsPanel | undefined;
   const runtime = createBrowseSentEventRuntime(options, {
     installed: true,
     uninstall() {
+      mountedPanel?.unmount();
+      mountedPanel = undefined;
+
       for (const interceptor of installedInterceptors.toReversed()) {
         interceptor.uninstall();
       }
@@ -83,6 +89,12 @@ export function installBrowseSentEvent(options?: BrowseSentEventOptions): Browse
   if (eventSourceInterceptor) {
     installedInterceptors.push(eventSourceInterceptor);
   }
+
+  mountedPanel = mountDevtoolsPanel({
+    engine: runtime.engine,
+    options: resolvedOptions.panel,
+    target,
+  });
 
   Reflect.set(target, runtimeKey, runtime);
 
