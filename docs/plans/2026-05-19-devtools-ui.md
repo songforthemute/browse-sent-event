@@ -1535,6 +1535,7 @@ git status --short
 | drag resize 미구현 | 패널 크기 조절 UX | 첫 데모는 메시지 표시가 핵심이고, 고정 크기 패널로 충분히 검증 가능 | UI polish 작업 |
 | localStorage 위치 기억 최소화 | 드래그 위치 저장 | drag resize/drag move가 없으므로 위치 옵션만 사용 | drag/move 구현 시 |
 | export 다운로드 미구현 | 파일 저장 UX | engine export와 UI 이벤트 연결만으로 기능 경계를 검증 가능 | export UX polish 작업 |
+| export가 검색어 query를 반영하지 않음 | 화면 검색 결과와 export 결과의 완전한 일치 | 현재 engine export API는 `BrowseSentEventMessageFilter` 기반이라 `query/text`를 받지 않는다. 이번 배치에서는 `connectionId`와 `direction` 필터까지만 export에 반영해 기능 경계를 먼저 연결한다 | 검색/export UX polish에서 engine export API를 `BrowseSentEventSearchQuery` 기반으로 확장하거나, panel의 filtered view model 결과를 export하는 설계를 선택할 때 |
 | Shadow DOM 화면 품질 수동 확인 | 자동 screenshot 회귀 | 이번 계획은 core package 단위 MVP이며, browser fixture는 별도 계획으로 분리하는 편이 안전 | DevTools UI polish 또는 demo fixture 계획 |
 
 ## 완료 기준
