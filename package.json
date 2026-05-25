@@ -1,0 +1,35 @@
+{
+  "name": "browse-sent-event-monorepo",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "typecheck": "turbo run typecheck",
+    "test:e2e": "playwright test",
+    "test:e2e:update": "playwright test --update-snapshots",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs",
+    "lint": "oxlint --type-aware --type-check --deny-warnings",
+    "format": "oxfmt --write .",
+    "format:check": "oxfmt --check .",
+    "changeset": "changeset"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.31.0",
+    "@playwright/test": "^1.60.0",
+    "happy-dom": "^20.9.0",
+    "oxfmt": "^0.51.0",
+    "oxlint": "^1.66.0",
+    "oxlint-tsgolint": "^0.23.0",
+    "tsdown": "^0.22.0",
+    "turbo": "^2.9.14",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.14",
+    "vitepress": "2.0.0-alpha.17",
+    "vitest": "^4.1.7"
+  },
+  "packageManager": "pnpm@11.2.2"
+}

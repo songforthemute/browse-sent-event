@@ -643,6 +643,7 @@ Claude Code skill ecosystem에서 정립한 원칙을 적용한다.
 |---|---|---|
 | `lit` | UI 프레임워크 (ADR-018) | runtime |
 | `typescript` | 타입 시스템 (ADR-014: 6.x) | dev |
+| `vite` | Vite 플러그인 개발/테스트 기준 (ADR-013: 8.x) | dev |
 | `tsdown` | 빌드 (ADR-015) | dev |
 | `vitest`, `happy-dom` | 단위/통합 테스트 | dev |
 | `@playwright/test` | E2E 테스트 | dev |
@@ -767,6 +768,19 @@ browse-sent-event의 특수성이 이 결정에 영향을 준다.
 | 포매터 | Oxfmt | ADR-016 |
 | 테스트 | Vitest | ADR-006 |
 
+**2026-05-18 구현 점검, 2026-05-25 최신화:**
+
+Vite 8 전환 후 번들러 영향 의존성은 다음과 같이 정렬한다.
+
+- `vite 8.0.14`는 `rolldown 1.0.2`, `lightningcss 1.32.0`을 사용한다.
+- `vitest 4.1.7`은 peer 경로에서 `vite 8.0.14`를 사용한다.
+- `tsdown 0.22.0`은 `rolldown 1.0.1`을 사용한다.
+- 현재 설치 그래프에는 `rollup`과 `esbuild`가 남아 있지 않다.
+
+이에 따라 `plugin-vite`는 Vite 공개 Plugin API를 기준으로 작성하고, Vite 8에서 deprecated 경로가 된 `transformWithEsbuild`, `optimizeDeps.esbuildOptions`, `build.minify: 'esbuild'`, `build.cssMinify: 'esbuild'`에 의존하지 않는다. Rollup 전용 출력 조정이 필요하면 `build.rollupOptions`보다 `build.rolldownOptions`를 먼저 검토한다.
+
+근거 문서: [Vite 8 announcement](https://vite.dev/blog/announcing-vite8), [Vite 8 migration guide](https://vite.dev/guide/migration).
+
 **정렬하지 않는 영역:**
 
 - **Turborepo**는 유지 (VoidZero는 태스크 러너가 아직 정식 제품 아님)
@@ -805,7 +819,7 @@ browse-sent-event의 특수성이 이 결정에 영향을 준다.
 1. VoidZero 재정/인력 위기 (주요 기여자 이탈, 투자 중단)
 2. Oxc 파서가 프로덕션에서 파싱 오류 재발생 (월 1회 이상)
 3. Oxlint type-aware 룰이 6개월간 정체 (tsgolint 정식 릴리스 실패)
-4. Vite 8 → Rolldown 전환에서 우리 플러그인 호환성 문제 지속
+4. Vite 8/Rolldown 기준에서 실제 주입 플러그인 호환성 문제가 지속
 
 롤백 시 마이그레이션 경로:
 

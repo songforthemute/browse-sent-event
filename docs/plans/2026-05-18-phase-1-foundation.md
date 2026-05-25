@@ -140,7 +140,7 @@ packages:
 
 `.gitignore`를 생성한다.
 
-```gitignore
+```text
 node_modules
 dist
 coverage
@@ -530,11 +530,11 @@ pnpm --filter @browse-sent-event/core build
     "typecheck": "tsc --noEmit"
   },
   "peerDependencies": {
-    "vite": ">=5.0.0 <7.0.0"
+    "vite": ">=5.0.0 <9.0.0"
   },
   "devDependencies": {
     "typescript": "workspace:*",
-    "vite": "<version-from-preflight>"
+    "vite": "^8.0.13"
   }
 }
 ```

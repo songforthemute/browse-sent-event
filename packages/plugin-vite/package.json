@@ -1,0 +1,29 @@
+{
+  "name": "@browse-sent-event/plugin-vite",
+  "version": "0.0.0",
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    }
+  },
+  "scripts": {
+    "build": "tsdown",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@browse-sent-event/core": "workspace:*"
+  },
+  "devDependencies": {
+    "vite": "^8.0.14"
+  },
+  "peerDependencies": {
+    "vite": ">=5.0.0 <9.0.0"
+  }
+}
