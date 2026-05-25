@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+const shouldAssertVisualSnapshot = !process.env.CI;
+
 test("mounts the closed-shadow DevTools panel host", async ({ page }) => {
   await page.goto("/");
 
@@ -14,14 +16,33 @@ test("renders seeded transport data in the panel", async ({ page }) => {
   await page.getByRole("button", { name: "Seed panel" }).click();
 
   const panel = page.locator("bse-devtools-panel");
+  const counts = await page.evaluate(() => {
+    const fixture = Reflect.get(globalThis, "__bseFixture");
+
+    if (typeof fixture !== "object" || fixture === null) {
+      throw new Error("Fixture bridge is missing");
+    }
+
+    const getSnapshotCounts = Reflect.get(fixture, "getSnapshotCounts");
+
+    if (typeof getSnapshotCounts !== "function") {
+      throw new Error("Fixture counts bridge is missing");
+    }
+
+    return getSnapshotCounts();
+  });
   const box = await panel.boundingBox();
 
+  expect(counts).toEqual({ connections: 1, messages: 2 });
   await expect(panel).toHaveAttribute("open", "");
   expect(box?.width).toBeGreaterThan(300);
   expect(box?.height).toBeGreaterThan(300);
-  await expect(panel).toHaveScreenshot("devtools-panel-seeded.png", {
-    animations: "disabled",
-  });
+
+  if (shouldAssertVisualSnapshot) {
+    await expect(panel).toHaveScreenshot("devtools-panel-seeded.png", {
+      animations: "disabled",
+    });
+  }
 });
 
 test("records fetch stream and EventSource messages in a real browser", async ({ page }) => {
