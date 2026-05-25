@@ -24,6 +24,7 @@ outline: deep
 ## 최근 구현 계획
 
 - [기술 문서 배포와 공급망 보안](./plans/2026-05-25-docs-site-supply-chain.md)
+- [DevTools 브라우저 검증](./plans/2026-05-25-devtools-browser-verification.md)
 - [DevTools UI 구현](./plans/2026-05-19-devtools-ui.md)
 - [DevTools UI 배치 2](./plans/2026-05-19-devtools-ui-batch-2.md)
 - [프로토콜 인터셉터 구현](./plans/2026-05-19-protocol-interceptors.md)
