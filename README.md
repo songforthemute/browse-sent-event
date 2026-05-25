@@ -28,7 +28,7 @@ Vite 전용, main thread 전용 개발 도구를 제공하고, 실시간 transpo
 
 ## 호환성 기준
 
-현재 개발/테스트 기준은 Vite 8.0.13이다. `packages/plugin-vite`는 Vite 공개 Plugin API만 사용하고, peer dependency 범위는 Vite 5.x부터 8.x까지로 둔다.
+현재 개발/테스트 기준은 Vite 8.0.14와 Vitest 4.1.7이다. `packages/plugin-vite`는 Vite 공개 Plugin API만 사용하고, peer dependency 범위는 Vite 5.x부터 8.x까지로 둔다.
 
 ## 문서
 

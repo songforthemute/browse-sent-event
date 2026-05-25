@@ -194,7 +194,7 @@ export default defineConfig({
 - `vite build`로 검증: 출력 번들에서 `browse-sent-event` 문자열 부재 확인
 
 **F6.4 Vite 8 / Rolldown 제약**
-- Phase 1의 개발 기준은 Vite 8.0.13이다.
+- Phase 1의 개발 기준은 Vite 8.0.14이다.
 - Vite 8에서는 Rolldown/Oxc가 기본 변환 경로이므로, 플러그인은 Vite 공개 Plugin API와 `transform`/`configResolved` 등 안정 훅에만 의존한다.
 - `transformWithEsbuild`, `optimizeDeps.esbuildOptions`, `build.minify: 'esbuild'`, `build.cssMinify: 'esbuild'`에 의존하지 않는다.
 - Rollup 전용 출력 옵션이 필요해지면 `build.rollupOptions` 대신 Vite 8의 `build.rolldownOptions` 경로를 먼저 검토한다.

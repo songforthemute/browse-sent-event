@@ -95,6 +95,31 @@ git add package.json pnpm-workspace.yaml .npmrc pnpm-lock.yaml
 git commit -m "chore(deps): pnpm 공급망 보안 게이트 추가"
 ```
 
+### 작업 2.5: 안전 후보 개발 의존성 갱신
+
+**파일:**
+- 수정: `package.json`
+- 수정: `packages/plugin-vite/package.json`
+- 수정: `pnpm-lock.yaml`
+- 수정: `README.md`
+- 수정: `docs/browse-sent-event-prd.md`
+- 수정: `docs/browse-sent-event-adr.md`
+
+**단계:**
+
+1. 사전 점검을 통과한 `vite@8.0.14`, `vitest@4.1.7`, `oxlint@1.66.0`, `oxfmt@0.51.0`으로 개발 의존성을 갱신한다.
+2. `packages/plugin-vite`의 테스트용 `vite` dev dependency도 `^8.0.14`로 맞춘다.
+3. `pnpm install --ignore-scripts --no-frozen-lockfile`로 lockfile을 갱신한다.
+4. README, PRD, ADR의 현재 개발/테스트 기준을 Vite 8.0.14와 Vitest 4.1.7로 갱신한다.
+5. `pnpm why vite rolldown lightningcss vitest`로 번들러 영향 경로를 확인한다.
+
+**커밋:**
+
+```bash
+git add package.json packages/plugin-vite/package.json pnpm-lock.yaml README.md docs/browse-sent-event-prd.md docs/browse-sent-event-adr.md docs/plans/2026-05-25-docs-site-supply-chain.md
+git commit -m "chore(deps): 개발 도구 패치 버전 갱신"
+```
+
 ### 작업 3: 문서 사이트 의존성과 스크립트 추가
 
 **파일:**

@@ -768,12 +768,12 @@ browse-sent-event의 특수성이 이 결정에 영향을 준다.
 | 포매터 | Oxfmt | ADR-016 |
 | 테스트 | Vitest | ADR-006 |
 
-**2026-05-18 구현 점검:**
+**2026-05-18 구현 점검, 2026-05-25 최신화:**
 
 Vite 8 전환 후 번들러 영향 의존성은 다음과 같이 정렬한다.
 
-- `vite 8.0.13`은 `rolldown 1.0.1`, `lightningcss 1.32.0`을 사용한다.
-- `vitest 4.1.6`은 peer 경로에서 `vite 8.0.13`을 사용한다.
+- `vite 8.0.14`는 `rolldown 1.0.2`, `lightningcss 1.32.0`을 사용한다.
+- `vitest 4.1.7`은 peer 경로에서 `vite 8.0.14`를 사용한다.
 - `tsdown 0.22.0`은 `rolldown 1.0.1`을 사용한다.
 - 현재 설치 그래프에는 `rollup`과 `esbuild`가 남아 있지 않다.
 

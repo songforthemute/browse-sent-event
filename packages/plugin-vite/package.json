@@ -21,7 +21,7 @@
     "@browse-sent-event/core": "workspace:*"
   },
   "devDependencies": {
-    "vite": "^8.0.13"
+    "vite": "^8.0.14"
   },
   "peerDependencies": {
     "vite": ">=5.0.0 <9.0.0"
