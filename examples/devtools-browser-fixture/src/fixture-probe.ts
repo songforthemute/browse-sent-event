@@ -5,6 +5,11 @@ export interface BrowseSentEventFixtureCounts {
   readonly messages: number;
 }
 
+export interface BrowseSentEventFixtureMinimumCounts {
+  readonly connections: number;
+  readonly messages: number;
+}
+
 interface BrowseSentEventPanelHost extends HTMLElement {
   setOpen(open: boolean): void;
 }
@@ -87,4 +92,49 @@ export function getSnapshotCounts(): BrowseSentEventFixtureCounts {
     connections: snapshot.connections.length,
     messages: snapshot.messages.length,
   };
+}
+
+async function waitForSnapshotCounts(minimum: BrowseSentEventFixtureMinimumCounts): Promise<void> {
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < 1_000) {
+    const counts = getSnapshotCounts();
+
+    if (counts.connections >= minimum.connections && counts.messages >= minimum.messages) {
+      return;
+    }
+
+    await new Promise((resolve) => {
+      globalThis.setTimeout(resolve, 10);
+    });
+  }
+
+  throw new Error("Timed out waiting for transport records");
+}
+
+export async function runFetchStream(): Promise<void> {
+  const response = await fetch("/__bse-fixture/stream");
+  await response.text();
+  await waitForSnapshotCounts({ connections: 1, messages: 1 });
+}
+
+export async function runEventSource(): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
+    const source = new EventSource("/__bse-fixture/events");
+    let count = 0;
+
+    source.addEventListener("message", () => {
+      count += 1;
+
+      if (count >= 2) {
+        source.close();
+        resolve();
+      }
+    });
+    source.addEventListener("error", () => {
+      source.close();
+      reject(new Error("EventSource fixture failed"));
+    });
+  });
+  await waitForSnapshotCounts({ connections: 2, messages: 2 });
 }

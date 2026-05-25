@@ -23,3 +23,35 @@ test("renders seeded transport data in the panel", async ({ page }) => {
     animations: "disabled",
   });
 });
+
+test("records fetch stream and EventSource messages in a real browser", async ({ page }) => {
+  await page.goto("/");
+
+  const counts = await page.evaluate(async () => {
+    const fixture = Reflect.get(globalThis, "__bseFixture");
+
+    if (typeof fixture !== "object" || fixture === null) {
+      throw new Error("Fixture bridge is missing");
+    }
+
+    const runFetchStream = Reflect.get(fixture, "runFetchStream");
+    const runEventSource = Reflect.get(fixture, "runEventSource");
+    const getSnapshotCounts = Reflect.get(fixture, "getSnapshotCounts");
+
+    if (
+      typeof runFetchStream !== "function" ||
+      typeof runEventSource !== "function" ||
+      typeof getSnapshotCounts !== "function"
+    ) {
+      throw new Error("Transport fixture bridge is missing");
+    }
+
+    await runFetchStream();
+    await runEventSource();
+
+    return getSnapshotCounts();
+  });
+
+  expect(counts.connections).toBeGreaterThanOrEqual(2);
+  expect(counts.messages).toBeGreaterThanOrEqual(2);
+});
