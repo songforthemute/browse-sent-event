@@ -1,3 +1,11 @@
 packages:
   - packages/*
   - examples/*
+
+minimumReleaseAge: 1440
+minimumReleaseAgeStrict: true
+minimumReleaseAgeIgnoreMissingTime: false
+blockExoticSubdeps: true
+strictPeerDependencies: true
+autoInstallPeers: false
+engineStrict: true
