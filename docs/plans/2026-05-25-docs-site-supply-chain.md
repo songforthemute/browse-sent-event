@@ -6,7 +6,7 @@
 
 **아키텍처:** `docs/`는 원문 기술 문서와 VitePress 사이트 엔트리를 함께 보관한다. GitHub Pages 배포는 GitHub Actions의 최소 권한 `push`/수동 실행 workflow로 분리하고, dependency update는 `pnpm`의 minimum release age와 lockfile 검증을 통과한 뒤에만 진행한다.
 
-**기술 스택:** pnpm workspace, pnpm 11.x, VitePress 1.6.x, Vite 8.x, Vitest 4.x, Oxlint, Oxfmt, GitHub Pages Actions.
+**기술 스택:** pnpm workspace, pnpm 11.x, VitePress 2.0 alpha, Vite 8.x, Vitest 4.x, Oxlint, Oxfmt, GitHub Pages Actions.
 
 ---
 
@@ -31,7 +31,8 @@
 | `vitest` | `4.1.6` | `4.1.7` | `2026-05-20T07:19:42.142Z` | 후보 |
 | `oxlint` | `1.65.0` | `1.66.0` | `2026-05-19T08:08:22.713Z` | 후보 |
 | `oxfmt` | `0.50.0` | `0.51.0` | `2026-05-19T08:07:12.732Z` | 후보 |
-| `vitepress` | 없음 | `1.6.4` | `2025-08-05T13:40:31.197Z` | 문서 사이트 신규 후보 |
+| `vitepress` | 없음 | `1.6.4` | `2025-08-05T13:40:31.197Z` | audit advisory로 제외 |
+| `vitepress` | 없음 | `2.0.0-alpha.17` | `2026-03-19T17:06:38.837Z` | 문서 사이트 후보 |
 
 모든 후보는 `npm view` 기준 `dist.integrity`와 `dist.signatures`를 가진다. 현재 lockfile 기준 `pnpm audit --json`은 advisory 0건이다.
 
@@ -130,11 +131,19 @@ git commit -m "chore(deps): 개발 도구 패치 버전 갱신"
 
 **단계:**
 
-1. `vitepress@1.6.4`를 dev dependency로 추가한다.
-2. 루트 script에 `docs:dev`, `docs:build`, `docs:preview`를 추가한다.
-3. `docs/index.md`는 기존 `browse-sent-event-prd`, `browse-sent-event-adr`, `browse-sent-event-v2`, 계획 문서로 들어가는 기술 문서 허브로 만든다.
-4. VitePress config는 프로젝트명 `browse-sent-event`와 GitHub Pages base path를 명시한다.
-5. VitePress가 내부적으로 `vite@^5.4.14`를 의존한다는 점을 lockfile diff와 `pnpm why vite`에서 확인한다. 이는 문서 빌드 도구 경로로 격리되며, runtime/plugin-vite의 Vite 8 지원 범위와 혼동하지 않도록 README에 기록한다.
+1. `vitepress@1.6.4`를 먼저 검증한다.
+2. `pnpm audit`에서 VitePress 1.6.4의 내부 `vite@5.4.21`, `esbuild@0.21.5` 경로가 moderate advisory를 만들면 제외한다.
+3. 대체 후보로 `vitepress@2.0.0-alpha.17`을 검증하고, advisory 0건이면 문서 빌드 도구에 한해 채택한다.
+4. 루트 script에 `docs:dev`, `docs:build`, `docs:preview`를 추가한다.
+5. `docs/index.md`는 기존 `browse-sent-event-prd`, `browse-sent-event-adr`, `browse-sent-event-v2`, 계획 문서로 들어가는 기술 문서 허브로 만든다.
+6. VitePress config는 프로젝트명 `browse-sent-event`와 GitHub Pages base path를 명시한다.
+7. VitePress 2 alpha가 내부적으로 `vite@^7.3.1`을 의존한다는 점을 lockfile diff와 `pnpm why vite`에서 확인한다. 이는 문서 빌드 도구 경로로 격리되며, runtime/plugin-vite의 Vite 8 지원 범위와 혼동하지 않도록 README에 기록한다.
+
+**의식적 부채:**
+
+- 포기하는 것: stable VitePress 1.6.4 사용.
+- 감당 가능한 이유: stable 1.6.4는 현재 audit에서 Vite 5/esbuild advisory를 만든다. 2.0.0-alpha.17은 문서 빌드 도구에만 쓰이고, `pnpm audit`, `pnpm peers check`, `pnpm docs:build`로 검증한다.
+- 회수 시점: VitePress 2 stable이 나오거나 VitePress 1.x가 advisory 없는 Vite 경로로 패치되면 alpha 의존을 stable로 되돌린다.
 
 **커밋:**
 
@@ -174,6 +183,7 @@ npm view vitest@4.1.7 version 'time[4.1.7]' engines deprecated dist.integrity di
 npm view oxlint@1.66.0 version 'time[1.66.0]' engines deprecated dist.integrity dist.signatures --json
 npm view oxfmt@0.51.0 version 'time[0.51.0]' engines deprecated dist.integrity dist.signatures --json
 npm view vitepress@1.6.4 version 'time[1.6.4]' engines deprecated dist.integrity dist.signatures --json
+npm view vitepress@2.0.0-alpha.17 version 'time[2.0.0-alpha.17]' engines deprecated dist.integrity dist.signatures --json
 pnpm audit --json
 rg -n "@tanstack|axios|@antv|size-sensor|echarts-for-react|timeago\\.js|github:|git\\+|tarball" package.json pnpm-lock.yaml pnpm-workspace.yaml packages docs
 ```

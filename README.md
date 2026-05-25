@@ -36,10 +36,13 @@ Vite 전용, main thread 전용 개발 도구를 제공하고, 실시간 transpo
 - `docs/browse-sent-event-adr.md`
 - `docs/browse-sent-event-v2.md`
 
+정적 기술 문서 사이트는 VitePress로 빌드한다. VitePress 1.6.4는 내부 Vite 5.x/esbuild 경로에서 audit advisory가 발생하므로, 문서 빌드 도구에 한해 VitePress 2.0.0 alpha를 사용한다. `packages/plugin-vite`의 개발/테스트 기준과 peer dependency 계약은 Vite 8.x 경로를 기준으로 유지한다.
+
 ## 개발
 
 ```bash
 pnpm install
+pnpm docs:build
 pnpm build
 pnpm test
 pnpm typecheck

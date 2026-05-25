@@ -140,7 +140,7 @@ packages:
 
 `.gitignore`를 생성한다.
 
-```gitignore
+```text
 node_modules
 dist
 coverage

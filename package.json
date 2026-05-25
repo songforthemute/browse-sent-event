@@ -7,6 +7,9 @@
     "build": "turbo run build",
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs",
     "lint": "oxlint --type-aware --type-check --deny-warnings",
     "format": "oxfmt --write .",
     "format:check": "oxfmt --check .",
@@ -23,6 +26,7 @@
     "turbo": "^2.9.14",
     "typescript": "^6.0.3",
     "vite": "^8.0.14",
+    "vitepress": "2.0.0-alpha.17",
     "vitest": "^4.1.7"
   },
   "packageManager": "pnpm@11.2.2"
