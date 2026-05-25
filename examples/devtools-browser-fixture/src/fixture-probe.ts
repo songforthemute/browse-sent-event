@@ -138,3 +138,33 @@ export async function runEventSource(): Promise<void> {
   });
   await waitForSnapshotCounts({ connections: 2, messages: 2 });
 }
+
+export async function runWebSocket(url: string): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
+    const socket = new WebSocket(url);
+
+    socket.addEventListener(
+      "open",
+      () => {
+        socket.send("browser hello");
+      },
+      { once: true },
+    );
+    socket.addEventListener(
+      "message",
+      () => {
+        socket.close();
+        resolve();
+      },
+      { once: true },
+    );
+    socket.addEventListener(
+      "error",
+      () => {
+        reject(new Error("WebSocket fixture failed"));
+      },
+      { once: true },
+    );
+  });
+  await waitForSnapshotCounts({ connections: 1, messages: 2 });
+}

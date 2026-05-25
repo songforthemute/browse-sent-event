@@ -55,3 +55,29 @@ test("records fetch stream and EventSource messages in a real browser", async ({
   expect(counts.connections).toBeGreaterThanOrEqual(2);
   expect(counts.messages).toBeGreaterThanOrEqual(2);
 });
+
+test("records WebSocket messages in a real browser", async ({ page }) => {
+  await page.goto("/");
+
+  const counts = await page.evaluate(async (url) => {
+    const fixture = Reflect.get(globalThis, "__bseFixture");
+
+    if (typeof fixture !== "object" || fixture === null) {
+      throw new Error("Fixture bridge is missing");
+    }
+
+    const runWebSocket = Reflect.get(fixture, "runWebSocket");
+    const getSnapshotCounts = Reflect.get(fixture, "getSnapshotCounts");
+
+    if (typeof runWebSocket !== "function" || typeof getSnapshotCounts !== "function") {
+      throw new Error("WebSocket fixture bridge is missing");
+    }
+
+    await runWebSocket(url);
+
+    return getSnapshotCounts();
+  }, "ws://127.0.0.1:4175");
+
+  expect(counts.connections).toBeGreaterThanOrEqual(1);
+  expect(counts.messages).toBeGreaterThanOrEqual(2);
+});

@@ -1,11 +1,18 @@
-import { closePanel, getSnapshotCounts, seedPanel } from "./fixture-probe.js";
-import { runEventSource, runFetchStream } from "./fixture-probe.js";
+import {
+  closePanel,
+  getSnapshotCounts,
+  runEventSource,
+  runFetchStream,
+  runWebSocket,
+  seedPanel,
+} from "./fixture-probe.js";
 
 const fixtureBridge = {
   closePanel,
   getSnapshotCounts,
   runEventSource,
   runFetchStream,
+  runWebSocket,
   seedPanel,
 };
 
