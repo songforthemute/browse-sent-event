@@ -4,7 +4,7 @@ WebSocket, HTTP stream, EventSource의 실시간 메시지 흐름을 관찰하�
 
 ## 상태
 
-이 저장소는 Phase 1 transport 수집 기반 구현 단계에 있다.
+이 저장소는 Phase 1 DevTools MVP 구현 단계에 있다.
 
 ## 현재 구현 상태
 
@@ -12,8 +12,15 @@ WebSocket, HTTP stream, EventSource의 실시간 메시지 흐름을 관찰하�
 - core runtime 설치 API
 - WebSocket, fetch ReadableStream, EventSource 이벤트 수집
 - in-memory ring buffer, 단순 검색, JSONL/log export
+- Shadow DOM 기반 DevTools 패널 MVP
+- 연결 목록, 메시지 타임라인, 메트릭, 검색/방향 필터
+- 패널 export 이벤트와 runtime mount/unmount 연결
 
-아직 DevTools UI는 구현 전이다.
+## 남은 정리 작업
+
+- GitHub Pages 기반 기술 문서 정적 배포
+- export 검색어 필터 반영 부채 회수
+- UI polish, 위치 기억, 실제 브라우저 기반 화면 검증
 
 ## Phase 1 목표
 

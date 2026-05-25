@@ -30,8 +30,16 @@
 - Vite plugin injection
 - core runtime install
 - transport event collection
+- Shadow DOM DevTools panel MVP
+- connection list, message timeline, metrics UI
+- search/direction filter UI
+- JSONL/log export event
+- runtime panel mount/unmount
 
 남음:
 
-- Shadow DOM 플로팅 패널
-- 연결 목록, 메시지 타임라인, 메트릭 UI
+- GitHub Pages 기술 문서 정적 배포
+- export 검색어 필터 반영
+- UI polish와 resize/position persistence
+- Playwright 기반 실제 브라우저 UI 검증
+- Phase 1 성능 기준 검증
