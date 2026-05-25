@@ -8,6 +8,19 @@
 
 **기술 스택:** Playwright 1.60, Vite 8, TypeScript 6, pnpm workspace, Turborepo, Node.js built-in HTTP/WebSocket fixture.
 
+## 진행 기록
+
+- 2026-05-25: Playwright 설정, DevTools browser fixture, seeded panel 시각 회귀 테스트를 구현했다.
+- 2026-05-25: 실제 브라우저에서 fetch ReadableStream, EventSource, WebSocket 수집 경로를 검증하도록 확장했다.
+- 2026-05-25: PR/push에서 단위 테스트, 타입체크, 빌드, 브라우저 E2E, lint, format을 실행하는 CI workflow를 연결했다.
+- 2026-05-25: Playwright screenshot baseline이 OS별 파일명으로 분리되므로, Linux CI에서는 기능 E2E만 실행하고 시각 snapshot 비교는 로컬 baseline 검증으로 제한했다.
+
+## 의식적 부채: CI 시각 snapshot
+
+- **포기하는 것:** Linux CI에서 seeded DevTools panel screenshot을 직접 비교하는 검증.
+- **왜 지금은 감당 가능한가:** CI는 panel mount, seeded data count, 실제 fetch stream/EventSource/WebSocket 수집 경로를 계속 검증한다. 시각 회귀는 macOS 기준 snapshot으로 로컬에서 유지된다.
+- **회수 시점:** Linux snapshot baseline을 생성해 커밋하거나, Playwright 실행 환경을 컨테이너/폰트까지 고정해 OS 차이를 제거할 때 회수한다.
+
 ---
 
 ## 현재 코드 기준

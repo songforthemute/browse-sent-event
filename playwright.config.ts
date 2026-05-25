@@ -24,11 +24,19 @@ export default defineConfig({
       },
     },
   ],
-  webServer: {
-    command:
-      "pnpm --filter @browse-sent-event/devtools-browser-fixture dev --host 127.0.0.1 --port 4174",
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
-    url: "http://127.0.0.1:4174",
-  },
+  webServer: [
+    {
+      command:
+        "pnpm --filter @browse-sent-event/devtools-browser-fixture dev --host 127.0.0.1 --port 4174",
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
+      url: "http://127.0.0.1:4174",
+    },
+    {
+      command: "node e2e/support/websocket-fixture.ts --port 4175",
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
+      url: "http://127.0.0.1:4175/health",
+    },
+  ],
 });

@@ -12,6 +12,12 @@
       }
     },
     {
+      "files": ["e2e/**/*.ts"],
+      "env": {
+        "node": true
+      }
+    },
+    {
       "files": ["examples/devtools-browser-fixture/**/*.ts"],
       "env": {
         "browser": true

@@ -33,6 +33,10 @@ export default defineConfig({
             text: "기술 문서 배포와 공급망 보안",
             link: "/plans/2026-05-25-docs-site-supply-chain",
           },
+          {
+            text: "DevTools 브라우저 검증",
+            link: "/plans/2026-05-25-devtools-browser-verification",
+          },
           { text: "DevTools UI", link: "/plans/2026-05-19-devtools-ui" },
           { text: "DevTools UI 배치 2", link: "/plans/2026-05-19-devtools-ui-batch-2" },
           { text: "프로토콜 인터셉터", link: "/plans/2026-05-19-protocol-interceptors" },
