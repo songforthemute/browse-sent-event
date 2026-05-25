@@ -14,6 +14,7 @@ outline: deep
 - Shadow DOM DevTools panel MVP
 - 연결 목록, 메시지 타임라인, 메트릭, 검색/방향 필터
 - JSONL/log export event
+- Playwright 기반 Chromium 브라우저 검증
 
 ## 기준 문서
 
@@ -36,6 +37,7 @@ outline: deep
 pnpm install
 pnpm docs:build
 pnpm test
+pnpm test:e2e
 pnpm typecheck
 pnpm lint
 pnpm format:check

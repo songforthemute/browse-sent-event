@@ -18,9 +18,8 @@ WebSocket, HTTP stream, EventSource의 실시간 메시지 흐름을 관찰하�
 
 ## 남은 정리 작업
 
-- GitHub Pages 기반 기술 문서 정적 배포
 - export 검색어 필터 반영 부채 회수
-- UI polish, 위치 기억, 실제 브라우저 기반 화면 검증
+- UI polish, 위치 기억, 브라우저 검증 시나리오 확대
 
 ## Phase 1 목표
 
@@ -45,6 +44,7 @@ pnpm install
 pnpm docs:build
 pnpm build
 pnpm test
+pnpm test:e2e
 pnpm typecheck
 pnpm lint
 pnpm format:check

@@ -8,6 +8,12 @@
 
 **기술 스택:** Playwright 1.60, Vite 8, TypeScript 6, pnpm workspace, Turborepo, Node.js built-in HTTP/WebSocket fixture.
 
+## 진행 기록
+
+- 2026-05-25: Playwright 설정, DevTools browser fixture, seeded panel 시각 회귀 테스트를 구현했다.
+- 2026-05-25: 실제 브라우저에서 fetch ReadableStream, EventSource, WebSocket 수집 경로를 검증하도록 확장했다.
+- 2026-05-25: PR/push에서 단위 테스트, 타입체크, 빌드, 브라우저 E2E, lint, format을 실행하는 CI workflow를 연결했다.
+
 ---
 
 ## 현재 코드 기준

@@ -9,3 +9,5 @@ blockExoticSubdeps: true
 strictPeerDependencies: true
 autoInstallPeers: false
 engineStrict: true
+allowBuilds:
+  esbuild: true
