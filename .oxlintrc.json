@@ -4,6 +4,20 @@
     "correctness": "error",
     "suspicious": "error"
   },
+  "overrides": [
+    {
+      "files": ["playwright.config.ts"],
+      "env": {
+        "node": true
+      }
+    },
+    {
+      "files": ["examples/devtools-browser-fixture/**/*.ts"],
+      "env": {
+        "browser": true
+      }
+    }
+  ],
   "rules": {
     "no-unused-vars": "error",
     "no-undef": "error",

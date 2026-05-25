@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "declaration": false,
+    "declarationMap": false,
+    "isolatedDeclarations": false,
+    "noEmit": true,
+    "sourceMap": false,
+    "types": ["vite/client"]
+  },
+  "include": ["src/**/*.ts", "vite.config.ts"]
+}

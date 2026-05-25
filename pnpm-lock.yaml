@@ -45,6 +45,19 @@ importers:
         specifier: ^4.1.7
         version: 4.1.7(@types/node@25.9.0)(happy-dom@20.9.0)(vite@8.0.14(@types/node@25.9.0)(esbuild@0.27.7))
 
+  examples/devtools-browser-fixture:
+    dependencies:
+      '@browse-sent-event/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@browse-sent-event/plugin-vite':
+        specifier: workspace:*
+        version: link:../../packages/plugin-vite
+    devDependencies:
+      vite:
+        specifier: ^8.0.14
+        version: 8.0.14(@types/node@25.9.0)(esbuild@0.27.7)
+
   packages/core:
     dependencies:
       lit:

@@ -1,0 +1,17 @@
+{
+  "name": "@browse-sent-event/devtools-browser-fixture",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@browse-sent-event/core": "workspace:*",
+    "@browse-sent-event/plugin-vite": "workspace:*"
+  },
+  "devDependencies": {
+    "vite": "^8.0.14"
+  }
+}
