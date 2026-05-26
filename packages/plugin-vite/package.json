@@ -1,21 +1,7 @@
 {
   "name": "@browse-sent-event/plugin-vite",
-  "description": "Vite plugin for injecting browse-sent-event into browser development entries.",
   "version": "0.0.0",
-  "files": [
-    "dist"
-  ],
-  "type": "module",
-  "license": "MIT",
-  "homepage": "https://songforthemute.github.io/browse-sent-event/",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/songforthemute/browse-sent-event.git",
-    "directory": "packages/plugin-vite"
-  },
-  "bugs": {
-    "url": "https://github.com/songforthemute/browse-sent-event/issues"
-  },
+  "description": "Vite plugin for injecting browse-sent-event into browser development entries.",
   "keywords": [
     "devtools",
     "eventsource",
@@ -25,6 +11,20 @@
     "vite-plugin",
     "websocket"
   ],
+  "homepage": "https://songforthemute.github.io/browse-sent-event/",
+  "bugs": {
+    "url": "https://github.com/songforthemute/browse-sent-event/issues"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/songforthemute/browse-sent-event.git",
+    "directory": "packages/plugin-vite"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "module",
   "sideEffects": false,
   "exports": {
     ".": {
