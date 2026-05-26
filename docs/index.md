@@ -15,15 +15,18 @@ outline: deep
 - 연결 목록, 메시지 타임라인, 메트릭, 검색/방향 필터
 - JSONL/log export event
 - Playwright 기반 Chromium 브라우저 검증
+- GitHub Pages 기반 공개 문서 배포
 
 ## 기준 문서
 
+- 공개 주소: <https://songforthemute.github.io/browse-sent-event/>
 - [제품 요구사항](./browse-sent-event-prd.md)
 - [아키텍처 결정 기록](./browse-sent-event-adr.md)
 - [v2 설계 메모](./browse-sent-event-v2.md)
 
 ## 최근 구현 계획
 
+- [문서 공개와 릴리즈 준비](./plans/2026-05-27-docs-release-readiness.md)
 - [기술 문서 배포와 공급망 보안](./plans/2026-05-25-docs-site-supply-chain.md)
 - [DevTools 브라우저 검증](./plans/2026-05-25-devtools-browser-verification.md)
 - [DevTools UI 구현](./plans/2026-05-19-devtools-ui.md)

@@ -31,6 +31,8 @@ Vite 전용, main thread 전용 개발 도구를 제공하고, 실시간 transpo
 
 ## 문서
 
+공개 기술 문서는 <https://songforthemute.github.io/browse-sent-event/>에서 확인한다.
+
 - `docs/browse-sent-event-prd.md`
 - `docs/browse-sent-event-adr.md`
 - `docs/browse-sent-event-v2.md`
