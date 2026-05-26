@@ -3,7 +3,7 @@
 ## 요구사항
 
 - Node.js 20+
-- pnpm 9+
+- pnpm 11.2.2+
 
 ## 작업 흐름
 
@@ -16,8 +16,10 @@
 
 ```bash
 pnpm install
+pnpm docs:build
 pnpm build
 pnpm test
+pnpm test:e2e
 pnpm typecheck
 pnpm lint
 pnpm format:check
