@@ -11,7 +11,7 @@ export default defineConfig({
       { text: "문서", link: "/" },
       { text: "PRD", link: "/browse-sent-event-prd" },
       { text: "ADR", link: "/browse-sent-event-adr" },
-      { text: "계획", link: "/plans/2026-05-25-docs-site-supply-chain" },
+      { text: "계획", link: "/plans/2026-05-27-docs-release-readiness" },
     ],
     search: {
       provider: "local",
@@ -29,6 +29,10 @@ export default defineConfig({
       {
         text: "구현 계획",
         items: [
+          {
+            text: "문서 공개와 릴리즈 준비",
+            link: "/plans/2026-05-27-docs-release-readiness",
+          },
           {
             text: "기술 문서 배포와 공급망 보안",
             link: "/plans/2026-05-25-docs-site-supply-chain",

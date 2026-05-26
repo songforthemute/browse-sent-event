@@ -21,6 +21,12 @@
 - **왜 지금은 감당 가능한가:** CI는 panel mount, seeded data count, 실제 fetch stream/EventSource/WebSocket 수집 경로를 계속 검증한다. 시각 회귀는 macOS 기준 snapshot으로 로컬에서 유지된다.
 - **회수 시점:** Linux snapshot baseline을 생성해 커밋하거나, Playwright 실행 환경을 컨테이너/폰트까지 고정해 OS 차이를 제거할 때 회수한다.
 
+## 릴리즈 기준
+
+- 첫 npm 배포 전에는 기능 E2E 검증을 릴리즈 필수 조건으로 유지한다.
+- Linux CI 시각 snapshot 비교는 후속 회수 부채로 유지하되, 패널 UI가 공개 품질 기준의 핵심 표면이 되는 시점에는 릴리즈 차단 조건으로 격상한다.
+- export 검색어 필터 반영 여부는 별도 UX polish 작업에서 결정한다. 검색 결과와 export 결과의 불일치가 사용자 혼란을 만들 수 있으므로, 첫 공개 배포 전에는 해결하거나 README의 제한사항에 명시한다.
+
 ---
 
 ## 현재 코드 기준

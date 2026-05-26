@@ -18,8 +18,16 @@ WebSocket, HTTP stream, EventSource의 실시간 메시지 흐름을 관찰하�
 
 ## 남은 정리 작업
 
+### 릴리즈 전 필수 후보
+
 - export 검색어 필터 반영 부채 회수
-- UI polish, 위치 기억, 브라우저 검증 시나리오 확대
+- npm publish dry-run과 changeset 정책 확정
+
+### 후속 회수
+
+- UI polish와 위치 기억
+- Linux CI 시각 snapshot 비교 회수
+- 브라우저 검증 시나리오 확대
 
 ## Phase 1 목표
 
@@ -29,7 +37,30 @@ Vite 전용, main thread 전용 개발 도구를 제공하고, 실시간 transpo
 
 현재 개발/테스트 기준은 Vite 8.0.14와 Vitest 4.1.7이다. `packages/plugin-vite`는 Vite 공개 Plugin API만 사용하고, peer dependency 범위는 Vite 5.x부터 8.x까지로 둔다.
 
+## 설치와 Vite 사용법
+
+패키지 배포 후 Vite 앱에서는 plugin 패키지를 개발 의존성으로 설치한다.
+
+```bash
+pnpm add -D @browse-sent-event/plugin-vite
+```
+
+`vite.config.ts`에서 plugin을 추가한다.
+
+```ts
+import { defineConfig } from "vite";
+import browseSentEvent from "@browse-sent-event/plugin-vite";
+
+export default defineConfig({
+  plugins: [browseSentEvent()],
+});
+```
+
+Phase 1은 Vite 개발 서버, 브라우저 main thread, WebSocket/fetch ReadableStream/EventSource 수집을 우선 대상으로 한다. production build instrumentation과 browser extension 형태의 배포는 현재 범위에 포함하지 않는다.
+
 ## 문서
+
+공개 기술 문서는 <https://songforthemute.github.io/browse-sent-event/>에서 확인한다.
 
 - `docs/browse-sent-event-prd.md`
 - `docs/browse-sent-event-adr.md`

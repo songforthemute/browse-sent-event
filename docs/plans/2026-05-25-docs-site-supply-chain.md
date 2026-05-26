@@ -19,6 +19,12 @@
 1. 개발자가 읽을 기술 문서를 GitHub Pages로 배포한다.
 2. 문서 배포와 의존성 최신화 과정에 공급망 보안 게이트를 넣는다.
 
+## 진행 기록
+
+- 2026-05-25: VitePress 기반 문서 사이트와 GitHub Pages 배포 workflow를 추가했다.
+- 2026-05-25: GitHub Pages source를 `GitHub Actions`로 활성화한 뒤 `Docs` workflow를 수동 재실행했다.
+- 2026-05-25: 공개 URL `https://songforthemute.github.io/browse-sent-event/`가 HTTP `200`으로 응답하는 것을 확인했다.
+
 ## 현재 점검 결과
 
 확인 시각: 2026-05-25 07:59 UTC 기준.
