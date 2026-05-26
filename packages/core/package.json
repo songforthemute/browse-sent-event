@@ -1,16 +1,38 @@
 {
   "name": "@browse-sent-event/core",
+  "description": "Core runtime for observing WebSocket, fetch stream, and EventSource traffic in browser dev builds.",
   "version": "0.0.0",
   "files": [
     "dist"
   ],
   "type": "module",
+  "license": "MIT",
+  "homepage": "https://songforthemute.github.io/browse-sent-event/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/songforthemute/browse-sent-event.git",
+    "directory": "packages/core"
+  },
+  "bugs": {
+    "url": "https://github.com/songforthemute/browse-sent-event/issues"
+  },
+  "keywords": [
+    "devtools",
+    "eventsource",
+    "fetch",
+    "realtime",
+    "stream",
+    "websocket"
+  ],
   "sideEffects": false,
   "exports": {
     ".": {
       "types": "./dist/index.d.mts",
       "import": "./dist/index.mjs"
     }
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
     "build": "tsdown",
