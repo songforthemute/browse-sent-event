@@ -18,9 +18,16 @@
 | 배포 방식 | GitHub Actions `workflow` |
 | 공개 URL | `https://songforthemute.github.io/browse-sent-event/` |
 | Docs workflow | Pages 활성화 후 수동 재실행 성공 |
-| GitHub repo homepage | 정리 필요 |
+| GitHub repo homepage | `https://songforthemute.github.io/browse-sent-event/` |
 | 배포 대상 패키지 | `@browse-sent-event/core`, `@browse-sent-event/plugin-vite` |
 | 루트 패키지 | `private: true` 유지 |
+
+## 진행 기록
+
+- 2026-05-27: 문서 배포 상태를 README와 VitePress 홈에 반영했다.
+- 2026-05-27: `@browse-sent-event/core`, `@browse-sent-event/plugin-vite`의 배포 metadata를 정리했다.
+- 2026-05-27: GitHub repo homepage를 공개 문서 URL로 설정했다.
+- 2026-05-27: 릴리즈 전 필수 후보와 후속 회수 부채를 분리했다.
 
 ## 판단 기준
 

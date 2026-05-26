@@ -18,8 +18,16 @@ WebSocket, HTTP stream, EventSource의 실시간 메시지 흐름을 관찰하�
 
 ## 남은 정리 작업
 
+### 릴리즈 전 필수 후보
+
 - export 검색어 필터 반영 부채 회수
-- UI polish, 위치 기억, 브라우저 검증 시나리오 확대
+- npm publish dry-run과 changeset 정책 확정
+
+### 후속 회수
+
+- UI polish와 위치 기억
+- Linux CI 시각 snapshot 비교 회수
+- 브라우저 검증 시나리오 확대
 
 ## Phase 1 목표
 
