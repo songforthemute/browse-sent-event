@@ -23,6 +23,7 @@ outline: deep
 - [제품 요구사항](./browse-sent-event-prd.md)
 - [아키텍처 결정 기록](./browse-sent-event-adr.md)
 - [v2 설계 메모](./browse-sent-event-v2.md)
+- [npm 배포 가이드](./release/npm-publish.md)
 
 ## 최근 구현 계획
 

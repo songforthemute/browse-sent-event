@@ -27,6 +27,10 @@ export default defineConfig({
         ],
       },
       {
+        text: "릴리즈",
+        items: [{ text: "npm 배포", link: "/release/npm-publish" }],
+      },
+      {
         text: "구현 계획",
         items: [
           {
