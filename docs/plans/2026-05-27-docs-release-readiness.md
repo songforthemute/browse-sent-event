@@ -28,6 +28,7 @@
 - 2026-05-27: `@browse-sent-event/core`, `@browse-sent-event/plugin-vite`의 배포 metadata를 정리했다.
 - 2026-05-27: GitHub repo homepage를 공개 문서 URL로 설정했다.
 - 2026-05-27: 릴리즈 전 필수 후보와 후속 회수 부채를 분리했다.
+- 2026-06-03: 릴리즈 전 필수 후보였던 export 검색어 필터 반영 부채를 회수했다.
 
 ## 판단 기준
 

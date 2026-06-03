@@ -20,7 +20,6 @@ WebSocket, HTTP stream, EventSource의 실시간 메시지 흐름을 관찰하�
 
 ### 릴리즈 전 필수 후보
 
-- export 검색어 필터 반영 부채 회수
 - npm publish dry-run과 changeset 정책 확정
 
 ### 후속 회수

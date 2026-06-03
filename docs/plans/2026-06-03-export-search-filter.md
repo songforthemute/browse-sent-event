@@ -16,6 +16,12 @@
 
 이 부채는 이전 DevTools UI 계획에서 의식적으로 남긴 항목이며, 첫 공개 배포 전에는 해결하거나 제한사항으로 명시해야 한다고 기록되어 있다. 기능을 숨기기보다 코드 경계를 맞춰서 회수한다.
 
+## 진행 기록
+
+- 2026-06-03: engine export API가 `BrowseSentEventSearchQuery`를 받도록 확장했다.
+- 2026-06-03: DevTools panel `requestExport()`가 현재 query를 engine export에 전달하도록 연결했다.
+- 2026-06-03: README와 기존 계획 문서의 export 검색어 필터 부채 기록을 회수 상태로 갱신했다.
+
 ## 현재 코드 기준
 
 | 영역 | 파일 | 현재 상태 |
