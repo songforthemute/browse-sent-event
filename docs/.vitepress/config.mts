@@ -34,6 +34,10 @@ export default defineConfig({
         text: "구현 계획",
         items: [
           {
+            text: "문서 SPA 인터랙티브 예제 데모",
+            link: "/plans/2026-06-03-docs-interactive-demo",
+          },
+          {
             text: "npm 배포 준비",
             link: "/plans/2026-06-03-npm-publish-readiness",
           },

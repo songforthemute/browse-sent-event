@@ -27,6 +27,7 @@ outline: deep
 
 ## 최근 구현 계획
 
+- [문서 SPA 인터랙티브 예제 데모](./plans/2026-06-03-docs-interactive-demo.md)
 - [npm 배포 준비](./plans/2026-06-03-npm-publish-readiness.md)
 - [Export 검색어 필터 회수](./plans/2026-06-03-export-search-filter.md)
 - [문서 공개와 릴리즈 준비](./plans/2026-05-27-docs-release-readiness.md)
