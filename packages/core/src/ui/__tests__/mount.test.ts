@@ -160,4 +160,55 @@ describe("mountDevtoolsPanel", () => {
 
     mounted.unmount();
   });
+
+  it("dispatches export content filtered by query", () => {
+    const engine = createDevtoolsEngine({ capacity: 10 });
+    const mounted = mountDevtoolsPanel({
+      engine,
+      options: {
+        autoOpen: true,
+        hotkey: "cmd+shift+r",
+        position: "bottom-right",
+      },
+      target: globalThis.window,
+    });
+    const connection = engine.recordConnection({
+      protocol: "websocket",
+      url: "wss://example.test/socket",
+    });
+
+    engine.recordMessage({
+      connectionId: connection.id,
+      direction: "in",
+      protocol: "websocket",
+      payload: "keep this message",
+    });
+    engine.recordMessage({
+      connectionId: connection.id,
+      direction: "in",
+      protocol: "websocket",
+      payload: "skip this message",
+    });
+
+    const exports: unknown[] = [];
+
+    mounted.element.addEventListener("bse-export", (event) => {
+      if (event instanceof globalThis.CustomEvent) {
+        exports.push(event.detail);
+      }
+    });
+
+    Reflect.get(mounted.element, "setQuery")?.call(mounted.element, "keep");
+    Reflect.get(mounted.element, "requestExport")?.call(mounted.element, "jsonl");
+
+    expect(exports).toEqual([
+      expect.objectContaining({
+        content: expect.stringContaining("keep this message"),
+        format: "jsonl",
+      }),
+    ]);
+    expect((exports[0] as { content: string }).content).not.toContain("skip this message");
+
+    mounted.unmount();
+  });
 });
