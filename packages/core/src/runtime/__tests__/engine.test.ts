@@ -47,10 +47,20 @@ describe("createDevtoolsEngine", () => {
       protocol: "fetch-stream",
       payload: "First Token",
     });
+    engine.recordMessage({
+      connectionId: connection.id,
+      direction: "in",
+      protocol: "fetch-stream",
+      payload: "Ignored Chunk",
+    });
 
     expect(engine.search({ text: "token" })).toHaveLength(1);
     expect(engine.exportJsonl()).toContain('"payload":"First Token"');
     expect(engine.exportLog()).toContain("IN [fetch-stream]");
+    expect(engine.exportJsonl({ text: "token" })).toContain('"payload":"First Token"');
+    expect(engine.exportJsonl({ text: "token" })).not.toContain('"payload":"Ignored Chunk"');
+    expect(engine.exportLog({ text: "token" })).toContain("First Token");
+    expect(engine.exportLog({ text: "token" })).not.toContain("Ignored Chunk");
   });
 
   it("reports metrics and dropped messages", () => {

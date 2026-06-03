@@ -1538,6 +1538,10 @@ git status --short
 | export가 검색어 query를 반영하지 않음 | 화면 검색 결과와 export 결과의 완전한 일치 | 현재 engine export API는 `BrowseSentEventMessageFilter` 기반이라 `query/text`를 받지 않는다. 이번 배치에서는 `connectionId`와 `direction` 필터까지만 export에 반영해 기능 경계를 먼저 연결한다 | 검색/export UX polish에서 engine export API를 `BrowseSentEventSearchQuery` 기반으로 확장하거나, panel의 filtered view model 결과를 export하는 설계를 선택할 때 |
 | Shadow DOM 화면 품질 수동 확인 | 자동 screenshot 회귀 | 이번 계획은 core package 단위 MVP이며, browser fixture는 별도 계획으로 분리하는 편이 안전 | DevTools UI polish 또는 demo fixture 계획 |
 
+### 부채 회수 기록
+
+- 2026-06-03: export가 검색어 query를 반영하지 않던 부채를 engine export API와 panel export 연결을 통해 회수했다.
+
 ## 완료 기준
 
 - `installBrowseSentEvent()` 호출 후 `bse-devtools-panel`이 mount된다.

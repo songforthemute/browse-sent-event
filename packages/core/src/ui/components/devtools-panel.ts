@@ -6,10 +6,7 @@ import {
   type PropertyDeclarations,
   type TemplateResult,
 } from "lit";
-import type {
-  BrowseSentEventDirection,
-  BrowseSentEventMessageFilter,
-} from "../../runtime/events.js";
+import type { BrowseSentEventDirection, BrowseSentEventSearchQuery } from "../../runtime/events.js";
 import type {
   BrowseSentEventEngine,
   BrowseSentEventEngineSnapshot,
@@ -538,12 +535,13 @@ export class BrowseSentEventDevtoolsPanelElement extends LitElement {
       return;
     }
 
-    const filter: BrowseSentEventMessageFilter = {
+    const query: BrowseSentEventSearchQuery = {
       connectionId: this.selectedConnectionId,
       direction: this.direction,
+      text: this.query || undefined,
     };
     const content =
-      format === "jsonl" ? this.engine.exportJsonl(filter) : this.engine.exportLog(filter);
+      format === "jsonl" ? this.engine.exportJsonl(query) : this.engine.exportLog(query);
 
     this.dispatchEvent(
       new globalThis.CustomEvent("bse-export", {
