@@ -64,8 +64,8 @@ export interface BrowseSentEventEngine {
   getMessages(filter?: BrowseSentEventMessageFilter): BrowseSentEventMessage[];
   getMetrics(connectionId?: string): BrowseSentEventMetrics;
   search(query: BrowseSentEventSearchQuery): BrowseSentEventMessage[];
-  exportJsonl(filter?: BrowseSentEventMessageFilter): string;
-  exportLog(filter?: BrowseSentEventMessageFilter): string;
+  exportJsonl(query?: BrowseSentEventSearchQuery): string;
+  exportLog(query?: BrowseSentEventSearchQuery): string;
   clear(): void;
 }
 
@@ -263,8 +263,12 @@ export function createDevtoolsEngine(options: BrowseSentEventEngineOptions): Bro
     });
   }
 
-  function exportJsonl(filter?: BrowseSentEventMessageFilter): string {
-    return getMessages(filter)
+  function getExportMessages(query?: BrowseSentEventSearchQuery): BrowseSentEventMessage[] {
+    return query ? search(query) : getMessages();
+  }
+
+  function exportJsonl(query?: BrowseSentEventSearchQuery): string {
+    return getExportMessages(query)
       .map((message) =>
         JSON.stringify({
           ...message,
@@ -274,8 +278,8 @@ export function createDevtoolsEngine(options: BrowseSentEventEngineOptions): Bro
       .join("\n");
   }
 
-  function exportLog(filter?: BrowseSentEventMessageFilter): string {
-    return getMessages(filter)
+  function exportLog(query?: BrowseSentEventSearchQuery): string {
+    return getExportMessages(query)
       .map((message) => {
         const timestamp = message.timestamp.toFixed(3);
 
