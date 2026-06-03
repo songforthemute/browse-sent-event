@@ -6,10 +6,7 @@ import {
   type PropertyDeclarations,
   type TemplateResult,
 } from "lit";
-import type {
-  BrowseSentEventDirection,
-  BrowseSentEventSearchQuery,
-} from "../../runtime/events.js";
+import type { BrowseSentEventDirection, BrowseSentEventSearchQuery } from "../../runtime/events.js";
 import type {
   BrowseSentEventEngine,
   BrowseSentEventEngineSnapshot,
