@@ -26,6 +26,7 @@ outline: deep
 
 ## 최근 구현 계획
 
+- [npm 배포 준비](./plans/2026-06-03-npm-publish-readiness.md)
 - [Export 검색어 필터 회수](./plans/2026-06-03-export-search-filter.md)
 - [문서 공개와 릴리즈 준비](./plans/2026-05-27-docs-release-readiness.md)
 - [기술 문서 배포와 공급망 보안](./plans/2026-05-25-docs-site-supply-chain.md)
