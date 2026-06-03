@@ -207,7 +207,11 @@ describe("mountDevtoolsPanel", () => {
         format: "jsonl",
       }),
     ]);
-    expect((exports[0] as { content: string }).content).not.toContain("skip this message");
+    expect(exports).toEqual([
+      expect.objectContaining({
+        content: expect.not.stringContaining("skip this message"),
+      }),
+    ]);
 
     mounted.unmount();
   });
