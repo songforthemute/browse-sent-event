@@ -1,3 +1,4 @@
+import { fileURLToPath, URL } from "node:url";
 import { defineConfig } from "vitepress";
 
 export default defineConfig({
@@ -6,6 +7,15 @@ export default defineConfig({
   base: "/browse-sent-event/",
   cleanUrls: true,
   lastUpdated: true,
+  vite: {
+    resolve: {
+      alias: {
+        "@browse-sent-event/core": fileURLToPath(
+          new URL("../../packages/core/src/index.ts", import.meta.url),
+        ),
+      },
+    },
+  },
   themeConfig: {
     nav: [
       { text: "문서", link: "/" },
@@ -29,6 +39,10 @@ export default defineConfig({
       {
         text: "릴리즈",
         items: [{ text: "npm 배포", link: "/release/npm-publish" }],
+      },
+      {
+        text: "예제",
+        items: [{ text: "DevTools panel", link: "/examples/devtools-panel" }],
       },
       {
         text: "구현 계획",
