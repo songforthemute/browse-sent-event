@@ -768,14 +768,16 @@ browse-sent-event의 특수성이 이 결정에 영향을 준다.
 | 포매터 | Oxfmt | ADR-016 |
 | 테스트 | Vitest | ADR-006 |
 
-**2026-05-18 구현 점검, 2026-05-25 최신화:**
+**2026-05-18 구현 점검, 2026-05-25 최신화, 2026-06-06 보안 패치 정렬:**
 
 Vite 8 전환 후 번들러 영향 의존성은 다음과 같이 정렬한다.
 
 - `vite 8.0.14`는 `rolldown 1.0.2`, `lightningcss 1.32.0`을 사용한다.
-- `vitest 4.1.7`은 peer 경로에서 `vite 8.0.14`를 사용한다.
+- `vitest 4.1.8`은 peer 경로에서 `vite 8.0.14`를 사용한다.
 - `tsdown 0.22.0`은 `rolldown 1.0.1`을 사용한다.
 - 현재 설치 그래프에는 `rollup`과 `esbuild`가 남아 있지 않다.
+
+2026-06-06 점검 기준으로 Vitest 관련 advisory는 `GHSA-5xrq-8626-4rwp`, `GHSA-2h32-95rg-cppp`, `GHSA-9crc-q9x8-hgqq`, `GHSA-8gvc-j273-4wm5`를 확인했다. 현재 사용 버전은 알려진 영향 범위 밖이며, Browser Mode와 Vitest UI를 사용하지 않는다. 그래도 release gate에서는 `pnpm audit --audit-level moderate`를 유지하고, 보안 패치선보다 뒤처진 경우 publish 후보에서 제외한다.
 
 이에 따라 `plugin-vite`는 Vite 공개 Plugin API를 기준으로 작성하고, Vite 8에서 deprecated 경로가 된 `transformWithEsbuild`, `optimizeDeps.esbuildOptions`, `build.minify: 'esbuild'`, `build.cssMinify: 'esbuild'`에 의존하지 않는다. Rollup 전용 출력 조정이 필요하면 `build.rollupOptions`보다 `build.rolldownOptions`를 먼저 검토한다.
 

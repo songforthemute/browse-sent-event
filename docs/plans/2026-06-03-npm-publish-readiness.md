@@ -22,6 +22,7 @@
 | Changesets | `.changeset/config.json`, `access: public`, `baseBranch: main` | 기본 설정은 있음 |
 | release workflow | 없음 | ADR-009 결정과 구현 사이에 gap 있음 |
 | npm registry 조회 | 2026-06-03 15:35 KST 기준 세 package name 모두 `E404` | 미게시 또는 권한 없음. 배포 직전 재확인 필요 |
+| Vitest 보안 점검 | 2026-06-06 KST 기준 `vitest@4.1.8` | 알려진 Vitest advisory 영향 범위 밖. Browser Mode/UI 미사용 |
 
 조회한 이름:
 
@@ -42,6 +43,20 @@ npm view browse-sent-event name version description --json
 5. npm 공급망 공격 대응을 위해 lockfile, audit, minimum release age, exotic dependency 차단, install script 점검을 release gate에 포함한다.
 6. npm scope 소유권과 publish 권한은 코드로 증명할 수 없으므로 publish 전 수동 확인 gate로 둔다.
 7. 첫 공개 배포는 PRD의 권장 릴리스 단계에 맞춰 `alpha`로 시작한다. stable은 별도 Release Criteria를 통과한 뒤 전환한다.
+8. test runner도 배포 gate의 일부로 본다. Vitest advisory가 발생하면 현재 lockfile 버전이 patched range 이후인지 확인하고, `@vitest/browser`/Vitest UI/Browser Mode 사용 여부를 함께 점검한다.
+
+## Vitest advisory 후속 점검
+
+확인 시각: 2026-06-06 KST 기준.
+
+| advisory | 패키지 | 영향 범위 | 패치 버전 | 현재 판단 |
+| --- | --- | --- | --- | --- |
+| `GHSA-5xrq-8626-4rwp` / `CVE-2026-47429` | `vitest` | `<3.2.5`, `>=4.0.0 <4.1.0` | `3.2.5`, `4.1.0` | `vitest@4.1.8`이라 영향 없음 |
+| `GHSA-2h32-95rg-cppp` / `CVE-2026-47428` | `@vitest/browser` | `>=4.0.17 <4.1.6`, `>=5.0.0-beta.0 <5.0.0-beta.3` | `4.1.6`, `5.0.0-beta.3` | Browser Mode 미사용, 영향 없음 |
+| `GHSA-9crc-q9x8-hgqq` / `CVE-2025-24964` | `vitest` | 1.x, 2.x, 3.0.0~3.0.4 일부 | `1.6.1`, `2.1.9`, `3.0.5` | `vitest@4.1.8`이라 영향 없음 |
+| `GHSA-8gvc-j273-4wm5` / `CVE-2025-24963` | `vitest` Browser Mode | `2.0.4~2.1.8`, `3.0.0~3.0.3` | `2.1.9`, `3.0.4` | Browser Mode 미사용, 영향 없음 |
+
+현재 `vitest.config.ts`는 `happy-dom` 환경만 사용하고, repository에는 `@vitest/browser`와 `@vitest/ui` 직접 의존성이 없다. `pnpm audit --audit-level moderate`는 advisory 0건을 반환했다.
 
 ## 구현 계획
 
@@ -609,6 +624,7 @@ gh pr checks <release-pr-number>
 - npm 계정이 `@browse-sent-event` scope publish 권한을 갖는지 확인되지 않았다.
 - `npm view` 결과에서 같은 package name이 다른 owner에 의해 점유되어 있다.
 - `pnpm audit --audit-level moderate`가 실패한다.
+- Vitest/Vite/VitePress 등 개발 서버 계열 도구가 공개 advisory의 영향 범위에 있다.
 - `pnpm peers check`가 실패한다.
 - `pnpm pack:check`가 실패한다.
 - `npm publish --dry-run`이 실패한다.
