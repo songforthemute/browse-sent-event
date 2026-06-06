@@ -38,6 +38,10 @@ outline: deep
 - [프로토콜 인터셉터 구현](./plans/2026-05-19-protocol-interceptors.md)
 - [Vite 8 정렬](./plans/2026-05-18-vite-8-alignment.md)
 
+## 예제
+
+- [DevTools panel 예제](./examples/devtools-panel.md)
+
 ## 개발 명령
 
 ```bash
