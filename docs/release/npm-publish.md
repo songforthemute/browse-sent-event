@@ -60,6 +60,15 @@ pnpm peers check
 
 설치 단계에서 새 install script, exotic dependency, lockfile 변동이 생기면 원인을 먼저 문서화한다.
 
+2026-06-06 KST 기준 Vitest 보안 점검 결과:
+
+- `vitest@4.1.8`은 확인한 Vitest advisory의 patched range 이후 버전이다.
+- `@vitest/browser`와 `@vitest/ui`는 현재 직접 사용하지 않는다.
+- `vitest.config.ts`는 `happy-dom` 환경만 사용하며 Browser Mode를 켜지 않는다.
+- 확인한 advisory는 `GHSA-5xrq-8626-4rwp`, `GHSA-2h32-95rg-cppp`, `GHSA-9crc-q9x8-hgqq`, `GHSA-8gvc-j273-4wm5`다.
+
+release 후보를 만들 때 Vitest/Vite/VitePress 같은 개발 서버 계열 도구에 새 advisory가 있으면, patched range와 실제 사용 모드를 확인하기 전까지 publish하지 않는다.
+
 ### 3. 기능 검증
 
 ```bash
@@ -196,6 +205,7 @@ stable `1.0.0` 이후에는 일반 SemVer 기준으로 전환한다.
 - npm 계정이 `@browse-sent-event` scope publish 권한을 갖는지 확인되지 않았다.
 - 같은 package name이 의도하지 않은 owner에게 점유되어 있다.
 - `pnpm audit --audit-level moderate`가 실패한다.
+- Vitest/Vite/VitePress 등 개발 서버 계열 도구가 공개 advisory의 영향 범위에 있다.
 - `pnpm peers check`가 실패한다.
 - pack tarball에 README 또는 license 정보가 없다.
 - `@browse-sent-event/plugin-vite` tarball의 dependency가 `workspace:*`로 남아 있다.

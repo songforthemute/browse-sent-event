@@ -24,6 +24,7 @@
 - 2026-05-25: VitePress 기반 문서 사이트와 GitHub Pages 배포 workflow를 추가했다.
 - 2026-05-25: GitHub Pages source를 `GitHub Actions`로 활성화한 뒤 `Docs` workflow를 수동 재실행했다.
 - 2026-05-25: 공개 URL `https://songforthemute.github.io/browse-sent-event/`가 HTTP `200`으로 응답하는 것을 확인했다.
+- 2026-06-06: Vitest advisory 후속 점검을 수행하고, 영향 범위 밖인 `vitest@4.1.8`로 최신 패치 정렬했다.
 
 ## 현재 점검 결과
 
@@ -41,6 +42,19 @@
 | `vitepress` | 없음 | `2.0.0-alpha.17` | `2026-03-19T17:06:38.837Z` | 문서 사이트 후보 |
 
 모든 후보는 `npm view` 기준 `dist.integrity`와 `dist.signatures`를 가진다. 현재 lockfile 기준 `pnpm audit --json`은 advisory 0건이다.
+
+### 2026-06-06 Vitest advisory 후속 점검
+
+확인한 advisory는 다음과 같다.
+
+| advisory | 패키지 | 판단 |
+| --- | --- | --- |
+| `GHSA-5xrq-8626-4rwp` / `CVE-2026-47429` | `vitest` | patched range 이후 버전 사용 |
+| `GHSA-2h32-95rg-cppp` / `CVE-2026-47428` | `@vitest/browser` | Browser Mode 미사용 |
+| `GHSA-9crc-q9x8-hgqq` / `CVE-2025-24964` | `vitest` | 4.x 최신 패치선이라 영향 없음 |
+| `GHSA-8gvc-j273-4wm5` / `CVE-2025-24963` | `vitest` Browser Mode | Browser Mode 미사용 |
+
+후속 조치로 root `vitest` dev dependency를 `^4.1.8`로 갱신한다. 이 버전은 2026-06-01 UTC에 게시되어 현재 `minimumReleaseAge: 1440` 기준을 통과한다. release 후보 검증에서는 `pnpm audit --audit-level moderate`와 Browser Mode/UI 사용 여부 점검을 계속 유지한다.
 
 ## 구현 계획
 
