@@ -4,7 +4,7 @@
 
 **목표:** `@browse-sent-event/core`와 `@browse-sent-event/plugin-vite`를 첫 npm alpha 배포 후보로 만들기 전에, tarball 산출물, Changesets 정책, 공급망 보안 gate, dry-run 검증 절차를 확정한다.
 
-**아키텍처:** 실제 publish는 이 계획의 마지막 검증이 통과하고 npm scope 권한이 확인된 뒤 별도 승인으로만 수행한다. 배포 대상은 `packages/*` 하위의 두 public package로 제한하고, root workspace는 `private: true`를 유지한다. `tsdown`이 `dist`를 생성하고, Changesets가 version bump와 changelog를 관리하며, GitHub Actions release workflow는 배포 가능한 main만 대상으로 한다.
+**아키텍처:** 실제 publish는 이 계획의 마지막 검증이 통과하고 npm scope 권한이 확인된 뒤 maintainer가 수동으로만 수행한다. 배포 대상은 `packages/*` 하위의 두 public package로 제한하고, root workspace는 `private: true`를 유지한다. `tsdown`이 `dist`를 생성하고, Changesets가 version bump와 changelog 후보를 관리한다. GitHub Actions는 release readiness 검증까지만 담당하며 npm publish 권한을 갖지 않는다.
 
 **기술 스택:** pnpm 11, Changesets, Turborepo, tsdown, TypeScript 6, Vite 8, Vitest 4, GitHub Actions, npm registry.
 
@@ -17,13 +17,13 @@
 | root package | `private: true`, `pnpm@11.2.2` | 배포 대상 아님 |
 | core package | `@browse-sent-event/core@0.0.0` | 첫 배포 전 version 정책 필요 |
 | Vite plugin package | `@browse-sent-event/plugin-vite@0.0.0` | `@browse-sent-event/core`와 함께 배포 필요 |
-| package files | `["dist"]` | README/LICENSE 포함 여부를 pack 결과로 확인해야 함 |
+| package files | `["dist", "README.md", "LICENSE"]` | `pnpm pack:check`로 tarball 포함 여부 검증 |
 | build output | `dist/index.mjs`, `dist/index.d.mts`, sourcemap | `.gitignore` 대상이므로 publish 전 build 필수 |
 | Changesets | `.changeset/config.json`, `access: public`, `baseBranch: main` | 기본 설정은 있음 |
-| release workflow | 없음 | ADR-009 결정과 구현 사이에 gap 있음 |
+| release publish workflow | 없음 | 의도된 상태. npm publish는 maintainer 수동 실행만 허용 |
 | npm registry 조회 | 2026-06-03 15:35 KST 기준 세 package name 모두 `E404` | 미게시 또는 권한 없음. 배포 직전 재확인 필요 |
 | Vitest 보안 점검 | 2026-06-06 KST 기준 `vitest@4.1.8` | 알려진 Vitest advisory 영향 범위 밖. Browser Mode/UI 미사용 |
-| package tarball gate | 2026-06-07 KST 기준 `pnpm pack:check` 추가 중 | README/LICENSE 포함과 publish manifest 검증을 CI gate로 올림 |
+| package tarball gate | 2026-06-07 KST 기준 `pnpm pack:check` 추가됨 | README/LICENSE 포함과 publish manifest 검증을 CI gate로 올림 |
 
 조회한 이름:
 
@@ -45,6 +45,7 @@ npm view browse-sent-event name version description --json
 6. npm scope 소유권과 publish 권한은 코드로 증명할 수 없으므로 publish 전 수동 확인 gate로 둔다.
 7. 첫 공개 배포는 PRD의 권장 릴리스 단계에 맞춰 `alpha`로 시작한다. stable은 별도 Release Criteria를 통과한 뒤 전환한다.
 8. test runner도 배포 gate의 일부로 본다. Vitest advisory가 발생하면 현재 lockfile 버전이 patched range 이후인지 확인하고, `@vitest/browser`/Vitest UI/Browser Mode 사용 여부를 함께 점검한다.
+9. GitHub Actions에는 `NPM_TOKEN`, trusted publishing, `pnpm changeset publish`를 연결하지 않는다. publish 권한은 maintainer 수동 실행으로만 유지한다.
 
 ## Vitest advisory 후속 점검
 
@@ -94,7 +95,7 @@ npm view browse-sent-event name version description --json
 4. pack tarball 검사
 5. `npm publish --dry-run`
 6. Changesets version PR 생성
-7. release workflow publish 또는 수동 publish 승인
+7. maintainer 수동 publish 승인
 
 **단계 4: 문서 네비게이션 연결**
 
@@ -343,7 +344,7 @@ git commit -m "test(release): 패키지 tarball 검증 추가"
 | public API 추가, 제거, 타입 변경 | 필요 |
 | runtime 동작 변경 | 필요 |
 | Vite plugin 사용자 동작 변경 | 필요 |
-| package metadata, README, release workflow | 필요 없음 |
+| package metadata, README, release 검증 workflow | 필요 없음 |
 | docs site 문서만 변경 | 필요 없음 |
 | test, lint, CI 검증만 변경 | 필요 없음 |
 
@@ -395,86 +396,46 @@ git add .changeset/README.md docs/release/npm-publish.md docs/browse-sent-event-
 git commit -m "docs(release): changeset 배포 정책 정리"
 ```
 
-### 작업 5: release workflow 초안 추가
+### 작업 5: 수동 publish gate 문서화
 
 **파일:**
-- 생성: `.github/workflows/release.yml`
 - 수정: `docs/release/npm-publish.md`
 - 수정: `docs/browse-sent-event-adr.md`
 
-**단계 1: publish 인증 방식 결정 gate 작성**
+**단계 1: 자동 publish 금지 원칙 작성**
 
-문서에 두 방식 중 하나만 선택하도록 명시한다.
+문서에 다음 원칙을 명시한다.
 
-| 방식 | 조건 | 주의 |
-| --- | --- | --- |
-| `NPM_TOKEN` | npm automation token을 GitHub secret으로 등록 | token rotation과 최소 권한 관리 필요 |
-| npm trusted publishing | npm package와 GitHub workflow를 trusted publisher로 연결 | `id-token: write` 권한이 필요하며 workflow 오염 방지 gate가 중요 |
+- npm publish는 maintainer가 로컬에서 수동으로만 실행한다.
+- GitHub Actions에는 `NPM_TOKEN`, trusted publishing, publish 권한을 연결하지 않는다.
+- Changesets는 version/changelog 후보 생성까지만 사용한다.
 
-둘을 동시에 활성화하지 않는다.
+**단계 2: 수동 publish 명령과 차단 조건 보강**
 
-**단계 2: workflow 초안 작성**
+`docs/release/npm-publish.md`에 최종 승인 시점의 수동 명령을 남긴다.
 
-`release.yml`은 `main` push와 `workflow_dispatch`에서만 실행한다.
-
-필수 속성:
-
-```yaml
-permissions:
-  contents: write
-  pull-requests: write
+```bash
+npm publish ./packages/core --access public
+npm publish ./packages/plugin-vite --access public
 ```
 
-trusted publishing을 선택한 경우에만 다음 권한을 추가한다.
+publish 차단 조건에는 maintainer 수동 승인 부재와 GitHub Actions publish 권한 연결을 포함한다.
 
-```yaml
-id-token: write
-```
+**단계 3: ADR 정합성 확인**
 
-필수 단계:
-
-1. checkout, `fetch-depth: 0`, `persist-credentials: false`
-2. Node.js `24.13.0`
-3. `corepack prepare pnpm@11.2.2 --activate`
-4. `pnpm install --frozen-lockfile`
-5. `pnpm audit --audit-level moderate`
-6. `pnpm peers check`
-7. `pnpm test`
-8. `pnpm exec turbo run typecheck --force`
-9. `pnpm exec turbo run build --force`
-10. `pnpm pack:check`
-11. Changesets action
-
-Changesets action 초안:
-
-```yaml
-- name: Create release PR or publish
-  uses: changesets/action@v1
-  with:
-    publish: pnpm changeset publish
-    createGithubReleases: true
-  env:
-    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-```
-
-trusted publishing을 채택하면 `NPM_TOKEN` 대신 npm 공식 문서에 맞춰 `pnpm changeset publish`가 provenance를 사용하도록 조정한다. 이 부분은 구현 시점의 npm 공식 문서를 확인한 뒤 확정한다.
-
-**단계 3: workflow와 ADR 정합성 확인**
-
-ADR-009의 Release workflow 설명이 실제 workflow와 어긋나지 않게 보정한다.
+ADR-009의 자동 publish 전제를 manual publish gate로 보정한다.
 
 **의식적 부채:**
 
-- 포기하는 것: release workflow 추가와 동시에 실제 npm publish까지 수행하는 것.
-- 감당 가능한 이유: publish 권한, scope 소유권, package tarball, dry-run 검증은 repo 안팎의 상태를 함께 요구한다. workflow 초안과 dry-run gate를 먼저 만들면 실제 배포 전 위험을 줄일 수 있다.
-- 회수 시점: npm scope 권한 확인, release secret 또는 trusted publisher 설정, `npm publish --dry-run` 통과 후 첫 alpha publish 승인 시점.
+- 포기하는 것: Changesets action 또는 GitHub Actions를 통한 자동 npm publish.
+- 감당 가능한 이유: 첫 alpha 전에는 publish 권한, scope 소유권, registry 상태를 maintainer가 직접 확인하는 편이 위험이 낮다. CI는 이미 build/test/pack gate를 검증한다.
+- 회수 시점: maintainer가 자동 publish를 허용하기로 별도 결정하고, secret/trusted publishing 운영 정책이 문서화된 시점.
 
 **커밋:**
 
 ```bash
-git add .github/workflows/release.yml docs/release/npm-publish.md docs/browse-sent-event-adr.md
-git commit -m "ci(release): changesets 배포 워크플로 초안 추가"
+git add .changeset/README.md docs/release/npm-publish.md docs/browse-sent-event-adr.md docs/plans/2026-06-03-npm-publish-readiness.md
+git commit -m "docs(release): 수동 배포 정책 정리"
 ```
 
 ### 작업 6: 첫 alpha dry-run 실행
@@ -613,15 +574,14 @@ npm publish ./packages/plugin-vite --dry-run --access public
 ### GitHub 검증
 
 ```bash
-gh workflow view release.yml --repo songforthemute/browse-sent-event
 gh pr checks <release-pr-number>
 ```
 
 기대 결과:
 
-- release workflow가 repository에서 인식된다.
-- release PR 또는 dry-run PR의 CI가 통과한다.
-- 실제 publish 권한이 필요한 단계는 secret/trusted publisher 설정 전에는 실행하지 않는다.
+- release 후보 PR의 CI가 통과한다.
+- GitHub Actions에 npm publish 권한이 연결되어 있지 않다.
+- 실제 publish 명령은 maintainer가 수동 승인 후 로컬에서만 실행한다.
 
 ## 실제 publish 전 차단 조건
 
@@ -636,7 +596,8 @@ gh pr checks <release-pr-number>
 - `npm publish --dry-run`이 실패한다.
 - package tarball에 README 또는 license 정보가 없다.
 - `@browse-sent-event/plugin-vite` tarball의 dependency가 `workspace:*`로 남아 있다.
-- GitHub Actions release workflow의 publish 인증 방식이 하나로 확정되지 않았다.
+- maintainer가 직접 publish를 승인하지 않았다.
+- GitHub Actions 또는 repository secret에 npm publish 권한이 연결되어 있다.
 
 ## 후속 전략
 

@@ -1,15 +1,16 @@
 # npm 배포 가이드
 
-`browse-sent-event`의 npm 배포는 첫 alpha 공개 전까지 dry-run과 승인 gate를 통과해야 한다. 이 문서는 실제 publish를 누르기 전 확인해야 할 절차를 한곳에 모은다.
+`browse-sent-event`의 npm 배포는 첫 alpha 공개 전까지 dry-run과 승인 gate를 통과해야 한다. 실제 publish는 자동화하지 않고 maintainer가 수동으로만 실행한다. 이 문서는 실제 publish를 누르기 전 확인해야 할 절차를 한곳에 모은다.
 
 ## 현재 원칙
 
-1. 실제 publish는 별도 승인 없이는 수행하지 않는다.
+1. 실제 publish는 maintainer가 로컬에서 수동으로만 수행한다.
 2. 배포 대상은 `packages/*` 하위 public package로 제한한다.
 3. root workspace와 examples, docs는 npm publish 대상이 아니다.
 4. user-visible package 변경은 Changesets 기록을 요구한다.
 5. npm scope 권한, registry 상태, tarball 내용은 배포 직전에 다시 확인한다.
 6. 공급망 보안 gate를 통과하지 못하면 publish하지 않는다.
+7. GitHub Actions에는 npm publish 권한, `NPM_TOKEN`, trusted publishing 설정을 두지 않는다.
 
 ## 배포 대상
 
@@ -156,36 +157,38 @@ changeset 예시:
 
 version 적용 후에는 다시 build, pack, dry-run을 실행한다.
 
-### 7. release workflow publish 또는 수동 publish 승인
+### 7. maintainer 수동 publish 승인
 
-실제 publish 방식은 다음 중 하나로 확정한다.
-
-| 방식                   | 조건                                                     | 주의                                                  |
-| ---------------------- | -------------------------------------------------------- | ----------------------------------------------------- |
-| `NPM_TOKEN`            | npm automation token을 GitHub secret으로 등록            | token rotation과 최소 권한 관리 필요                  |
-| npm trusted publishing | npm package와 GitHub workflow를 trusted publisher로 연결 | `id-token: write` 권한과 workflow 오염 방지 gate 필요 |
-
-둘을 동시에 활성화하지 않는다.
+실제 publish는 자동 workflow로 수행하지 않는다. `NPM_TOKEN` secret, npm trusted publishing, `changesets/action`의 publish 단계는 첫 alpha 전까지 추가하지 않는다.
 
 첫 publish 전에는 다음을 다시 확인한다.
 
 - npm scope 권한
-- release workflow 인증 방식
 - latest dry-run 결과
 - CI 성공
 - package tarball 내용
 - Changesets version PR diff
+- maintainer가 직접 실행할 publish 명령과 npm 로그인 상태
+
+수동 publish 명령은 최종 승인 시점에만 실행한다.
+
+```bash
+npm publish ./packages/core --access public
+npm publish ./packages/plugin-vite --access public
+```
+
+publish 후에는 npm registry에서 실제 version을 확인하고, README의 설치 문구에서 "배포 후" 표현을 제거한다.
 
 ## changeset 작성 기준
 
-| 변경 종류                                  | changeset |
-| ------------------------------------------ | --------- |
-| public API 추가, 제거, 타입 변경           | 필요      |
-| runtime 동작 변경                          | 필요      |
-| Vite plugin 사용자 동작 변경               | 필요      |
-| package metadata, README, release workflow | 필요 없음 |
-| docs site 문서만 변경                      | 필요 없음 |
-| test, lint, CI 검증만 변경                 | 필요 없음 |
+| 변경 종류                                       | changeset |
+| ----------------------------------------------- | --------- |
+| public API 추가, 제거, 타입 변경                | 필요      |
+| runtime 동작 변경                               | 필요      |
+| Vite plugin 사용자 동작 변경                    | 필요      |
+| package metadata, README, release 검증 workflow | 필요 없음 |
+| docs site 문서만 변경                           | 필요 없음 |
+| test, lint, CI 검증만 변경                      | 필요 없음 |
 
 0.x에서는 다음 bump 기준을 사용한다.
 
@@ -210,7 +213,8 @@ stable `1.0.0` 이후에는 일반 SemVer 기준으로 전환한다.
 - pack tarball에 README 또는 license 정보가 없다.
 - `@browse-sent-event/plugin-vite` tarball의 dependency가 `workspace:*`로 남아 있다.
 - `npm publish --dry-run`이 실패한다.
-- release workflow의 publish 인증 방식이 하나로 확정되지 않았다.
+- maintainer가 직접 publish를 승인하지 않았다.
+- GitHub Actions 또는 repository secret에 npm publish 권한이 연결되어 있다.
 
 ## 관련 문서
 

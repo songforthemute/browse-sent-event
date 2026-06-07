@@ -29,3 +29,9 @@ pnpm format:check
 
 사용자에게 보이는 package 변경에는 `pnpm changeset`을 실행한다.
 기반 설정만 변경하는 경우 release changeset은 작성하지 않는다.
+
+자세한 기준은 `.changeset/README.md`와 `docs/release/npm-publish.md`를 따른다.
+
+## npm publish
+
+npm publish는 자동화하지 않는다. 첫 alpha 전까지 `NPM_TOKEN`, trusted publishing, GitHub Actions publish workflow를 사용하지 않고, maintainer가 release gate를 확인한 뒤 로컬에서 수동으로만 실행한다.

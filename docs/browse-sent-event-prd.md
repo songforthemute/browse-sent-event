@@ -489,6 +489,8 @@ Phase 1 착수 전 혼선을 줄이기 위해, ADR에서 이미 확정된 항목
 
 **OQ2. Phase 1 릴리스 단계**
 - 권장안: alpha 2주(내부) → beta 4주(공개) → stable
+- 첫 npm 후보: `0.1.0-alpha.0`
+- 배포 방식: 첫 alpha 전까지 maintainer 수동 publish만 허용
 - 결정 필요: stable 전환 조건을 Release Criteria와 어떤 방식으로 연결할지
 
 ---
