@@ -421,7 +421,7 @@ Phase 2에서 React causality 추적을 위해 `__REACT_DEVTOOLS_GLOBAL_HOOK__`�
 
 **Context:**
 
-pnpm workspace + Changesets + Turborepo 조합을 CI에서 활용해야 한다. npm 배포는 수동 개입 없이 자동화되어야 하지만, 의도치 않은 배포를 막는 gate가 필요하다.
+pnpm workspace + Changesets + Turborepo 조합을 CI에서 활용해야 한다. 초기 초안은 npm 배포 자동화를 전제로 했지만, 첫 alpha 전까지 실제 npm publish는 maintainer가 수동으로만 수행한다. CI는 배포 가능한 상태를 검증하되, npm publish 권한은 갖지 않는다.
 
 **Decision:**
 
@@ -457,29 +457,32 @@ jobs:
 
 Turborepo 캐싱 활용으로 변경 없는 패키지는 재실행 안 함.
 
-### W2. Release (`.github/workflows/release.yml`)
+### W2. Release readiness
 
-`main` 브랜치에 push 시 실행, Changesets 기반:
+`main` 브랜치와 release 후보 PR에서는 기존 CI를 release readiness gate로 사용한다.
 
 ```yaml
 jobs:
-  release:
+  validation:
     steps:
       - checkout with fetch-depth: 0
       - setup pnpm + node
       - install dependencies
-      - build all packages
-      - changesets action:
-          publish: pnpm changeset publish
-          createGithubReleases: true
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - pnpm audit --audit-level moderate
+      - pnpm peers check
+      - pnpm test
+      - pnpm test:release
+      - pnpm turbo run typecheck
+      - pnpm turbo run build
+      - pnpm pack:check
 ```
 
 **배포 전제:**
-- PR에서 `.changeset/*.md` 파일이 생성되어 있어야 함 (없으면 릴리스 안 함)
-- Changesets는 자동으로 version bump PR을 생성, 머지되면 실제 publish
+
+- user-visible package 변경에는 `.changeset/*.md` 파일이 있어야 한다.
+- Changesets는 version/changelog 후보 생성에 사용한다.
+- GitHub Actions에는 `NPM_TOKEN`, trusted publishing, `pnpm changeset publish`를 연결하지 않는다.
+- 실제 `npm publish`는 maintainer가 registry/scope/dry-run/CI 결과를 확인한 뒤 로컬에서 수동으로 실행한다.
 
 ### W3. Framework Watch (`.github/workflows/framework-watch.yml`) — Phase 4
 
@@ -494,10 +497,12 @@ jobs:
 
 **Consequences:**
 
-- (+) 수동 배포 단계 제거 — Changesets가 version/changelog/publish 자동화
-- (+) 의도치 않은 배포 방지 (changeset 파일이 필요)
+- (+) 첫 alpha 전까지 npm publish 권한이 CI에 노출되지 않음
+- (+) 의도치 않은 배포 방지 (maintainer 수동 승인 필요)
+- (+) Changesets로 version/changelog 후보는 유지
 - (+) Turborepo 캐싱으로 CI 시간 최소화
-- (−) Changesets 워크플로우를 기여자에게 설명 필요 → CONTRIBUTING.md에 명시
+- (−) 실제 publish는 수동 단계가 남음
+- (−) Changesets 워크플로우와 수동 publish gate를 기여자에게 설명 필요 → CONTRIBUTING.md에 명시
 
 ---
 
@@ -714,7 +719,7 @@ Claude Code skill ecosystem에서 정립한 원칙을 적용한다.
 | 006 | Test | Vitest + Playwright + happy-dom | Accepted | 초기 |
 | 007 | 번들 | ESM-only, `sideEffects: false` | Accepted | 초기 |
 | 008 | 어댑터 | 비공식 API 격리, confidence 표시 | Accepted | Phase 2+ |
-| 009 | CI/CD | GitHub Actions + Changesets 자동 배포 | Accepted | 초기 |
+| 009 | CI/CD | GitHub Actions + Changesets + 수동 publish gate | Accepted | 초기 |
 | 010 | AI 하네스 | `.ai/` 디렉터리, AGENTS.md + contexts/ + tasks/ | Accepted | 초기 |
 | 011 | 라이선스 | MIT, public GitHub, Contributor Covenant | Accepted | 초기 |
 | 012 | 의존성 | 런타임 제로 목표, peer deps 활용 | Accepted | 초기 |
@@ -1171,8 +1176,8 @@ docs/                           ← ADR-002의 docs 디렉터리
 
 **배포:**
 
-- GitHub Actions로 빌드 후 GitHub Pages 또는 Vercel/Netlify 배포
-- `main` 브랜치 머지 시 자동 배포
+- GitHub Actions로 빌드 후 GitHub Pages 또는 Vercel/Netlify에 문서 사이트 배포
+- `main` 브랜치 머지 시 문서 사이트 자동 배포
 
 **Rejected alternatives:**
 
