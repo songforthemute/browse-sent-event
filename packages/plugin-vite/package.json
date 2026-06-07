@@ -22,7 +22,9 @@
     "directory": "packages/plugin-vite"
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "LICENSE"
   ],
   "type": "module",
   "sideEffects": false,

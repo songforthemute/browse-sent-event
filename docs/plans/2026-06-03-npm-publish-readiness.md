@@ -23,6 +23,7 @@
 | release workflow | 없음 | ADR-009 결정과 구현 사이에 gap 있음 |
 | npm registry 조회 | 2026-06-03 15:35 KST 기준 세 package name 모두 `E404` | 미게시 또는 권한 없음. 배포 직전 재확인 필요 |
 | Vitest 보안 점검 | 2026-06-06 KST 기준 `vitest@4.1.8` | 알려진 Vitest advisory 영향 범위 밖. Browser Mode/UI 미사용 |
+| package tarball gate | 2026-06-07 KST 기준 `pnpm pack:check` 추가 중 | README/LICENSE 포함과 publish manifest 검증을 CI gate로 올림 |
 
 조회한 이름:
 
@@ -238,12 +239,14 @@ git commit -m "chore(release): 패키지 배포 문서 포함"
 
 **파일:**
 - 생성: `scripts/verify-package-tarballs.mjs`
+- 생성: `scripts/verify-package-tarballs.test.mjs`
 - 수정: `package.json`
+- 수정: `.github/workflows/ci.yml`
 - 수정: `docs/release/npm-publish.md`
 
 **단계 1: 실패 기준 정의**
 
-스크립트는 `npm pack --dry-run --json` 또는 실제 `.tmp-pack` tarball 목록을 읽어 다음 조건을 검사한다.
+스크립트는 `pnpm pack --pack-destination .tmp-pack --json` 결과와 실제 `.tmp-pack` tarball을 읽어 다음 조건을 검사한다.
 
 필수 포함:
 
@@ -271,8 +274,8 @@ Node.js 표준 라이브러리만 사용한다. 새 npm dependency는 추가하�
 스크립트는 다음 순서로 동작한다.
 
 1. `.tmp-pack`을 비운다.
-2. `npm pack ./packages/core --pack-destination .tmp-pack --json`을 실행한다.
-3. `npm pack ./packages/plugin-vite --pack-destination .tmp-pack --json`을 실행한다.
+2. `packages/core`에서 `pnpm pack --pack-destination .tmp-pack --json`을 실행한다.
+3. `packages/plugin-vite`에서 `pnpm pack --pack-destination .tmp-pack --json`을 실행한다.
 4. JSON의 `files[].path`를 검사한다.
 5. `@browse-sent-event/plugin-vite` tarball의 `package.json`을 열어 `dependencies["@browse-sent-event/core"]`가 `workspace:*`이면 실패한다.
 
@@ -283,10 +286,13 @@ Node.js 표준 라이브러리만 사용한다. 새 npm dependency는 추가하�
 ```json
 {
   "scripts": {
+    "test:release": "node --test scripts/verify-package-tarballs.test.mjs",
     "pack:check": "node scripts/verify-package-tarballs.mjs"
   }
 }
 ```
+
+CI는 package build 이후 `pnpm pack:check`를 실행해 tarball 계약을 검증한다.
 
 **단계 4: 실패 검증**
 
