@@ -48,6 +48,10 @@ export default defineConfig({
         text: "구현 계획",
         items: [
           {
+            text: "Runtime/UI 하드닝 설계",
+            link: "/plans/2026-06-08-runtime-ui-hardening-design",
+          },
+          {
             text: "문서 SPA 인터랙티브 예제 데모",
             link: "/plans/2026-06-03-docs-interactive-demo",
           },
