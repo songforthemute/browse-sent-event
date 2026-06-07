@@ -91,11 +91,10 @@ git diff --check
 ### 4. pack tarball 확인
 
 ```bash
-rm -rf .tmp-pack
-mkdir -p .tmp-pack
-npm pack ./packages/core --pack-destination .tmp-pack --json
-npm pack ./packages/plugin-vite --pack-destination .tmp-pack --json
+pnpm pack:check
 ```
+
+`pack:check`는 각 package 디렉터리에서 `pnpm pack --pack-destination .tmp-pack --json`을 실행하고, 실제 생성된 tarball의 `package/package.json`까지 확인한다.
 
 tarball에는 최소 다음 파일이 있어야 한다.
 
@@ -105,17 +104,18 @@ tarball에는 최소 다음 파일이 있어야 한다.
 - `package/dist/index.d.mts`
 - `package/dist/index.d.mts.map`
 - `package/README.md`
-- license 정보
+- `package/LICENSE`
 
 tarball에는 다음 파일이 없어야 한다.
 
-- source test files
+- `src/`
+- `__tests__/`
 - `node_modules/`
 - `.tmp-*`
 - `playwright-report/`
 - `test-results/`
 
-`@browse-sent-event/plugin-vite`의 tarball metadata도 확인한다. `dependencies["@browse-sent-event/core"]`가 `workspace:*`로 남아 있으면 publish하지 않는다.
+`@browse-sent-event/plugin-vite`의 tarball metadata도 확인한다. tarball 안의 `dependencies["@browse-sent-event/core"]`가 `workspace:*`로 남아 있으면 publish하지 않는다. source package는 monorepo 개발을 위해 `workspace:*`를 유지할 수 있지만, publish manifest에는 배포 가능한 semver 범위로 변환되어야 한다.
 
 ### 5. npm publish dry-run
 

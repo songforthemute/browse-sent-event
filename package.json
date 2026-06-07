@@ -6,6 +6,7 @@
   "scripts": {
     "build": "turbo run build",
     "test": "turbo run test",
+    "test:release": "node --test scripts/verify-package-tarballs.test.mjs",
     "typecheck": "turbo run typecheck",
     "test:e2e": "playwright test",
     "test:e2e:update": "playwright test --update-snapshots",
@@ -15,7 +16,8 @@
     "lint": "oxlint --type-aware --type-check --deny-warnings",
     "format": "oxfmt --write .",
     "format:check": "oxfmt --check .",
-    "changeset": "changeset"
+    "changeset": "changeset",
+    "pack:check": "node scripts/verify-package-tarballs.mjs"
   },
   "devDependencies": {
     "@changesets/cli": "^2.31.0",
