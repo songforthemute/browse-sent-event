@@ -8,8 +8,10 @@ import type {
   BrowseSentEventProtocol,
   BrowseSentEventSearchQuery,
 } from "./events.js";
-import { createPayloadSummary, serializePayloadForExport } from "./payload.js";
+import { exportMessagesAsJsonl, exportMessagesAsLog } from "./export.js";
+import { createPayloadSummary } from "./payload.js";
 import { RingBuffer } from "./ring-buffer.js";
+import { calculateMetrics, filterMessages, searchMessages } from "./selectors.js";
 
 export interface BrowseSentEventEngineOptions {
   readonly capacity: number;
@@ -80,60 +82,17 @@ function createId(prefix: string): string {
   return `${prefix}-${sequence}`;
 }
 
-function formatDirection(direction: "in" | "out"): string {
-  return direction === "in" ? "IN" : "OUT";
-}
-
 export function createDevtoolsEngine(options: BrowseSentEventEngineOptions): BrowseSentEventEngine {
   const messages = new RingBuffer<BrowseSentEventMessage>(options.capacity);
   const connections = new Map<string, BrowseSentEventConnection>();
   const subscribers = new Set<BrowseSentEventEngineSubscriber>();
-
-  function getConnectionForMessage(
-    message: BrowseSentEventMessage,
-  ): BrowseSentEventConnection | undefined {
-    return connections.get(message.connectionId);
-  }
-
-  function matchesFilter(
-    message: BrowseSentEventMessage,
-    filter: BrowseSentEventMessageFilter = {},
-  ): boolean {
-    const connection = getConnectionForMessage(message);
-
-    if (filter.connectionId && message.connectionId !== filter.connectionId) {
-      return false;
-    }
-
-    if (filter.protocol && message.protocol !== filter.protocol) {
-      return false;
-    }
-
-    if (filter.direction && message.direction !== filter.direction) {
-      return false;
-    }
-
-    if (filter.urlIncludes && !connection?.url.includes(filter.urlIncludes)) {
-      return false;
-    }
-
-    if (filter.fromTimestamp !== undefined && message.timestamp < filter.fromTimestamp) {
-      return false;
-    }
-
-    if (filter.toTimestamp !== undefined && message.timestamp > filter.toTimestamp) {
-      return false;
-    }
-
-    return true;
-  }
 
   function getConnections(): BrowseSentEventConnection[] {
     return [...connections.values()];
   }
 
   function getMessages(filter?: BrowseSentEventMessageFilter): BrowseSentEventMessage[] {
-    return messages.toArray().filter((message) => matchesFilter(message, filter));
+    return filterMessages(messages.toArray(), getConnections(), filter);
   }
 
   function getSnapshot(): BrowseSentEventEngineSnapshot {
@@ -230,37 +189,16 @@ export function createDevtoolsEngine(options: BrowseSentEventEngineOptions): Bro
   }
 
   function getMetrics(connectionId?: string): BrowseSentEventMetrics {
-    const selectedMessages = getMessages(connectionId ? { connectionId } : undefined);
-    const selectedConnections = connectionId
-      ? getConnections().filter((connection) => connection.id === connectionId)
-      : getConnections();
-
-    return {
-      activeConnectionCount: selectedConnections.filter(
-        (connection) => connection.state !== "closed",
-      ).length,
-      connectionCount: selectedConnections.length,
-      messageCount: selectedMessages.length,
-      incomingCount: selectedMessages.filter((message) => message.direction === "in").length,
-      outgoingCount: selectedMessages.filter((message) => message.direction === "out").length,
-      droppedMessageCount: messages.droppedCount,
-      totalBytes: selectedMessages.reduce((total, message) => total + message.size, 0),
-    };
+    return calculateMetrics(
+      messages.toArray(),
+      getConnections(),
+      messages.droppedCount,
+      connectionId,
+    );
   }
 
   function search(query: BrowseSentEventSearchQuery): BrowseSentEventMessage[] {
-    const normalizedText = query.text?.toLowerCase();
-
-    return getMessages(query).filter((message) => {
-      if (!normalizedText) {
-        return true;
-      }
-
-      const payloadText =
-        typeof message.payload === "string" ? message.payload : message.payloadPreview;
-
-      return payloadText.toLowerCase().includes(normalizedText);
-    });
+    return searchMessages(messages.toArray(), getConnections(), query);
   }
 
   function getExportMessages(query?: BrowseSentEventSearchQuery): BrowseSentEventMessage[] {
@@ -268,24 +206,11 @@ export function createDevtoolsEngine(options: BrowseSentEventEngineOptions): Bro
   }
 
   function exportJsonl(query?: BrowseSentEventSearchQuery): string {
-    return getExportMessages(query)
-      .map((message) =>
-        JSON.stringify({
-          ...message,
-          payload: serializePayloadForExport(message.payload),
-        }),
-      )
-      .join("\n");
+    return exportMessagesAsJsonl(getExportMessages(query));
   }
 
   function exportLog(query?: BrowseSentEventSearchQuery): string {
-    return getExportMessages(query)
-      .map((message) => {
-        const timestamp = message.timestamp.toFixed(3);
-
-        return `${timestamp} ${formatDirection(message.direction)} [${message.protocol}] ${message.type ?? "message"} - ${message.payloadPreview}`;
-      })
-      .join("\n");
+    return exportMessagesAsLog(getExportMessages(query));
   }
 
   function clear(): void {
