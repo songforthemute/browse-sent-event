@@ -39,6 +39,10 @@ function toPayload(chunk: Uint8Array, contentType: string | null): BrowseSentEve
   return Uint8Array.from(chunk).buffer;
 }
 
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 async function recordReadableStream(
   stream: ReadableStream<Uint8Array>,
   context: BrowseSentEventInterceptorContext,
@@ -47,6 +51,7 @@ async function recordReadableStream(
   contentType: string | null,
 ): Promise<void> {
   const reader = stream.getReader();
+  let captureError: unknown;
 
   try {
     while (true) {
@@ -64,10 +69,18 @@ async function recordReadableStream(
         metadata: { contentType },
       });
     }
+  } catch (error) {
+    captureError = error;
   } finally {
     context.engine.updateConnection(connectionId, {
       state: "closed",
       closedAt: globalThis.performance?.now() ?? Date.now(),
+      metadata: captureError
+        ? {
+            captureError: getErrorMessage(captureError),
+            captureStatus: "failed",
+          }
+        : undefined,
     });
     reader.releaseLock();
   }
