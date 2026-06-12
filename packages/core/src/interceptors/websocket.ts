@@ -3,6 +3,7 @@ import type {
   BrowseSentEventInterceptorContext,
   InstalledBrowseSentEventInterceptor,
 } from "./types.js";
+import { installGlobalPatch } from "./global-patch.js";
 
 function copyArrayBuffer(
   buffer: ArrayBufferLike,
@@ -96,12 +97,12 @@ export function installWebSocketInterceptor(
     },
   });
 
-  Reflect.set(context.target, "WebSocket", ProxiedWebSocket);
+  const patch = installGlobalPatch(context.target, "WebSocket", () => ProxiedWebSocket);
 
   return {
     name: "websocket",
     uninstall() {
-      Reflect.set(context.target, "WebSocket", OriginalWebSocket);
+      patch.uninstall();
     },
   };
 }

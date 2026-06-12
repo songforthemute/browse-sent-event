@@ -3,6 +3,7 @@ import type {
   BrowseSentEventInterceptorContext,
   InstalledBrowseSentEventInterceptor,
 } from "./types.js";
+import { installGlobalPatch } from "./global-patch.js";
 
 type FetchFunction = typeof globalThis.fetch;
 type FetchInput = Parameters<FetchFunction>[0];
@@ -112,12 +113,12 @@ export function installFetchStreamInterceptor(
     return response;
   };
 
-  Reflect.set(context.target, "fetch", instrumentedFetch);
+  const patch = installGlobalPatch(context.target, "fetch", () => instrumentedFetch);
 
   return {
     name: "fetch-stream",
     uninstall() {
-      Reflect.set(context.target, "fetch", originalFetch);
+      patch.uninstall();
     },
   };
 }
