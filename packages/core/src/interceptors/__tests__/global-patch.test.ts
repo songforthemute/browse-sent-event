@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { installGlobalPatch } from "../global-patch.js";
 
+const originalFetch = () => Promise.resolve(new globalThis.Response());
+const replacementFetch = () => Promise.resolve(new globalThis.Response("instrumented"));
+const laterFetch = () => Promise.resolve(new globalThis.Response("later"));
+const previousPatchFetch = () => Promise.resolve(new globalThis.Response("previous"));
+
 describe("installGlobalPatch", () => {
   it("restores the original value when the installed replacement is still current", () => {
-    const originalFetch = () => Promise.resolve(new globalThis.Response());
-    const replacementFetch = () => Promise.resolve(new globalThis.Response("instrumented"));
     const target = {
       fetch: originalFetch,
     };
@@ -18,9 +21,6 @@ describe("installGlobalPatch", () => {
   });
 
   it("does not overwrite a later patch during uninstall", () => {
-    const originalFetch = () => Promise.resolve(new globalThis.Response());
-    const replacementFetch = () => Promise.resolve(new globalThis.Response("instrumented"));
-    const laterFetch = () => Promise.resolve(new globalThis.Response("later"));
     const target = {
       fetch: originalFetch,
     };
@@ -33,9 +33,6 @@ describe("installGlobalPatch", () => {
   });
 
   it("treats an already patched value as the original for this install", () => {
-    const originalFetch = () => Promise.resolve(new globalThis.Response());
-    const previousPatchFetch = () => Promise.resolve(new globalThis.Response("previous"));
-    const replacementFetch = () => Promise.resolve(new globalThis.Response("instrumented"));
     const target = {
       fetch: originalFetch,
     };
