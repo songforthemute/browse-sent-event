@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { BrowseSentEventEngineSnapshot } from "../../runtime/engine.js";
-import { getPanelViewModel } from "../view-model.js";
+import { countMessagesByConnection, getPanelViewModel } from "../view-model.js";
 
 const snapshot: BrowseSentEventEngineSnapshot = {
   connections: [
@@ -50,6 +50,10 @@ const snapshot: BrowseSentEventEngineSnapshot = {
 };
 
 describe("getPanelViewModel", () => {
+  it("counts messages by connection in one pass", () => {
+    expect(countMessagesByConnection(snapshot.messages)).toEqual(new Map([["conn-1", 2]]));
+  });
+
   it("sorts messages newest first and applies filters", () => {
     const model = getPanelViewModel(snapshot, {
       direction: "out",

@@ -25,6 +25,26 @@ function createStreamResponse(chunks: string[], contentType = "text/plain"): Res
   );
 }
 
+function createResponseWithFailingClone(): Response {
+  const response = createStreamResponse(["app response"]);
+  const failingClone = new globalThis.Response(
+    new globalThis.ReadableStream<Uint8Array>({
+      pull(controller) {
+        controller.error(new Error("tap failed"));
+      },
+    }),
+    {
+      headers: {
+        "content-type": "text/plain",
+      },
+    },
+  );
+
+  Reflect.set(response, "clone", () => failingClone);
+
+  return response;
+}
+
 function waitForStreamTap(): Promise<void> {
   return new Promise((resolve) => {
     globalThis.setTimeout(resolve, 0);
@@ -89,5 +109,34 @@ describe("installFetchStreamInterceptor", () => {
         metadata: expect.objectContaining({ source: "fetch" }),
       }),
     );
+  });
+
+  it("records clone stream failures without breaking the app response", async () => {
+    const engine = createDevtoolsEngine({ capacity: 10 });
+
+    Reflect.set(globalThis.window, "fetch", () =>
+      Promise.resolve(createResponseWithFailingClone()),
+    );
+
+    installFetchStreamInterceptor({
+      engine,
+      target: globalThis.window,
+    });
+
+    const response = await globalThis.window.fetch("https://example.test/failing-stream");
+
+    await expect(response.text()).resolves.toBe("app response");
+    await waitForStreamTap();
+
+    expect(engine.getConnections()).toEqual([
+      expect.objectContaining({
+        metadata: expect.objectContaining({
+          captureError: expect.stringContaining("tap failed"),
+          captureStatus: "failed",
+        }),
+        state: "closed",
+        url: "https://example.test/failing-stream",
+      }),
+    ]);
   });
 });

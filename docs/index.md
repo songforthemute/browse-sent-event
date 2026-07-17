@@ -27,6 +27,7 @@ outline: deep
 
 ## 최근 구현 계획
 
+- [Runtime/UI 하드닝 설계](./plans/2026-06-08-runtime-ui-hardening-design.md)
 - [문서 SPA 인터랙티브 예제 데모](./plans/2026-06-03-docs-interactive-demo.md)
 - [npm 배포 준비](./plans/2026-06-03-npm-publish-readiness.md)
 - [Export 검색어 필터 회수](./plans/2026-06-03-export-search-filter.md)

@@ -3,6 +3,7 @@ import type {
   BrowseSentEventInterceptorContext,
   InstalledBrowseSentEventInterceptor,
 } from "./types.js";
+import { installGlobalPatch } from "./global-patch.js";
 
 type FetchFunction = typeof globalThis.fetch;
 type FetchInput = Parameters<FetchFunction>[0];
@@ -38,6 +39,10 @@ function toPayload(chunk: Uint8Array, contentType: string | null): BrowseSentEve
   return Uint8Array.from(chunk).buffer;
 }
 
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 async function recordReadableStream(
   stream: ReadableStream<Uint8Array>,
   context: BrowseSentEventInterceptorContext,
@@ -46,6 +51,7 @@ async function recordReadableStream(
   contentType: string | null,
 ): Promise<void> {
   const reader = stream.getReader();
+  let captureError: unknown;
 
   try {
     while (true) {
@@ -63,10 +69,18 @@ async function recordReadableStream(
         metadata: { contentType },
       });
     }
+  } catch (error) {
+    captureError = error;
   } finally {
     context.engine.updateConnection(connectionId, {
       state: "closed",
       closedAt: globalThis.performance?.now() ?? Date.now(),
+      metadata: captureError
+        ? {
+            captureError: getErrorMessage(captureError),
+            captureStatus: "failed",
+          }
+        : undefined,
     });
     reader.releaseLock();
   }
@@ -112,12 +126,12 @@ export function installFetchStreamInterceptor(
     return response;
   };
 
-  Reflect.set(context.target, "fetch", instrumentedFetch);
+  const patch = installGlobalPatch(context.target, "fetch", () => instrumentedFetch);
 
   return {
     name: "fetch-stream",
     uninstall() {
-      Reflect.set(context.target, "fetch", originalFetch);
+      patch.uninstall();
     },
   };
 }

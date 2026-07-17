@@ -54,10 +54,23 @@ function matchesState(message: BrowseSentEventMessage, state: BrowseSentEventPan
   return true;
 }
 
+export function countMessagesByConnection(
+  messages: readonly BrowseSentEventMessage[],
+): Map<string, number> {
+  const counts = new Map<string, number>();
+
+  for (const message of messages) {
+    counts.set(message.connectionId, (counts.get(message.connectionId) ?? 0) + 1);
+  }
+
+  return counts;
+}
+
 export function getPanelViewModel(
   snapshot: BrowseSentEventEngineSnapshot,
   state: BrowseSentEventPanelState = {},
 ): BrowseSentEventPanelViewModel {
+  const messageCountByConnection = countMessagesByConnection(snapshot.messages);
   const messages: BrowseSentEventMessageViewModel[] = snapshot.messages
     .filter((message) => matchesState(message, state))
     .toSorted((left, right) => right.timestamp - left.timestamp)
@@ -81,8 +94,7 @@ export function getPanelViewModel(
       label: connection.url,
       protocol: connection.protocol,
       state: connection.state,
-      messageCount: snapshot.messages.filter((message) => message.connectionId === connection.id)
-        .length,
+      messageCount: messageCountByConnection.get(connection.id) ?? 0,
       selected: connection.id === state.selectedConnectionId,
     })),
     messages,

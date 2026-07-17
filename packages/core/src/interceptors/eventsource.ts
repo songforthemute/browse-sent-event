@@ -2,6 +2,7 @@ import type {
   BrowseSentEventInterceptorContext,
   InstalledBrowseSentEventInterceptor,
 } from "./types.js";
+import { installGlobalPatch } from "./global-patch.js";
 
 function isInstrumentableEventSource(value: unknown): value is EventSource {
   return (
@@ -74,12 +75,12 @@ export function installEventSourceInterceptor(
     },
   });
 
-  Reflect.set(context.target, "EventSource", ProxiedEventSource);
+  const patch = installGlobalPatch(context.target, "EventSource", () => ProxiedEventSource);
 
   return {
     name: "eventsource",
     uninstall() {
-      Reflect.set(context.target, "EventSource", OriginalEventSource);
+      patch.uninstall();
     },
   };
 }
