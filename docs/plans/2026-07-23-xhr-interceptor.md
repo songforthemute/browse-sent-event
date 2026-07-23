@@ -571,113 +571,22 @@ pnpm --filter @browse-sent-event/core test -- src/interceptors/__tests__/xml-htt
 
 ### 단계 3: 소비하지 않는 Payload 변환 구현
 
-`xml-http-request.ts`에 다음 내부 helper를 추가한다.
+`xml-http-request.ts`에 다음 정책을 구현하는 내부 helper를 추가한다.
 
-```ts
-function copyArrayBuffer(
-  buffer: ArrayBufferLike,
-  byteOffset = 0,
-  byteLength = buffer.byteLength,
-): ArrayBuffer {
-  return Uint8Array.from(new Uint8Array(buffer, byteOffset, byteLength)).buffer;
-}
+- `ArrayBuffer`와 view는 관찰 시점에 별도 `ArrayBuffer`로 복사한다.
+- 문자열은 그대로 기록하고 `null`은 빈 문자열로 기록한다.
+- `URLSearchParams`, `Blob`, `FormData`, `Document`는 대상 `window`와 실행 realm의 prototype intrinsic으로 brand를 확인하고 읽는다.
+- 인스턴스가 덮어쓴 `toString()`, `entries()`, `size`, `type`, `contentType`은 호출하지 않는다.
+- `FormData`는 값을 기록하지 않고 필드명만 최대 20개, 각 64자로 제한한다.
+- `responseType`별로 `responseText`, 복사한 `ArrayBuffer`, JSON 직렬화, Blob 요약, Document 요약을 선택한다.
+- 변환 실패의 예외 메시지는 기록하지 않고 고정된 unavailable placeholder를 사용한다.
+- GET과 HEAD의 body는 브라우저가 폐기하므로 빈 payload로 기록한다.
 
-function summarizeBlob(blob: Blob): string {
-  const type = blob.type ? ` type=${blob.type}` : "";
+기타 임의 body는 `String(body)`로 재변환하지 않고 unsupported placeholder로 남긴다. 이 결정에 수반되는 의식적 부채는 다음과 같다.
 
-  return `[Blob size=${blob.size}${type}]`;
-}
-
-function summarizeFormData(formData: FormData): string {
-  const fields: string[] = [];
-
-  try {
-    for (const [name] of formData.entries()) {
-      fields.push(name);
-    }
-  } catch {
-    return "[FormData]";
-  }
-
-  return `[FormData entries=${fields.length} fields=${fields.join(",")}]`;
-}
-
-function toRequestPayload(
-  body: Document | XMLHttpRequestBodyInit | null,
-): BrowseSentEventPayload {
-  try {
-    if (body === null) {
-      return "";
-    }
-
-    if (typeof body === "string") {
-      return body;
-    }
-
-    if (body instanceof URLSearchParams) {
-      return body.toString();
-    }
-
-    if (body instanceof ArrayBuffer) {
-      return copyArrayBuffer(body);
-    }
-
-    if (ArrayBuffer.isView(body)) {
-      return copyArrayBuffer(body.buffer, body.byteOffset, body.byteLength);
-    }
-
-    if (body instanceof Blob) {
-      return summarizeBlob(body);
-    }
-
-    if (body instanceof FormData) {
-      return summarizeFormData(body);
-    }
-
-    if (body instanceof Document) {
-      return `[Document type=${body.contentType}]`;
-    }
-
-    return String(body);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-
-    return `[unavailable request payload: ${message}]`;
-  }
-}
-
-function toResponsePayload(request: XMLHttpRequest): BrowseSentEventPayload {
-  try {
-    switch (request.responseType) {
-      case "":
-      case "text":
-        return request.responseText;
-      case "arraybuffer":
-        return request.response instanceof ArrayBuffer
-          ? copyArrayBuffer(request.response)
-          : "[unavailable ArrayBuffer response]";
-      case "json":
-        return JSON.stringify(request.response) ?? "null";
-      case "blob":
-        return request.response instanceof Blob
-          ? summarizeBlob(request.response)
-          : "[unavailable Blob response]";
-      case "document":
-        return request.response instanceof Document
-          ? `[Document type=${request.response.contentType}]`
-          : "[unavailable Document response]";
-      default:
-        return String(request.response ?? "");
-    }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-
-    return `[unavailable response payload: ${message}]`;
-  }
-}
-```
-
-구현 환경에서 constructor realm 문제가 확인되면 `context.target.Blob`, `context.target.FormData`를 helper 인자로 전달한다. 단, cross-realm 지원을 이유로 duck typing 범위를 과도하게 넓히지 않는다.
+- 포기하는 것: 표준 `XMLHttpRequestBodyInit` 범위를 벗어난 사용자 정의 body의 내용과 제한을 초과한 `FormData` 필드명은 기록하지 않는다.
+- 지금 감당 가능한 이유: 표준 body 형식은 모두 별도로 처리하며, 추가 문자열 변환이나 override 가능한 멤버 호출이 실제 전송 body와 애플리케이션 상태를 바꾸는 위험이 더 크다.
+- 회수 조건: 브라우저가 Web IDL 변환 이후의 body를 부작용 없이 읽는 API를 제공하거나, 라이브러리에 명시적 사용자 serializer와 redaction 정책을 추가할 때 다시 검토한다.
 
 ### 단계 4: 종료 원인과 예외 보존 테스트 추가
 
@@ -769,11 +678,14 @@ it("creates a new connection when the same instance is reopened", () => {
 
 다음 규칙을 구현한다.
 
-- `load`, `error`, `abort`, `timeout`은 active request에 outcome만 저장한다.
-- `loadend`는 한 번만 finalize한다.
+- `load`, `error`, `abort`, `timeout`은 사용자 이벤트 핸들러보다 먼저 해당 세대의 응답과 metadata snapshot을 저장하고 종료 대기열에 넣는다.
+- `loadend`는 대기열에서 같은 세대의 snapshot을 꺼내 한 번만 finalize한다.
+- terminal event 핸들러가 같은 XHR 인스턴스를 즉시 `open()`/`send()`해도 이전 `loadend`가 새 connection을 닫지 않는다.
 - outcome이 `load`일 때만 incoming message를 기록한다.
 - metadata getter와 payload 변환은 observer 내부에서 예외가 새지 않게 한다.
 - native `send()`가 던지면 connection을 `send-threw`로 닫고 같은 예외를 다시 던진다.
+- native `send()`의 인자 변환이 실패하면 descriptor의 `sent`를 되돌려 같은 `open()`의 정상 재시도를 새 connection으로 기록한다.
+- engine subscriber가 `recordConnection()` 도중 던져도 이미 저장된 connection을 회수해 이후 종료 이벤트와 연결한다.
 - `open()` 성공 전에는 descriptor를 바꾸지 않는다.
 - 같은 `open()`에 중복 `send()`가 들어오면 record를 추가하지 않고 native 호출에 위임한다.
 - 재사용을 위해 새 `open()` 성공 시 `sent`와 active state를 초기화한다.
