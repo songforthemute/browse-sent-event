@@ -1,4 +1,4 @@
-export type BrowseSentEventProtocol = "websocket" | "fetch-stream" | "eventsource";
+export type BrowseSentEventProtocol = "websocket" | "fetch-stream" | "eventsource" | "xhr";
 export type BrowseSentEventDirection = "in" | "out";
 export type BrowseSentEventConnectionState = "connecting" | "open" | "closing" | "closed";
 export type BrowseSentEventPayload = string | ArrayBuffer;
