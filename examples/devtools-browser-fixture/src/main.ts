@@ -1,18 +1,22 @@
 import {
   closePanel,
   getSnapshotCounts,
+  getXmlHttpRequestCapture,
   runEventSource,
   runFetchStream,
   runWebSocket,
+  runXmlHttpRequest,
   seedPanel,
 } from "./fixture-probe.js";
 
 const fixtureBridge = {
   closePanel,
   getSnapshotCounts,
+  getXmlHttpRequestCapture,
   runEventSource,
   runFetchStream,
   runWebSocket,
+  runXmlHttpRequest,
   seedPanel,
 };
 

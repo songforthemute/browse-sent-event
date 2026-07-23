@@ -1,4 +1,4 @@
-import type { ServerResponse } from "node:http";
+import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Plugin } from "vite";
 import { defineConfig } from "vite";
 import browseSentEvent from "@browse-sent-event/plugin-vite";
@@ -27,6 +27,24 @@ function writeSse(res: ServerResponse, chunks: readonly string[]): void {
   res.end();
 }
 
+function writeXmlHttpRequestResponse(req: IncomingMessage, res: ServerResponse): void {
+  let body = "";
+
+  req.setEncoding("utf8");
+  req.on("data", (chunk: string) => {
+    body += chunk;
+  });
+  req.on("end", () => {
+    res.statusCode = 200;
+    res.setHeader("content-type", "application/json; charset=utf-8");
+    res.end(
+      JSON.stringify({
+        message: body.includes("xhr hello") ? "xhr goodbye" : "unexpected request",
+      }),
+    );
+  });
+}
+
 function fixtureEndpoints(): Plugin {
   return {
     name: "browse-sent-event-fixture-endpoints",
@@ -41,6 +59,11 @@ function fixtureEndpoints(): Plugin {
 
         if (pathname === "/__bse-fixture/events") {
           writeSse(res, ["eventsource hello", "eventsource goodbye"]);
+          return;
+        }
+
+        if (pathname === "/__bse-fixture/xhr" && req.method === "POST") {
+          writeXmlHttpRequestResponse(req, res);
           return;
         }
 
