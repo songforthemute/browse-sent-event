@@ -133,6 +133,61 @@ describe("installXmlHttpRequestInterceptor", () => {
     expect(globalThis.window.XMLHttpRequest).toBe(FakeXmlHttpRequest);
   });
 
+  it("preserves custom method casing in recorded metadata", () => {
+    const engine = createDevtoolsEngine({ capacity: 10 });
+
+    installXmlHttpRequestInterceptor({
+      engine,
+      target: globalThis.window,
+    });
+
+    const request = new globalThis.window.XMLHttpRequest();
+
+    request.open("eGg", "https://example.test/custom-method");
+    request.send();
+
+    expect(engine.getConnections()[0]?.metadata).toEqual(
+      expect.objectContaining({ method: "eGg" }),
+    );
+    expect(engine.getMessages()[0]?.metadata).toEqual(expect.objectContaining({ method: "eGg" }));
+  });
+
+  it("does not depend on an overridden String.prototype.toUpperCase", () => {
+    const engine = createDevtoolsEngine({ capacity: 10 });
+    const originalDescriptor = Object.getOwnPropertyDescriptor(
+      globalThis.String.prototype,
+      "toUpperCase",
+    );
+
+    installXmlHttpRequestInterceptor({
+      engine,
+      target: globalThis.window,
+    });
+
+    const request = new globalThis.window.XMLHttpRequest();
+
+    Object.defineProperty(globalThis.String.prototype, "toUpperCase", {
+      configurable: true,
+      value() {
+        throw new Error("toUpperCase must not be called");
+      },
+    });
+
+    try {
+      expect(() => request.open("get", "https://example.test/standard-method")).not.toThrow();
+    } finally {
+      if (originalDescriptor) {
+        Object.defineProperty(globalThis.String.prototype, "toUpperCase", originalDescriptor);
+      }
+    }
+
+    request.send();
+
+    expect(engine.getConnections()[0]?.metadata).toEqual(
+      expect.objectContaining({ method: "GET" }),
+    );
+  });
+
   it("preserves the native instance identity and static constants", () => {
     const engine = createDevtoolsEngine({ capacity: 10 });
 
@@ -145,6 +200,264 @@ describe("installXmlHttpRequestInterceptor", () => {
 
     expect(request).toBeInstanceOf(FakeXmlHttpRequest);
     expect(globalThis.window.XMLHttpRequest.DONE).toBe(FakeXmlHttpRequest.DONE);
+  });
+
+  it("returns the native instance when event listener instrumentation fails", () => {
+    class ListenerRejectingXmlHttpRequest extends FakeXmlHttpRequest {
+      override addEventListener(
+        type: string,
+        callback: EventListenerOrEventListenerObject | null,
+        options?: AddEventListenerOptions | boolean,
+      ): void {
+        void type;
+        void callback;
+        void options;
+        throw new Error("listener instrumentation rejected");
+      }
+    }
+
+    Reflect.set(globalThis.window, "XMLHttpRequest", ListenerRejectingXmlHttpRequest);
+
+    const engine = createDevtoolsEngine({ capacity: 10 });
+
+    installXmlHttpRequestInterceptor({
+      engine,
+      target: globalThis.window,
+    });
+
+    expect(() => new globalThis.window.XMLHttpRequest()).not.toThrow();
+
+    const request = new globalThis.window.XMLHttpRequest();
+
+    request.open("POST", "https://example.test/listener-rejected");
+    request.send("body");
+
+    expect(Reflect.get(request, "sentBodies")).toEqual(["body"]);
+    expect(engine.getConnections()).toEqual([]);
+  });
+
+  it("rolls back a partial instance method installation", () => {
+    class ReadonlySendXmlHttpRequest extends FakeXmlHttpRequest {}
+
+    Object.defineProperty(ReadonlySendXmlHttpRequest.prototype, "send", {
+      configurable: true,
+      value: Reflect.get(FakeXmlHttpRequest.prototype, "send"),
+      writable: false,
+    });
+
+    Reflect.set(globalThis.window, "XMLHttpRequest", ReadonlySendXmlHttpRequest);
+
+    const engine = createDevtoolsEngine({ capacity: 10 });
+
+    installXmlHttpRequestInterceptor({
+      engine,
+      target: globalThis.window,
+    });
+
+    const request = new globalThis.window.XMLHttpRequest();
+
+    expect(Object.hasOwn(request, "open")).toBe(false);
+    expect(Object.hasOwn(request, "send")).toBe(false);
+
+    request.open("POST", "https://example.test/partial-install");
+    request.send("body");
+
+    expect(Reflect.get(request, "sentBodies")).toEqual(["body"]);
+    expect(engine.getConnections()).toEqual([]);
+  });
+
+  it("leaves accessor-backed instance methods untouched", () => {
+    const nativeOpen = Reflect.get(FakeXmlHttpRequest.prototype, "open");
+    const nativeSend = Reflect.get(FakeXmlHttpRequest.prototype, "send");
+
+    class AccessorMethodXmlHttpRequest extends FakeXmlHttpRequest {
+      constructor() {
+        super();
+
+        let open: unknown = nativeOpen;
+        let send: unknown = nativeSend;
+
+        Object.defineProperties(this, {
+          open: {
+            configurable: true,
+            get() {
+              return open;
+            },
+            set(value: unknown) {
+              open = value;
+            },
+          },
+          send: {
+            configurable: true,
+            get() {
+              return send;
+            },
+            set(value: unknown) {
+              send = value;
+            },
+          },
+        });
+      }
+
+      override addEventListener(
+        type: string,
+        callback: EventListenerOrEventListenerObject | null,
+        options?: AddEventListenerOptions | boolean,
+      ): void {
+        void type;
+        void callback;
+        void options;
+        throw new Error("listener instrumentation rejected");
+      }
+    }
+
+    Reflect.set(globalThis.window, "XMLHttpRequest", AccessorMethodXmlHttpRequest);
+
+    const engine = createDevtoolsEngine({ capacity: 10 });
+
+    installXmlHttpRequestInterceptor({
+      engine,
+      target: globalThis.window,
+    });
+
+    const request = new globalThis.window.XMLHttpRequest();
+
+    expect(Reflect.get(request, "open")).toBe(nativeOpen);
+    expect(Reflect.get(request, "send")).toBe(nativeSend);
+
+    request.open("POST", "https://example.test/accessor-methods");
+    request.send("body");
+
+    expect(Reflect.get(request, "sentBodies")).toEqual(["body"]);
+    expect(engine.getConnections()).toEqual([]);
+  });
+
+  it("leaves inherited accessor methods untouched", () => {
+    const nativeOpen = Reflect.get(FakeXmlHttpRequest.prototype, "open");
+    const nativeSend = Reflect.get(FakeXmlHttpRequest.prototype, "send");
+    let open: unknown = nativeOpen;
+    let send: unknown = nativeSend;
+
+    class AccessorPrototypeXmlHttpRequest extends FakeXmlHttpRequest {
+      override addEventListener(
+        type: string,
+        callback: EventListenerOrEventListenerObject | null,
+        options?: AddEventListenerOptions | boolean,
+      ): void {
+        void type;
+        void callback;
+        void options;
+        throw new Error("listener instrumentation rejected");
+      }
+    }
+
+    Object.defineProperties(AccessorPrototypeXmlHttpRequest.prototype, {
+      open: {
+        configurable: true,
+        get() {
+          return open;
+        },
+        set(value: unknown) {
+          open = value;
+        },
+      },
+      send: {
+        configurable: true,
+        get() {
+          return send;
+        },
+        set(value: unknown) {
+          send = value;
+        },
+      },
+    });
+    Reflect.set(globalThis.window, "XMLHttpRequest", AccessorPrototypeXmlHttpRequest);
+
+    const engine = createDevtoolsEngine({ capacity: 10 });
+
+    installXmlHttpRequestInterceptor({
+      engine,
+      target: globalThis.window,
+    });
+
+    const request = new globalThis.window.XMLHttpRequest();
+
+    expect(Reflect.get(request, "open")).toBe(nativeOpen);
+    expect(Reflect.get(request, "send")).toBe(nativeSend);
+
+    request.open("POST", "https://example.test/inherited-accessor-methods");
+    request.send("body");
+
+    expect(Reflect.get(request, "sentBodies")).toEqual(["body"]);
+    expect(engine.getConnections()).toEqual([]);
+  });
+
+  it("restores methods virtualized by a prior constructor patch", () => {
+    let priorOpen: unknown;
+    let priorSend: unknown;
+    const PriorXmlHttpRequest = new Proxy(FakeXmlHttpRequest, {
+      construct(target, args, newTarget) {
+        const request = Reflect.construct(target, args, newTarget);
+
+        priorOpen = Reflect.get(request, "open").bind(request);
+        priorSend = Reflect.get(request, "send").bind(request);
+        let open = priorOpen;
+        let send = priorSend;
+
+        return new Proxy(request, {
+          get(instance, property, receiver) {
+            if (property === "open") {
+              return open;
+            }
+
+            if (property === "send") {
+              return send;
+            }
+
+            if (property === "addEventListener") {
+              return () => {
+                throw new Error("listener instrumentation rejected");
+              };
+            }
+
+            return Reflect.get(instance, property, receiver);
+          },
+          set(instance, property, value, receiver) {
+            if (property === "open") {
+              open = value;
+              return true;
+            }
+
+            if (property === "send") {
+              send = value;
+              return true;
+            }
+
+            return Reflect.set(instance, property, value, receiver);
+          },
+        });
+      },
+    });
+
+    Reflect.set(globalThis.window, "XMLHttpRequest", PriorXmlHttpRequest);
+
+    const engine = createDevtoolsEngine({ capacity: 10 });
+
+    installXmlHttpRequestInterceptor({
+      engine,
+      target: globalThis.window,
+    });
+
+    const request = new globalThis.window.XMLHttpRequest();
+
+    expect(Reflect.get(request, "open")).toBe(priorOpen);
+    expect(Reflect.get(request, "send")).toBe(priorSend);
+
+    request.open("POST", "https://example.test/virtual-methods");
+    request.send("body");
+
+    expect(Reflect.get(request, "sentBodies")).toEqual(["body"]);
+    expect(engine.getConnections()).toEqual([]);
   });
 
   it("preserves the receiver semantics of borrowed native methods", () => {

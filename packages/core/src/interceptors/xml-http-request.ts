@@ -119,6 +119,22 @@ function getPrototypeGetter(Constructor: unknown, name: string): unknown {
   return undefined;
 }
 
+function getPropertyDescriptor(value: object, name: PropertyKey): PropertyDescriptor | undefined {
+  let current: object | null = value;
+
+  while (current) {
+    const descriptor = Object.getOwnPropertyDescriptor(current, name);
+
+    if (descriptor) {
+      return descriptor;
+    }
+
+    current = Object.getPrototypeOf(current);
+  }
+
+  return undefined;
+}
+
 function isArrayBuffer(
   value: unknown,
   runtime: XmlHttpRequestPayloadRuntime,
@@ -418,6 +434,50 @@ function toResponsePayload(
   }
 }
 
+function equalsAsciiCaseInsensitive(value: string, uppercase: string, lowercase: string): boolean {
+  if (value.length !== uppercase.length) {
+    return false;
+  }
+
+  for (let index = 0; index < value.length; index += 1) {
+    const character = value[index];
+
+    if (character !== uppercase[index] && character !== lowercase[index]) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function normalizeMethod(method: string): string {
+  if (equalsAsciiCaseInsensitive(method, "DELETE", "delete")) {
+    return "DELETE";
+  }
+
+  if (equalsAsciiCaseInsensitive(method, "GET", "get")) {
+    return "GET";
+  }
+
+  if (equalsAsciiCaseInsensitive(method, "HEAD", "head")) {
+    return "HEAD";
+  }
+
+  if (equalsAsciiCaseInsensitive(method, "OPTIONS", "options")) {
+    return "OPTIONS";
+  }
+
+  if (equalsAsciiCaseInsensitive(method, "POST", "post")) {
+    return "POST";
+  }
+
+  if (equalsAsciiCaseInsensitive(method, "PUT", "put")) {
+    return "PUT";
+  }
+
+  return method;
+}
+
 function createDescriptor(args: readonly unknown[]): XmlHttpRequestDescriptor | undefined {
   const [method, url, async = true] = args;
 
@@ -426,7 +486,7 @@ function createDescriptor(args: readonly unknown[]): XmlHttpRequestDescriptor | 
   }
 
   return {
-    method: method.toUpperCase(),
+    method: normalizeMethod(method),
     url,
     async: Boolean(async),
     sent: false,
@@ -471,6 +531,18 @@ function instrumentXmlHttpRequest(
   context: BrowseSentEventInterceptorContext,
   payloadRuntime: XmlHttpRequestPayloadRuntime,
 ): void {
+  const originalOpenDescriptor = Object.getOwnPropertyDescriptor(request, "open");
+  const originalSendDescriptor = Object.getOwnPropertyDescriptor(request, "send");
+  const openDescriptor = getPropertyDescriptor(request, "open");
+  const sendDescriptor = getPropertyDescriptor(request, "send");
+
+  if (
+    (openDescriptor && !("value" in openDescriptor)) ||
+    (sendDescriptor && !("value" in sendDescriptor))
+  ) {
+    throw new TypeError("Accessor-backed XMLHttpRequest methods cannot be instrumented safely.");
+  }
+
   const originalOpen: unknown = Reflect.get(request, "open");
   const originalSend: unknown = Reflect.get(request, "send");
 
@@ -547,59 +619,6 @@ function instrumentXmlHttpRequest(
     }
   }
 
-  request.addEventListener("loadstart", () => {
-    const current = active;
-
-    if (current) {
-      observeSafely(() => {
-        context.engine.updateConnection(current.connection.id, { state: "open" });
-      });
-    }
-  });
-  request.addEventListener("readystatechange", () => {
-    const readyState = observeValue(() => request.readyState, 0);
-    const pending = openCallStack.at(-1);
-
-    if (readyState === 1 && pending) {
-      activatePendingOpen(pending);
-    }
-
-    const current = active;
-
-    if (readyState === 4 && current && !current.doneCompletion) {
-      current.doneCompletion = captureCompletion(request, payloadRuntime, "load");
-      doneGenerations.push(current);
-    }
-  });
-  for (const outcome of ["load", "error", "abort", "timeout"] as const) {
-    request.addEventListener(outcome, () => {
-      const current = doneGenerations.pop() ?? active;
-
-      if (!current || current.finalized) {
-        return;
-      }
-
-      const completion = current.doneCompletion
-        ? { ...current.doneCompletion, outcome }
-        : captureCompletion(request, payloadRuntime, outcome);
-
-      finalize(current, completion);
-      ignoredLoadEndEvents += 1;
-    });
-  }
-  request.addEventListener("loadend", () => {
-    if (ignoredLoadEndEvents > 0) {
-      ignoredLoadEndEvents -= 1;
-      return;
-    }
-
-    const current = active;
-
-    if (current) {
-      finalize(current, captureCompletion(request, payloadRuntime, "unknown"));
-    }
-  });
-
   function closeAfterSendError(): void {
     const current = active;
 
@@ -674,7 +693,87 @@ function instrumentXmlHttpRequest(
     });
   }
 
-  Reflect.set(request, "open", function (this: XMLHttpRequest, ...args: unknown[]) {
+  const handleLoadStart = () => {
+    const current = active;
+
+    if (current) {
+      observeSafely(() => {
+        context.engine.updateConnection(current.connection.id, { state: "open" });
+      });
+    }
+  };
+  const handleReadyStateChange = () => {
+    const readyState = observeValue(() => request.readyState, 0);
+    const pending = openCallStack.at(-1);
+
+    if (readyState === 1 && pending) {
+      activatePendingOpen(pending);
+    }
+
+    const current = active;
+
+    if (readyState === 4 && current && !current.doneCompletion) {
+      current.doneCompletion = captureCompletion(request, payloadRuntime, "load");
+      doneGenerations.push(current);
+    }
+  };
+  const terminalListeners = (["load", "error", "abort", "timeout"] as const).map(
+    (outcome) =>
+      [
+        outcome,
+        () => {
+          const current = doneGenerations.pop() ?? active;
+
+          if (!current || current.finalized) {
+            return;
+          }
+
+          const completion = current.doneCompletion
+            ? { ...current.doneCompletion, outcome }
+            : captureCompletion(request, payloadRuntime, outcome);
+
+          finalize(current, completion);
+          ignoredLoadEndEvents += 1;
+        },
+      ] as const,
+  );
+  const handleLoadEnd = () => {
+    if (ignoredLoadEndEvents > 0) {
+      ignoredLoadEndEvents -= 1;
+      return;
+    }
+
+    const current = active;
+
+    if (current) {
+      finalize(current, captureCompletion(request, payloadRuntime, "unknown"));
+    }
+  };
+  const listeners: readonly (readonly [string, EventListener])[] = [
+    ["loadstart", handleLoadStart],
+    ["readystatechange", handleReadyStateChange],
+    ...terminalListeners,
+    ["loadend", handleLoadEnd],
+  ];
+
+  function restoreMethod(
+    name: "open" | "send",
+    propertyDescriptor: PropertyDescriptor | undefined,
+    original: unknown,
+  ): void {
+    observeSafely(() => {
+      Reflect.set(request, name, original);
+
+      if (propertyDescriptor) {
+        Reflect.defineProperty(request, name, propertyDescriptor);
+        return;
+      }
+
+      Reflect.deleteProperty(request, name);
+    });
+  }
+
+  const wrappedOpen = function (this: XMLHttpRequest, ...args: unknown[]) {
     if (this !== request) {
       return Reflect.apply(originalOpen, this, args);
     }
@@ -699,36 +798,65 @@ function instrumentXmlHttpRequest(
         openCallStack.splice(pendingIndex, 1);
       }
     }
-  });
+  };
+  const wrappedSend = function (
+    this: XMLHttpRequest,
+    ...args: [body?: Document | XMLHttpRequestBodyInit | null]
+  ) {
+    if (this !== request) {
+      return Reflect.apply(originalSend, this, args);
+    }
 
-  Reflect.set(
-    request,
-    "send",
-    function (this: XMLHttpRequest, ...args: [body?: Document | XMLHttpRequestBodyInit | null]) {
-      if (this !== request) {
-        return Reflect.apply(originalSend, this, args);
-      }
+    if (!descriptor || descriptor.sent) {
+      return Reflect.apply(originalSend, this, args);
+    }
 
-      if (!descriptor || descriptor.sent) {
-        return Reflect.apply(originalSend, this, args);
-      }
+    const currentDescriptor = descriptor;
 
-      const currentDescriptor = descriptor;
+    currentDescriptor.sent = true;
+    const body = args[0] ?? null;
 
-      currentDescriptor.sent = true;
-      const body = args[0] ?? null;
+    beginObservation(currentDescriptor, body);
 
-      beginObservation(currentDescriptor, body);
+    try {
+      return Reflect.apply(originalSend, this, args);
+    } catch (error) {
+      closeAfterSendError();
+      currentDescriptor.sent = false;
+      throw error;
+    }
+  };
 
-      try {
-        return Reflect.apply(originalSend, this, args);
-      } catch (error) {
-        closeAfterSendError();
-        currentDescriptor.sent = false;
-        throw error;
-      }
-    },
-  );
+  try {
+    if (
+      !Reflect.set(request, "open", wrappedOpen) ||
+      Reflect.get(request, "open") !== wrappedOpen
+    ) {
+      throw new TypeError("Could not instrument XMLHttpRequest.open.");
+    }
+
+    if (
+      !Reflect.set(request, "send", wrappedSend) ||
+      Reflect.get(request, "send") !== wrappedSend
+    ) {
+      throw new TypeError("Could not instrument XMLHttpRequest.send.");
+    }
+
+    for (const [type, listener] of listeners) {
+      request.addEventListener(type, listener);
+    }
+  } catch (error) {
+    for (const [type, listener] of listeners) {
+      observeSafely(() => {
+        request.removeEventListener(type, listener);
+      });
+    }
+
+    restoreMethod("send", originalSendDescriptor, originalSend);
+    restoreMethod("open", originalOpenDescriptor, originalOpen);
+
+    throw error;
+  }
 }
 
 export function installXmlHttpRequestInterceptor(
@@ -743,13 +871,15 @@ export function installXmlHttpRequestInterceptor(
   const payloadRuntime = createPayloadRuntime(context.target);
   const ProxiedXmlHttpRequest = new Proxy(OriginalXmlHttpRequest, {
     construct(target, args, newTarget) {
-      const request: unknown = Reflect.construct(target, args, newTarget);
+      const request = Reflect.construct(target, args, newTarget);
 
-      if (!isInstrumentableXmlHttpRequest(request)) {
-        throw new TypeError("Expected XMLHttpRequest instance.");
+      try {
+        if (isInstrumentableXmlHttpRequest(request)) {
+          instrumentXmlHttpRequest(request, context, payloadRuntime);
+        }
+      } catch {
+        // 선행 patch가 계측을 거부해도 생성된 XHR 인스턴스는 그대로 반환한다.
       }
-
-      instrumentXmlHttpRequest(request, context, payloadRuntime);
 
       return request;
     },
