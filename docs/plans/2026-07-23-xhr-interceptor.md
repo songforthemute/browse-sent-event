@@ -678,17 +678,29 @@ it("creates a new connection when the same instance is reopened", () => {
 
 다음 규칙을 구현한다.
 
-- `load`, `error`, `abort`, `timeout`은 사용자 이벤트 핸들러보다 먼저 해당 세대의 응답과 metadata snapshot을 저장하고 종료 대기열에 넣는다.
-- `loadend`는 대기열에서 같은 세대의 snapshot을 꺼내 한 번만 finalize한다.
-- terminal event 핸들러가 같은 XHR 인스턴스를 즉시 `open()`/`send()`해도 이전 `loadend`가 새 connection을 닫지 않는다.
+- `readystatechange(DONE)`에서 사용자 핸들러보다 먼저 해당 세대의 응답과 metadata snapshot을 stack에 저장한다.
+- `load`, `error`, `abort`, `timeout`은 가장 최근 DONE 세대를 꺼내 즉시 한 번만 finalize한다.
+- `loadend`는 앞선 terminal event와 짝을 이룬 경우 무시하고, terminal event가 없었던 비정상 경로에서만 `unknown` 종료 fallback으로 사용한다.
+- terminal event나 DONE 핸들러가 같은 XHR 인스턴스를 즉시 `open()`/`send()`해도 이전 세대의 후속 이벤트가 새 connection을 닫지 않는다.
+- 중첩된 동기 XHR 완료는 DONE stack의 LIFO 순서로 각 terminal event와 연결한다.
 - outcome이 `load`일 때만 incoming message를 기록한다.
 - metadata getter와 payload 변환은 observer 내부에서 예외가 새지 않게 한다.
 - native `send()`가 던지면 connection을 `send-threw`로 닫고 같은 예외를 다시 던진다.
 - native `send()`의 인자 변환이 실패하면 descriptor의 `sent`를 되돌려 같은 `open()`의 정상 재시도를 새 connection으로 기록한다.
 - engine subscriber가 `recordConnection()` 도중 던져도 이미 저장된 connection을 회수해 이후 종료 이벤트와 연결한다.
 - `open()` 성공 전에는 descriptor를 바꾸지 않는다.
+- native `open()`이 동기 발생시키는 `readystatechange(OPENED)`에서 pending descriptor를 사용자 핸들러보다 먼저 활성화한다.
+- 중첩된 `open()` 호출 stack에서 각 호출의 `OPENED` 시점에 descriptor를 활성화해, OPENED 핸들러 재진입과 Web IDL 인자 변환 재진입 모두 실제 native 최종 상태를 따른다.
+- URL은 원시 문자열만 descriptor에 저장하고 `URL` 인스턴스와 기타 객체는 native 동작만 보존한다.
+- 진행 중인 요청에서 `open()`이 다시 성공하면 이전 connection을 `reopened`로 명시적으로 닫는다.
 - 같은 `open()`에 중복 `send()`가 들어오면 record를 추가하지 않고 native 호출에 위임한다.
-- 재사용을 위해 새 `open()` 성공 시 `sent`와 active state를 초기화한다.
+- 재사용을 위해 새 `open()` 성공 시 새 descriptor와 active state를 시작한다.
+
+객체 URL을 계측하지 않는 결정에 수반되는 의식적 부채는 다음과 같다.
+
+- 포기하는 것: `URL` 인스턴스나 사용자 정의 객체를 `open()`에 전달한 요청은 connection과 message를 기록하지 않는다.
+- 지금 감당 가능한 이유: 일반 XHR과 Axios는 대부분 문자열 URL을 전달하며, 객체의 native Web IDL 변환값을 다시 얻으려면 사용자 변환 코드나 Proxy trap을 추가 실행해 실제 요청과 기록을 어긋나게 할 수 있다.
+- 회수 조건: 브라우저가 변환 완료 URL을 부작용 없이 노출하거나, 라이브러리에 명시적 URL serializer 계약을 추가할 때 다시 검토한다.
 
 observer callback은 다음 형태의 guard를 사용한다.
 

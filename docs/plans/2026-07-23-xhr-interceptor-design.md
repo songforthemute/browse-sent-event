@@ -123,7 +123,7 @@ export type BrowseSentEventProtocol =
 | 필드 | 값 |
 | --- | --- |
 | `protocol` | `"xhr"` |
-| `url` | 성공한 마지막 `open()`에 전달된 URL |
+| `url` | 성공한 마지막 `open()`에 전달된 원시 URL 문자열 |
 | 초기 `state` | `"connecting"` |
 | `metadata.method` | 정규화된 HTTP method |
 | `metadata.async` | `open()`의 async 인자 |
@@ -174,6 +174,8 @@ metadata:  { status, statusText, responseType, contentType }
 래퍼는 native `open()`을 먼저 호출한다. native 호출이 성공한 뒤에만 method, URL, async 값을 저장하고 이전 요청 상태를 초기화한다.
 
 이 순서는 잘못된 method, URL, 동기 XHR 제한 등 native validation 결과를 그대로 보존한다. `open()`이 예외를 던지면 connection이나 message를 기록하지 않는다.
+
+URL은 원시 문자열만 기록한다. `URL` 인스턴스와 기타 객체는 native 변환 결과를 부작용 없이 재사용할 수 없으므로 요청 동작만 보존하고 계측하지 않는다.
 
 ### `send()`
 
@@ -226,11 +228,13 @@ contentType
 | `ArrayBuffer` | 복사한 `ArrayBuffer` |
 | typed array, `DataView` | 해당 byte range를 복사한 `ArrayBuffer` |
 | `Blob` | type과 size를 포함한 요약 문자열 |
-| `FormData` | 값은 펼치지 않고 entry 수와 field 이름을 요약 |
+| `FormData` | 값은 펼치지 않고 field 이름을 최대 20개, 각 64자로 제한해 요약 |
 | `Document` | document type 중심의 요약 문자열 |
-| 기타 | 안전한 문자열 변환 결과 |
+| 기타 | 사용자 변환 코드를 다시 실행하지 않는 unsupported placeholder |
 
 `FormData`와 `Blob`을 실제 wire format으로 재직렬화하지 않는다. 브라우저가 생성하는 multipart boundary와 binary body를 정확히 복제하려면 추가 비용과 민감 정보 노출이 생기기 때문이다.
+
+기타 body를 `String()`으로 다시 변환하지 않는다. Native Web IDL 변환과 별도로 사용자 코드를 한 번 더 실행하면 실제 전송 동작을 바꿀 수 있으며, 이 제한의 포기 범위와 회수 조건은 구현 계획에 기록한다.
 
 ### 응답
 
