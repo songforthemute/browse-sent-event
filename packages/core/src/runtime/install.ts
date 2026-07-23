@@ -6,6 +6,7 @@ import type {
 import { installEventSourceInterceptor } from "../interceptors/eventsource.js";
 import { installFetchStreamInterceptor } from "../interceptors/fetch-stream.js";
 import { installWebSocketInterceptor } from "../interceptors/websocket.js";
+import { installXmlHttpRequestInterceptor } from "../interceptors/xml-http-request.js";
 import { mountDevtoolsPanel, type MountedDevtoolsPanel } from "../ui/mount.js";
 import { resolveOptions, type BrowseSentEventOptions } from "./options.js";
 
@@ -88,6 +89,15 @@ export function installBrowseSentEvent(options?: BrowseSentEventOptions): Browse
 
   if (eventSourceInterceptor) {
     installedInterceptors.push(eventSourceInterceptor);
+  }
+
+  const xmlHttpRequestInterceptor = installXmlHttpRequestInterceptor({
+    engine: runtime.engine,
+    target,
+  });
+
+  if (xmlHttpRequestInterceptor) {
+    installedInterceptors.push(xmlHttpRequestInterceptor);
   }
 
   mountedPanel = mountDevtoolsPanel({
