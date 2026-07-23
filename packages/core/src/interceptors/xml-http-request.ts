@@ -256,18 +256,28 @@ function copyArrayBufferView(
   return undefined;
 }
 
+function getOwnDataProperty(value: unknown, name: PropertyKey): unknown {
+  if ((typeof value !== "object" && typeof value !== "function") || value === null) {
+    return undefined;
+  }
+
+  const descriptor = Object.getOwnPropertyDescriptor(value, name);
+
+  return descriptor && "value" in descriptor ? descriptor.value : undefined;
+}
+
 function summarizeBlob(value: unknown, runtime: XmlHttpRequestPayloadRuntime): string | undefined {
   for (const intrinsics of runtime.blobIntrinsics) {
-    if (
-      typeof intrinsics.sizeGetter !== "function" ||
-      typeof intrinsics.typeGetter !== "function"
-    ) {
-      continue;
-    }
-
     try {
-      const size: unknown = Reflect.apply(intrinsics.sizeGetter, value, []);
-      const type: unknown = Reflect.apply(intrinsics.typeGetter, value, []);
+      const sizeResult = callIntrinsic([intrinsics.sizeGetter], value);
+      const typeResult = callIntrinsic([intrinsics.typeGetter], value);
+
+      if (!sizeResult.ok && !typeResult.ok) {
+        continue;
+      }
+
+      const size = sizeResult.ok ? sizeResult.value : getOwnDataProperty(value, "size");
+      const type = typeResult.ok ? typeResult.value : getOwnDataProperty(value, "type");
 
       if (typeof size === "number" && typeof type === "string") {
         const typeSummary = type ? ` type=${type}` : "";

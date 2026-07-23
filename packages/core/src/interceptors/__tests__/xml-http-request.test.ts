@@ -727,6 +727,60 @@ describe("installXmlHttpRequestInterceptor", () => {
     expect(engine.getMessages()[0]?.size).toBe(3);
   });
 
+  it("serializes a URLSearchParams request body", () => {
+    const engine = createDevtoolsEngine({ capacity: 10 });
+    const body = new globalThis.URLSearchParams([
+      ["name", "sample"],
+      ["tag", "xhr"],
+    ]);
+
+    installXmlHttpRequestInterceptor({
+      engine,
+      target: globalThis.window,
+    });
+
+    const request = new globalThis.window.XMLHttpRequest();
+
+    request.open("POST", "https://example.test/search-params");
+    request.send(body);
+
+    expect(engine.getMessages()[0]?.payload).toBe("name=sample&tag=xhr");
+  });
+
+  it("summarizes a Blob request body", () => {
+    const engine = createDevtoolsEngine({ capacity: 10 });
+    const body = new globalThis.Blob(["hello"], { type: "text/plain" });
+
+    installXmlHttpRequestInterceptor({
+      engine,
+      target: globalThis.window,
+    });
+
+    const request = new globalThis.window.XMLHttpRequest();
+
+    request.open("POST", "https://example.test/blob-request");
+    request.send(body);
+
+    expect(engine.getMessages()[0]?.payload).toBe("[Blob size=5 type=text/plain]");
+  });
+
+  it("summarizes a Document request body", () => {
+    const engine = createDevtoolsEngine({ capacity: 10 });
+    const body = globalThis.document.implementation.createHTMLDocument("request");
+
+    installXmlHttpRequestInterceptor({
+      engine,
+      target: globalThis.window,
+    });
+
+    const request = new globalThis.window.XMLHttpRequest();
+
+    request.open("POST", "https://example.test/document-request");
+    request.send(body);
+
+    expect(engine.getMessages()[0]?.payload).toBe("[Document type=text/html]");
+  });
+
   it("summarizes FormData without exposing field values", () => {
     const engine = createDevtoolsEngine({ capacity: 10 });
     const formData = new globalThis.FormData();
@@ -749,6 +803,52 @@ describe("installXmlHttpRequestInterceptor", () => {
     expect(payload).toContain("FormData");
     expect(payload).toContain("token");
     expect(payload).not.toContain("secret-value");
+  });
+
+  it("summarizes a Blob response", () => {
+    const engine = createDevtoolsEngine({ capacity: 10 });
+
+    installXmlHttpRequestInterceptor({
+      engine,
+      target: globalThis.window,
+    });
+
+    const request = new globalThis.window.XMLHttpRequest();
+
+    request.open("GET", "https://example.test/blob-response");
+    request.responseType = "blob";
+    request.send();
+    Reflect.set(request, "response", new globalThis.Blob(["response"], { type: "text/plain" }));
+    Reflect.set(request, "status", 200);
+    request.dispatchEvent(new globalThis.ProgressEvent("load"));
+    request.dispatchEvent(new globalThis.ProgressEvent("loadend"));
+
+    expect(engine.getMessages()[1]?.payload).toBe("[Blob size=8 type=text/plain]");
+  });
+
+  it("summarizes a Document response", () => {
+    const engine = createDevtoolsEngine({ capacity: 10 });
+
+    installXmlHttpRequestInterceptor({
+      engine,
+      target: globalThis.window,
+    });
+
+    const request = new globalThis.window.XMLHttpRequest();
+
+    request.open("GET", "https://example.test/document-response");
+    request.responseType = "document";
+    request.send();
+    Reflect.set(
+      request,
+      "response",
+      globalThis.document.implementation.createHTMLDocument("response"),
+    );
+    Reflect.set(request, "status", 200);
+    request.dispatchEvent(new globalThis.ProgressEvent("load"));
+    request.dispatchEvent(new globalThis.ProgressEvent("loadend"));
+
+    expect(engine.getMessages()[1]?.payload).toBe("[Document type=text/html]");
   });
 
   it("serializes a json response without reading responseText", () => {
@@ -780,6 +880,29 @@ describe("installXmlHttpRequestInterceptor", () => {
         payloadPreview: '{"id":"item-1"}',
       }),
     );
+  });
+
+  it.each([404, 500])("records an HTTP %s response as a completed load", (status) => {
+    const engine = createDevtoolsEngine({ capacity: 10 });
+
+    installXmlHttpRequestInterceptor({
+      engine,
+      target: globalThis.window,
+    });
+
+    const request = new globalThis.window.XMLHttpRequest();
+
+    request.open("GET", `https://example.test/status-${status}`);
+    request.send();
+    Reflect.apply(Reflect.get(request, "succeed"), request, ["error response", status]);
+
+    expect(engine.getConnections()[0]?.metadata).toEqual(
+      expect.objectContaining({
+        outcome: "load",
+        status,
+      }),
+    );
+    expect(engine.getMessages()[1]?.metadata).toEqual(expect.objectContaining({ status }));
   });
 
   it.each(["error", "abort", "timeout"] as const)(
