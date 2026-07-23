@@ -1,6 +1,6 @@
 # browse-sent-event
 
-WebSocket, HTTP stream, EventSource의 실시간 메시지 흐름을 관찰하기 위한 프론트엔드 개발 도구.
+WebSocket, HTTP stream, EventSource, XMLHttpRequest의 통신 흐름을 관찰하기 위한 프론트엔드 개발 도구.
 
 ## 상태
 
@@ -10,7 +10,7 @@ WebSocket, HTTP stream, EventSource의 실시간 메시지 흐름을 관찰하�
 
 - Vite 개발 서버 entry bootstrap 주입
 - core runtime 설치 API
-- WebSocket, fetch ReadableStream, EventSource 이벤트 수집
+- WebSocket, fetch ReadableStream, EventSource, XMLHttpRequest 이벤트 수집
 - in-memory ring buffer, 단순 검색, JSONL/log export
 - Shadow DOM 기반 DevTools 패널 MVP
 - 연결 목록, 메시지 타임라인, 메트릭, 검색/방향 필터
@@ -34,7 +34,7 @@ Vite 전용, main thread 전용 개발 도구를 제공하고, 실시간 transpo
 
 ## 호환성 기준
 
-현재 개발/테스트 기준은 Vite 8.0.14와 Vitest 4.1.8이다. `packages/plugin-vite`는 Vite 공개 Plugin API만 사용하고, peer dependency 범위는 Vite 5.x부터 8.x까지로 둔다.
+현재 개발/테스트 기준은 Vite 8.0.16과 Vitest 4.1.8이다. `packages/plugin-vite`는 Vite 공개 Plugin API만 사용하고, peer dependency 범위는 Vite 5.x부터 8.x까지로 둔다.
 
 ## 설치와 Vite 사용법
 
@@ -55,7 +55,9 @@ export default defineConfig({
 });
 ```
 
-Phase 1은 Vite 개발 서버, 브라우저 main thread, WebSocket/fetch ReadableStream/EventSource 수집을 우선 대상으로 한다. production build instrumentation과 browser extension 형태의 배포는 현재 범위에 포함하지 않는다.
+Phase 1은 Vite 개발 서버, 브라우저 main thread, WebSocket/fetch ReadableStream/EventSource/XMLHttpRequest 수집을 우선 대상으로 한다. production build instrumentation과 browser extension 형태의 배포는 현재 범위에 포함하지 않는다.
+
+XMLHttpRequest는 `open()`에 문자열 URL을 전달한 요청만 계측한다. URL 객체를 전달한 요청과 요청 header, progress chunk는 수집하지 않으며 응답 header는 `content-type`만 기록한다. GET/HEAD body는 빈 payload로 기록하고, FormData는 값 없이 제한된 field 이름만, Blob과 Document는 metadata만 요약한다. 이 제한과 관계없이 native 요청 동작은 그대로 보존한다.
 
 ## 문서
 

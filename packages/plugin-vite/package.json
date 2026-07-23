@@ -9,7 +9,8 @@
     "realtime",
     "vite",
     "vite-plugin",
-    "websocket"
+    "websocket",
+    "xhr"
   ],
   "homepage": "https://songforthemute.github.io/browse-sent-event/",
   "bugs": {

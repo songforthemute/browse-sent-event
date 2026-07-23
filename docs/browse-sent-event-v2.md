@@ -2,7 +2,7 @@
 
 **실시간 메시지가 도착한 뒤, 어느 상태를 거쳐 어떤 컴포넌트까지 소비됐는지 보여주는 개발 도구.**
 
-WebSocket, HTTP stream(fetch/SSE), window messaging을 한곳에서 보고, 도착했지만 화면에 소비되지 않은 메시지를 즉시 찾는다. 설정 한 줄로 개발 환경에만 주입되며, 프론트엔드가 아닌 문제를 5초 안에 잘라낸다.
+WebSocket, HTTP stream(fetch/SSE), XMLHttpRequest, window messaging을 한곳에서 보고, 도착했지만 화면에 소비되지 않은 메시지를 즉시 찾는다. 설정 한 줄로 개발 환경에만 주입되며, 프론트엔드가 아닌 문제를 5초 안에 잘라낸다.
 
 ---
 
@@ -50,7 +50,7 @@ browse-sent-event는 그 경계면을 투명하게 만들어서, **"이건 내 �
 
 - **core(인터셉트, 타임라인, 검색)**는 프레임워크에 무관하게 동작한다
 - **causality 추적**은 지원 프레임워크 어댑터 또는 heuristic 폴백으로 제공된다
-- 프로토콜 — WebSocket, HTTP stream(fetch/SSE), window messaging — 을 하나의 타임라인으로 통합한다
+- 프로토콜 — WebSocket, HTTP stream(fetch/SSE), XMLHttpRequest, window messaging — 을 하나의 타임라인으로 통합한다
 - 앱 코드 변경 없이, 번들러 설정 한 줄로 도입한다
 - 프로덕션 번들에는 한 바이트도 포함되지 않는다
 - 사람(DevTools UI)과 에이전트(JSON API) 모두 소비할 수 있다
@@ -94,17 +94,20 @@ arrived → parsed → handled → stored → selected → rendered
 
 ### 1. 프로토콜 인터셉트 + 채팅형 타임라인 UI
 
-브라우저 Web API 레벨에서 세 가지 통신 표면을 패치한다.
+브라우저 Web API 레벨에서 네 가지 통신 표면을 패치한다.
 
 - **WebSocket**: `window.WebSocket`을 Proxy로 래핑
 - **HTTP stream**: `window.fetch`를 래핑하여 `ReadableStream` 응답을 감지 + `window.EventSource` Proxy 패치
+- **XMLHttpRequest**: `window.XMLHttpRequest`를 Proxy로 래핑해 요청 body와 최종 응답을 기록
 - **Window messaging**: `window.postMessage` 송신 패치 + `message` 이벤트 capture phase 수신
+
+XMLHttpRequest 지원은 Axios의 기본 브라우저 어댑터처럼 XHR을 사용하는 HTTP 클라이언트를 앱 코드 변경 없이 관찰하기 위한 것이다. `open()`에 문자열 URL을 전달한 요청만 계측하고 URL 객체를 전달한 요청은 수집하지 않는다. 요청 header와 progress chunk는 제외하고 응답 header는 `content-type`만 기록한다. GET/HEAD body는 비우며 FormData는 값 없이 제한된 field 이름만, Blob과 Document는 metadata만 요약한다.
 
 인터셉터는 `core/interceptors/` 아래에 프로토콜별로 분리되어 있으며, 새 프로토콜을 추가할 때 아키텍처 변경 없이 어댑터만 추가하면 된다.
 
 Shadow DOM으로 앱 스타일과 격리된 플로팅 패널에 연결 목록, 채팅형 메시지 타임라인(방향 ↑↓, 타임스탬프, 페이로드 프리뷰, 응답 지연), 집계 메트릭을 표시한다. 모든 프로토콜이 하나의 타임라인에 통합된다.
 
-**현재 스코프: main thread only.** Web Worker에서 열린 WebSocket/EventSource 연결은 Phase 1에서는 캡처하지 않는다. Worker 지원은 별도 부트스트랩 주입 경로가 필요하며, 이후 Phase에서 다룬다.
+**현재 스코프: main thread only.** Web Worker에서 시작한 WebSocket/fetch/EventSource/XMLHttpRequest 통신은 Phase 1에서는 캡처하지 않는다. Worker 지원은 별도 부트스트랩 주입 경로가 필요하며, 이후 Phase에서 다룬다.
 
 **해소하는 고통**: "이 데이터 서버에서 왔어? 안 왔어?"를 확인하려고 Chrome Network 탭을 열고, WS 필터를 걸고, 프레임 목록에서 스크롤하며 찾는 과정. LLM 스트리밍 앱에서 토큰이 끊기면 fetch response가 멈춘 건지, 서버가 생성을 중단한 건지 판단하기 어려운 문제.
 
@@ -364,7 +367,7 @@ ws.addEventListener('message', (e) => {
 
 **스코프: Vite-only, main-thread only.**
 
-- core: Proxy 인터셉트 — WebSocket + fetch stream(ReadableStream 감지) + EventSource
+- core: Proxy 인터셉트 — WebSocket + fetch stream(ReadableStream 감지) + EventSource + XMLHttpRequest
 - core: 채팅형 타임라인 DevTools UI (Shadow DOM)
 - core: 메트릭 수집 + 메모리 링 버퍼
 - core: 단순 텍스트 매칭 검색 + `.jsonl`/`.log` export
@@ -442,7 +445,7 @@ browseSentEvent({ experimentalWasm: true })
 
 ### 2. 프로토콜 통합이라는 스코프 우위
 
-WebSocket만 다루는 도구, SSE만 다루는 도구, postMessage만 다루는 도구는 이미 각각 존재한다. 하지만 WebSocket, HTTP stream, window messaging을 **하나의 타임라인, 하나의 causality 추적, 하나의 검색 엔진**으로 통합 관찰하는 도구는 프로토콜별 도구를 조합해도 만들어지지 않는다.
+WebSocket만 다루는 도구, SSE만 다루는 도구, XMLHttpRequest만 다루는 도구, postMessage만 다루는 도구는 이미 각각 존재한다. 하지만 WebSocket, HTTP stream, XMLHttpRequest, window messaging을 **하나의 타임라인, 하나의 causality 추적, 하나의 검색 엔진**으로 통합 관찰하는 도구는 프로토콜별 도구를 조합해도 만들어지지 않는다.
 
 ### 3. 에이전트 통합이라는 미개척 영역
 
@@ -473,6 +476,7 @@ browse-sent-event/
 │   │   ├── websocket.ts        ← Phase 1
 │   │   ├── fetch-stream.ts     ← Phase 1 (ReadableStream 감지)
 │   │   ├── eventsource.ts      ← Phase 1
+│   │   ├── xml-http-request.ts ← Phase 1
 │   │   └── post-message.ts     ← Phase 3
 │   ├── lifecycle/
 │   │   ├── stages.ts           ← Message Lifecycle 단계 모델

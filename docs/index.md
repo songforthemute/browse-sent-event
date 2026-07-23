@@ -4,7 +4,7 @@ outline: deep
 
 # browse-sent-event 기술 문서
 
-`browse-sent-event`는 WebSocket, fetch ReadableStream, EventSource의 실시간 메시지 흐름을 브라우저 안에서 관찰하기 위한 프론트엔드 개발 도구다.
+`browse-sent-event`는 WebSocket, fetch ReadableStream, EventSource, XMLHttpRequest의 통신 흐름을 브라우저 안에서 관찰하기 위한 프론트엔드 개발 도구다.
 
 ## 현재 상태
 
@@ -27,6 +27,8 @@ outline: deep
 
 ## 최근 구현 계획
 
+- [XMLHttpRequest 인터셉터 설계](./plans/2026-07-23-xhr-interceptor-design.md)
+- [XMLHttpRequest 인터셉터 구현 계획](./plans/2026-07-23-xhr-interceptor.md)
 - [Runtime/UI 하드닝 설계](./plans/2026-06-08-runtime-ui-hardening-design.md)
 - [문서 SPA 인터랙티브 예제 데모](./plans/2026-06-03-docs-interactive-demo.md)
 - [npm 배포 준비](./plans/2026-06-03-npm-publish-readiness.md)
