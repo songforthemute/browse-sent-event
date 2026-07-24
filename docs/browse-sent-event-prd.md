@@ -6,7 +6,7 @@
 |---|---|
 | **Status** | Draft v1 |
 | **Owner** | songforthemute (코코) |
-| **Last updated** | 2026-04-20 |
+| **Last updated** | 2026-07-23 |
 | **Scope of this PRD** | Phase 1 (핵심 가치 증명) 집중, Phase 2~6은 개요만 |
 
 ---
@@ -15,7 +15,7 @@
 
 ### 1.1 Product Summary
 
-실시간 메시지가 도착한 뒤, 어느 상태를 거쳐 어떤 컴포넌트까지 소비됐는지 보여주는 프론트엔드 개발 도구. WebSocket, HTTP stream(fetch/SSE), window messaging을 하나의 타임라인으로 통합하고, Vite 플러그인 한 줄로 도입한다.
+실시간 메시지가 도착한 뒤, 어느 상태를 거쳐 어떤 컴포넌트까지 소비됐는지 보여주는 프론트엔드 개발 도구. WebSocket, HTTP stream(fetch/SSE), XMLHttpRequest, window messaging을 하나의 타임라인으로 통합하고, Vite 플러그인 한 줄로 도입한다.
 
 ### 1.2 Problem Statement
 
@@ -107,6 +107,15 @@ LLM 스트리밍, WebView 하이브리드 앱, MFE iframe 통신 등 실시간 �
 - `window.EventSource`를 Proxy로 래핑
 - SSE 고유 지표 캡처: `Last-Event-ID`, `retry` 값, event type
 
+**F1.4 XMLHttpRequest 인터셉트**
+- `window.XMLHttpRequest` 생성자를 Proxy로 래핑
+- `open()`에 문자열 URL을 전달한 요청만 계측하고, URL 객체를 전달한 요청은 수집하지 않음
+- 각 `send()`의 요청 body와 최종 응답을 기록
+- `load`, HTTP status, network error, abort, timeout을 구분
+- GET/HEAD body는 빈 payload로 기록
+- FormData는 값 없이 제한된 field 이름만, Blob과 Document는 metadata만 요약
+- 요청 header와 progress chunk는 수집하지 않고, 응답 header는 `content-type`만 기록
+
 **제약사항**: main thread only. Web Worker 내부 연결은 Phase 1에서 지원하지 않음. README와 DevTools UI에 명시.
 
 #### F2. DevTools UI
@@ -154,7 +163,7 @@ browseSentEvent({
 - 연결 URL
 - 방향 (incoming/outgoing)
 - 시간 범위
-- 프로토콜 (WebSocket/fetch-stream/EventSource)
+- 프로토콜 (WebSocket/fetch-stream/EventSource/XMLHttpRequest)
 
 #### F5. Export
 
@@ -194,7 +203,7 @@ export default defineConfig({
 - `vite build`로 검증: 출력 번들에서 `browse-sent-event` 문자열 부재 확인
 
 **F6.4 Vite 8 / Rolldown 제약**
-- Phase 1의 개발 기준은 Vite 8.0.14이다.
+- Phase 1의 개발 기준은 Vite 8.0.16이다.
 - Vite 8에서는 Rolldown/Oxc가 기본 변환 경로이므로, 플러그인은 Vite 공개 Plugin API와 `transform`/`configResolved` 등 안정 훅에만 의존한다.
 - `transformWithEsbuild`, `optimizeDeps.esbuildOptions`, `build.minify: 'esbuild'`, `build.cssMinify: 'esbuild'`에 의존하지 않는다.
 - Rollup 전용 출력 옵션이 필요해지면 `build.rollupOptions` 대신 Vite 8의 `build.rolldownOptions` 경로를 먼저 검토한다.
@@ -225,18 +234,18 @@ export default defineConfig({
 ### 4.1 Architecture Overview
 
 ```
-┌─ App Code (untouched) ─────────────────────────────┐
+┌─ App Code (untouched) ──────────────────────────────┐
 │                                                     │
-│  new WebSocket() / fetch() / new EventSource()      │
+│  WebSocket / fetch / EventSource / XMLHttpRequest   │
 │       │                                             │
 └───────┼─────────────────────────────────────────────┘
         │
         ▼ (Proxy intercept, injected by plugin)
 ┌─────────────────────────────────────────────────────┐
 │  core/interceptors/                                 │
-│  ┌────────────┬──────────────┬──────────────┐      │
-│  │ websocket  │ fetch-stream │ eventsource  │      │
-│  └────────────┴──────────────┴──────────────┘      │
+│  ┌────────────┬──────────────┬──────────────┬─────┐ │
+│  │ websocket  │ fetch-stream │ eventsource  │ xhr │ │
+│  └────────────┴──────────────┴──────────────┴─────┘ │
 │              │                                      │
 │              ▼                                      │
 │  core/engine/ (JS engine)                           │
@@ -283,7 +292,7 @@ interface Message {
   connectionId: string;
   timestamp: number;                   // performance.now() 기준
   direction: 'in' | 'out';
-  protocol: 'websocket' | 'fetch-stream' | 'eventsource';
+  protocol: 'websocket' | 'fetch-stream' | 'eventsource' | 'xhr';
   type?: string;                       // event type (SSE) 또는 추론된 type 필드
   size: number;                        // bytes
   payload: string | ArrayBuffer;       // 원본 데이터
@@ -297,7 +306,7 @@ interface Message {
 ```typescript
 interface Connection {
   id: string;
-  protocol: 'websocket' | 'fetch-stream' | 'eventsource';
+  protocol: 'websocket' | 'fetch-stream' | 'eventsource' | 'xhr';
   url: string;
   state: 'connecting' | 'open' | 'closing' | 'closed';
   openedAt: number;
@@ -408,7 +417,7 @@ interface BrowseSentEventOptions {
 ### 6.1 Phase 1 Release Criteria
 
 **기능 완성도:**
-- [ ] WebSocket, fetch stream, EventSource 모두 안정적으로 인터셉트
+- [ ] WebSocket, fetch stream, EventSource, XMLHttpRequest 모두 안정적으로 인터셉트
 - [ ] Vite 플러그인 설치 후 앱 코드 변경 없이 동작
 - [ ] 프로덕션 빌드에서 관련 코드가 완전히 제거됨을 테스트로 검증
 - [ ] 기본 UI 동작 (연결 목록, 타임라인, 검색, export)

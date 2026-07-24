@@ -1,10 +1,31 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { installBrowseSentEvent } from "../install.js";
+
+const originalXmlHttpRequest = globalThis.window.XMLHttpRequest;
+
+function cleanupInstalledRuntime(): void {
+  const installedRuntime = Reflect.get(globalThis.window, "__browseSentEventRuntime__");
+
+  if (typeof installedRuntime === "object" && installedRuntime !== null) {
+    const uninstall: unknown = Reflect.get(installedRuntime, "uninstall");
+
+    if (typeof uninstall === "function") {
+      Reflect.apply(uninstall, installedRuntime, []);
+    }
+  }
+
+  Reflect.set(globalThis.window, "XMLHttpRequest", originalXmlHttpRequest);
+  Reflect.deleteProperty(globalThis.window, "__browseSentEventRuntime__");
+  globalThis.document.body.replaceChildren();
+}
 
 describe("installBrowseSentEvent", () => {
   beforeEach(() => {
-    globalThis.document.body.replaceChildren();
-    Reflect.deleteProperty(globalThis.window, "__browseSentEventRuntime__");
+    cleanupInstalledRuntime();
+  });
+
+  afterEach(() => {
+    cleanupInstalledRuntime();
   });
 
   it("installs the runtime once and returns the same runtime on repeated calls", () => {
@@ -43,5 +64,19 @@ describe("installBrowseSentEvent", () => {
     runtime.uninstall();
 
     expect(globalThis.document.querySelector("bse-devtools-panel")).toBeNull();
+  });
+
+  it("patches XMLHttpRequest once and restores it on uninstall", () => {
+    const beforeInstall = globalThis.window.XMLHttpRequest;
+    const runtime = installBrowseSentEvent();
+    const afterInstall = globalThis.window.XMLHttpRequest;
+
+    expect(afterInstall).not.toBe(beforeInstall);
+    expect(installBrowseSentEvent()).toBe(runtime);
+    expect(globalThis.window.XMLHttpRequest).toBe(afterInstall);
+
+    runtime.uninstall();
+
+    expect(globalThis.window.XMLHttpRequest).toBe(beforeInstall);
   });
 });

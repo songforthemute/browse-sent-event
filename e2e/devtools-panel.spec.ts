@@ -102,3 +102,48 @@ test("records WebSocket messages in a real browser", async ({ page }) => {
   expect(counts.connections).toBeGreaterThanOrEqual(1);
   expect(counts.messages).toBeGreaterThanOrEqual(2);
 });
+
+test("records XMLHttpRequest request and response in a real browser", async ({ page }) => {
+  await page.goto("/");
+
+  const capture = await page.evaluate(async () => {
+    const fixture = Reflect.get(globalThis, "__bseFixture");
+
+    if (typeof fixture !== "object" || fixture === null) {
+      throw new Error("Fixture bridge is missing");
+    }
+
+    const runXmlHttpRequest = Reflect.get(fixture, "runXmlHttpRequest");
+    const getXmlHttpRequestCapture = Reflect.get(fixture, "getXmlHttpRequestCapture");
+
+    if (typeof runXmlHttpRequest !== "function" || typeof getXmlHttpRequestCapture !== "function") {
+      throw new Error("XMLHttpRequest fixture bridge is missing");
+    }
+
+    await runXmlHttpRequest();
+
+    return getXmlHttpRequestCapture();
+  });
+
+  expect(capture.connection).toMatchObject({
+    protocol: "xhr",
+    state: "closed",
+    metadata: {
+      method: "POST",
+      outcome: "load",
+      status: 200,
+    },
+  });
+  expect(capture.messages).toEqual([
+    expect.objectContaining({
+      direction: "out",
+      payloadPreview: '{"message":"xhr hello"}',
+      type: "request",
+    }),
+    expect.objectContaining({
+      direction: "in",
+      payloadPreview: '{"message":"xhr goodbye"}',
+      type: "response",
+    }),
+  ]);
+});

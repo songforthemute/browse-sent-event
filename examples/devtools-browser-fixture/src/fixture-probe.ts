@@ -10,6 +10,21 @@ export interface BrowseSentEventFixtureMinimumCounts {
   readonly messages: number;
 }
 
+export interface BrowseSentEventXmlHttpRequestCapture {
+  readonly connection:
+    | {
+        readonly protocol: string;
+        readonly state: string;
+        readonly metadata: Readonly<Record<string, unknown>>;
+      }
+    | undefined;
+  readonly messages: readonly {
+    readonly direction: string;
+    readonly payloadPreview: string;
+    readonly type?: string;
+  }[];
+}
+
 interface BrowseSentEventPanelHost extends HTMLElement {
   setOpen(open: boolean): void;
 }
@@ -167,4 +182,50 @@ export async function runWebSocket(url: string): Promise<void> {
     );
   });
   await waitForSnapshotCounts({ connections: 1, messages: 2 });
+}
+
+export async function runXmlHttpRequest(): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
+    const request = new XMLHttpRequest();
+
+    request.open("POST", "/__bse-fixture/xhr");
+    request.setRequestHeader("content-type", "application/json");
+    request.addEventListener("load", () => {
+      if (request.status === 200) {
+        resolve();
+        return;
+      }
+
+      reject(new Error(`XMLHttpRequest fixture returned ${request.status}`));
+    });
+    request.addEventListener("error", () => {
+      reject(new Error("XMLHttpRequest fixture failed"));
+    });
+    request.send('{"message":"xhr hello"}');
+  });
+
+  await waitForSnapshotCounts({ connections: 1, messages: 2 });
+}
+
+export function getXmlHttpRequestCapture(): BrowseSentEventXmlHttpRequestCapture {
+  const snapshot = getRuntime().engine.getSnapshot();
+  const connection = snapshot.connections.find(({ protocol }) => protocol === "xhr");
+  const messages = snapshot.messages
+    .filter(({ protocol }) => protocol === "xhr")
+    .map(({ direction, payloadPreview, type }) => ({
+      direction,
+      payloadPreview,
+      type,
+    }));
+
+  return {
+    connection: connection
+      ? {
+          protocol: connection.protocol,
+          state: connection.state,
+          metadata: connection.metadata,
+        }
+      : undefined,
+    messages,
+  };
 }
