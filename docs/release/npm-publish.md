@@ -160,7 +160,7 @@ pnpm install --frozen-lockfile
 
 version 적용 후에는 다시 build, pack, dry-run을 실행한다.
 
-첫 install은 package version 변경을 lockfile에 반영한다. 이어지는 frozen install은 생성된 lockfile이 clean checkout에서도 추가 변경 없이 재현되는지 확인한다.
+첫 install은 package version 변경에 필요한 lockfile 갱신 기회를 제공한다. workspace package version을 lockfile에 기록하지 않는 현재 pnpm 구조에서는 diff가 없을 수 있다. 이어지는 frozen install은 lockfile이 clean checkout에서도 추가 변경 없이 재현되는지 확인한다.
 
 ### 7. maintainer 수동 publish 승인
 

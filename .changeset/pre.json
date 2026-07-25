@@ -1,0 +1,10 @@
+{
+  "mode": "pre",
+  "tag": "alpha",
+  "initialVersions": {
+    "@browse-sent-event/devtools-browser-fixture": "0.0.0",
+    "@browse-sent-event/core": "0.0.0",
+    "@browse-sent-event/plugin-vite": "0.0.0"
+  },
+  "changesets": ["calm-xhrs-observe"]
+}

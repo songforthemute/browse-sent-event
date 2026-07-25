@@ -28,7 +28,7 @@ search: false
 1. Changesets의 비공개 package version/tag 정책 명시
 2. `@browse-sent-event/devtools-browser-fixture` release plan 제외 검증
 3. 기존 XHR changeset을 이용한 `0.1.0-alpha.0` 생성
-4. package changelog와 lockfile 갱신
+4. package changelog 생성과 lockfile 재현성 확인
 5. registry/scope, audit, peer dependency 점검
 6. 전체 정적 검사, 단위 테스트, 브라우저 E2E, 빌드
 7. tarball manifest와 격리된 소비자 설치 검증
@@ -89,7 +89,7 @@ fixture의 patch는 직접 changeset이 아니라 공개 package의 `workspace:*
 
 fixture의 core와 plugin 의존성을 `dependencies`에서 `devDependencies`로 옮기지 않는다. 브라우저 fixture가 실행 시 소비하는 package라는 의미가 현재 선언과 맞으며, Changesets 결과만 피하려고 package model을 왜곡하지 않는다.
 
-### 4. version 생성과 frozen install 사이에 lockfile 갱신
+### 4. version 생성과 frozen install 사이에 lockfile 확인
 
 `pnpm changeset version`은 package version과 changelog를 바꾼다. 이 상태에서 기존 lockfile을 전제로 `pnpm install --frozen-lockfile`부터 실행하지 않는다.
 
@@ -103,7 +103,7 @@ lockfile diff 검토
 pnpm install --frozen-lockfile
 ```
 
-첫 install은 의도된 lockfile 갱신 단계이고, 두 번째 install은 생성된 후보가 clean checkout에서도 재현되는지 확인하는 단계다.
+첫 install은 필요한 lockfile 갱신 기회를 제공한다. workspace package version을 lockfile에 기록하지 않는 현재 pnpm 구조에서는 diff가 없을 수 있다. 두 번째 install은 생성된 후보가 clean checkout에서도 재현되는지 확인하는 단계다.
 
 ### 5. 실제 publish는 release candidate 바깥의 승인 단계
 
@@ -126,7 +126,7 @@ pnpm install --frozen-lockfile
 | 순서 | 책임 | 커밋 메시지 |
 | --- | --- | --- |
 | 1 | 비공개 package release plan 정책 | `chore(release): 비공개 패키지 버전 정책 확정` |
-| 2 | alpha version, changelog, lockfile | `chore(release): 0.1.0-alpha.0 배포 후보 생성` |
+| 2 | alpha version, changelog, prerelease 상태 | `chore(release): 0.1.0-alpha.0 배포 후보 생성` |
 | 3 | registry, 보안, tarball, dry-run 결과 | `docs(release): 알파 후보 검증 결과 기록` |
 
 dependency 취약점이나 기능 오류가 발견되면 위 커밋에 섞지 않는다. 해당 문제를 별도 브랜치와 PR로 해결한 뒤 alpha 후보 브랜치를 `main` 위로 갱신한다.
@@ -283,7 +283,7 @@ node --input-type=module -e '
 3. fixture가 공개되거나 독립 version contract를 갖게 되면 ignore 정책을 제거한다.
 4. 기존 XHR changeset이 있으므로 첫 alpha용 changeset을 새로 만들지 않는다.
 5. npm 11의 scope 확인 명령은 `npm access list packages @browse-sent-event --json`이다.
-6. version 뒤에는 일반 install로 lockfile을 갱신하고 frozen install을 다시 확인한다.
+6. version 뒤에는 일반 install로 필요한 lockfile 갱신 여부를 확인하고 frozen install을 다시 확인한다.
 
 #### 단계 6: 설정 검증
 
@@ -372,10 +372,10 @@ pnpm pack:check
 - 생성 또는 수정: `packages/plugin-vite/CHANGELOG.md`
 - 수정: `packages/core/package.json`
 - 수정: `packages/plugin-vite/package.json`
-- 수정: `pnpm-lock.yaml`
-- 삭제 예정: `.changeset/calm-xhrs-observe.md`
+- 필요한 경우 수정: `pnpm-lock.yaml`
+- 유지: `.changeset/calm-xhrs-observe.md`
 
-Changesets가 실제로 만든 파일만 stage한다. 예상 목록과 다른 파일이 바뀌면 원인을 확인하기 전에는 계속 진행하지 않는다.
+Changesets prerelease 모드에서는 changeset 파일을 삭제하지 않고 `.changeset/pre.json`에 소비 이력을 남긴다. Changesets가 실제로 만든 파일만 stage한다. 예상 목록과 다른 파일이 바뀌면 원인을 확인하기 전에는 계속 진행하지 않는다.
 
 #### 단계 1: prerelease mode 진입
 
@@ -438,7 +438,7 @@ pnpm install --frozen-lockfile
 
 기대 결과:
 
-- 첫 install은 version 변경에 필요한 lockfile metadata만 갱신한다.
+- 첫 install은 version 변경에 필요한 lockfile metadata를 갱신하거나, 현재 workspace 구조에서 변경할 내용이 없음을 확인한다.
 - dependency resolution이나 integrity가 예상 밖으로 바뀌지 않는다.
 - 두 번째 frozen install은 추가 변경 없이 통과한다.
 
@@ -471,7 +471,8 @@ node --input-type=module -e '
 #### 단계 6: 두 번째 커밋
 
 ```bash
-git add .changeset packages/core/package.json packages/core/CHANGELOG.md packages/plugin-vite/package.json packages/plugin-vite/CHANGELOG.md pnpm-lock.yaml
+git add .changeset packages/core/package.json packages/core/CHANGELOG.md packages/plugin-vite/package.json packages/plugin-vite/CHANGELOG.md
+# pnpm-lock.yaml이 실제로 변경된 경우에만 추가한다.
 git commit -m "chore(release): 0.1.0-alpha.0 배포 후보 생성"
 ```
 
