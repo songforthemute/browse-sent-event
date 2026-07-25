@@ -1,6 +1,6 @@
 {
   "name": "@browse-sent-event/plugin-vite",
-  "version": "0.0.0",
+  "version": "0.1.0-alpha.0",
   "description": "Vite plugin for injecting browse-sent-event into browser development entries.",
   "keywords": [
     "devtools",

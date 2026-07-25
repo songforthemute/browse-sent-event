@@ -31,14 +31,18 @@ stable `1.0.0` 이후에는 일반 SemVer 기준으로 전환한다.
 
 첫 npm alpha 후보는 `0.1.0-alpha.0`를 기준으로 한다. `@browse-sent-event/core`와 `@browse-sent-event/plugin-vite`는 같은 alpha 후보 안에서 함께 versioning한다.
 
+`@browse-sent-event/devtools-browser-fixture`는 `private: true`인 비배포 검증 앱이므로 version과 tag를 만들지 않는다. fixture가 외부 배포 대상이나 독립 version contract를 갖게 되면 `.changeset/config.json`의 ignore 정책을 제거하고 별도 version 정책을 정한다.
+
+첫 alpha version을 만들 때는 이미 병합된 사용자 변경 changeset을 사용한다. 배포 준비만을 위한 changeset을 중복 생성하지 않는다.
+
 ```bash
 pnpm changeset pre enter alpha
-pnpm changeset
 pnpm changeset version
+pnpm install
 pnpm install --frozen-lockfile
 ```
 
-version 적용 후에는 `pnpm pack:check`와 `npm publish --dry-run`을 다시 실행하고, 결과를 release 문서 또는 PR 본문에 기록한다.
+첫 install은 package version 변경에 필요한 lockfile 갱신 기회를 제공한다. workspace package version을 lockfile에 기록하지 않는 현재 pnpm 구조에서는 diff가 없을 수 있다. 이어지는 frozen install은 clean checkout 재현성을 확인한다. version 적용 후에는 `pnpm pack:check`와 `npm publish --dry-run`을 다시 실행하고, 결과를 release 문서 또는 PR 본문에 기록한다.
 
 ## publish 권한
 
