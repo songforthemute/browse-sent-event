@@ -210,6 +210,23 @@ npm dist-tag rm @browse-sent-event/core latest
 npm dist-tag rm @browse-sent-event/plugin-vite latest
 ```
 
+## 0.1.0-alpha.1 복구 후보 검증
+
+검증 일시: `2026-07-26 KST`
+
+| gate                    | 결과 | 비고                                                               |
+| ----------------------- | ---- | ------------------------------------------------------------------ |
+| Changesets version 계산 | 통과 | plugin-vite만 `0.1.0-alpha.1`, core는 `0.1.0-alpha.0` 유지         |
+| package build           | 통과 | core와 plugin-vite 강제 재빌드 성공                                |
+| plugin-vite tarball     | 통과 | 7 files, 4,046 bytes, unpacked 10,514 bytes                        |
+| tarball SHA-256         | 기록 | `fe6f31891aee5a91e6fabf4ecfac0995e895ed2af6c1610f5c326db168c69a19` |
+| publish manifest        | 통과 | core 의존성이 `0.1.0-alpha.0`으로 변환됨                           |
+| npm publish dry-run     | 통과 | 검증된 `alpha.1` tarball 대상, `alpha` tag, 실제 publish 없음      |
+| 소비자 설치             | 통과 | 공개 core alpha.0 해석, Vite 8.0.16과 함께 설치, 취약점 0건        |
+| ESM import              | 통과 | plugin-vite default export와 core public export 로드 성공          |
+
+복구 후보 tarball은 `.tmp-pack/browse-sent-event-plugin-vite-0.1.0-alpha.1.tgz`다. `.tmp-pack`은 임시 산출물이므로 Git에는 포함하지 않는다. PR 병합과 최신 CI 확인 후 같은 커밋에서 build와 `pnpm pack:check`를 다시 실행하고, 새로 출력된 plugin-vite `publish:` 명령만 maintainer가 실행한다. 이미 공개되어 정상인 core alpha.0은 다시 publish하지 않는다.
+
 ## 0.1.0-alpha.0 후보 검증
 
 검증 일시: `2026-07-25 10:17 KST`
