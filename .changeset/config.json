@@ -7,5 +7,9 @@
   "access": "public",
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
-  "ignore": []
+  "privatePackages": {
+    "version": false,
+    "tag": false
+  },
+  "ignore": ["@browse-sent-event/devtools-browser-fixture"]
 }

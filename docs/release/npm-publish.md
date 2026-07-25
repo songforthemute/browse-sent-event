@@ -14,13 +14,16 @@
 
 ## 배포 대상
 
-| package                          | publish | 이유                                      |
-| -------------------------------- | ------- | ----------------------------------------- |
-| `@browse-sent-event/core`        | yes     | runtime, interceptors, DevTools panel API |
-| `@browse-sent-event/plugin-vite` | yes     | Vite 개발 서버 bootstrap injection        |
-| `browse-sent-event-monorepo`     | no      | root workspace, `private: true`           |
-| `examples/*`                     | no      | 테스트 fixture와 데모                     |
-| `docs/`                          | no      | GitHub Pages 배포 대상                    |
+| package                                       | publish | 이유                                      |
+| --------------------------------------------- | ------- | ----------------------------------------- |
+| `@browse-sent-event/core`                     | yes     | runtime, interceptors, DevTools panel API |
+| `@browse-sent-event/plugin-vite`              | yes     | Vite 개발 서버 bootstrap injection        |
+| `browse-sent-event-monorepo`                  | no      | root workspace, `private: true`           |
+| `@browse-sent-event/devtools-browser-fixture` | no      | 브라우저 E2E용 비공개 검증 앱             |
+| `examples/*`                                  | no      | 테스트 fixture와 데모                     |
+| `docs/`                                       | no      | GitHub Pages 배포 대상                    |
+
+비공개 브라우저 fixture는 `0.0.0`을 유지하고 Changesets 버전 변경 대상에서 제외한다. `changeset status --output` JSON에는 `type: "none"`으로 남을 수 있지만, version과 changelog는 만들지 않는다. fixture가 외부 배포 대상이나 독립 version contract를 갖게 되면 ignore 정책을 제거하고 별도 version 정책을 정한다.
 
 ## 배포 전 확인 순서
 
@@ -31,14 +34,14 @@
 ```bash
 npm view @browse-sent-event/core name version description --json
 npm view @browse-sent-event/plugin-vite name version description --json
-npm access ls-packages @browse-sent-event
+npm access list packages @browse-sent-event --json
 ```
 
 기대 결과:
 
 - `npm view`가 `E404`를 반환하거나, 의도한 owner의 기존 package만 보여야 한다.
 - 같은 package name이 다른 owner에게 점유되어 있으면 배포를 중단한다.
-- `npm access ls-packages`로 현재 계정이 `@browse-sent-event` scope에 접근 가능한지 확인한다.
+- `npm access list packages`로 현재 계정이 `@browse-sent-event` scope에 접근 가능한지 확인한다.
 
 주의:
 
@@ -137,14 +140,14 @@ npm publish ./packages/plugin-vite --dry-run --access public
 
 ```bash
 pnpm changeset pre enter alpha
-pnpm changeset
 pnpm changeset version
+pnpm install
 pnpm install --frozen-lockfile
 ```
 
 첫 alpha 후보는 `0.1.0-alpha.0`를 기준으로 한다.
 
-changeset 예시:
+첫 alpha version은 이미 병합된 사용자 변경 changeset을 사용한다. 배포 준비만을 위한 changeset을 중복 생성하지 않는다. 적용할 changeset은 다음 형태다.
 
 ```markdown
 ---
@@ -156,6 +159,8 @@ changeset 예시:
 ```
 
 version 적용 후에는 다시 build, pack, dry-run을 실행한다.
+
+첫 install은 package version 변경을 lockfile에 반영한다. 이어지는 frozen install은 생성된 lockfile이 clean checkout에서도 추가 변경 없이 재현되는지 확인한다.
 
 ### 7. maintainer 수동 publish 승인
 

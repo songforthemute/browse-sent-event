@@ -81,7 +81,7 @@ fixture의 patch는 직접 changeset이 아니라 공개 package의 `workspace:*
 `.changeset/config.json`에 다음 두 의도를 각각 명시한다.
 
 - `privatePackages.version: false`, `privatePackages.tag: false`: 비공개 package를 일반 version/tag 대상으로 취급하지 않는다.
-- `ignore`: 공개 package의 dependency graph에서 파생된 fixture patch도 release plan에서 제외한다.
+- `ignore`: 공개 package의 dependency graph에서 파생된 fixture patch를 `none`으로 낮춰 버전 변경 대상에서 제외한다.
 
 `privatePackages` 기본값에만 의존하지 않는다. 현재 CLI가 기본값 아래에서도 fixture patch를 출력하므로 `status --output` 결과를 실제 승인 기준으로 삼는다.
 
@@ -202,7 +202,7 @@ node --input-type=module -e '
 
 #### 단계 1: 실패 기준 고정
 
-설정 변경 전에 fixture가 release plan에 없다고 가정하는 검증을 실행한다.
+설정 변경 전에 fixture가 버전 변경 대상이 아니라고 가정하는 검증을 실행한다.
 
 ```bash
 node --input-type=module -e '
@@ -248,8 +248,8 @@ cat /tmp/browse-sent-event-release-plan-after.json
 
 기대 결과:
 
-- core minor와 plugin-vite minor만 `releases`에 남는다.
-- fixture는 `releases`에 없다.
+- core minor와 plugin-vite minor만 실제 버전 변경 대상으로 남는다.
+- JSON `releases`의 fixture는 `type: "none"`, `newVersion: "0.0.0"`으로 남을 수 있다.
 - Changesets가 ignored package dependency 오류를 내지 않는다.
 
 오류가 발생하면 설정을 커밋하지 않는다. fixture version 변경을 허용하는 대안을 검토하고, 허용 이유와 비배포 보장을 이 계획 문서에 먼저 갱신한 뒤 사용자 승인을 받는다.
@@ -264,6 +264,7 @@ node --input-type=module -e '
   const expected = [
     { name: "@browse-sent-event/core", type: "minor", newVersion: "0.1.0" },
     { name: "@browse-sent-event/plugin-vite", type: "minor", newVersion: "0.1.0" },
+    { name: "@browse-sent-event/devtools-browser-fixture", type: "none", newVersion: "0.0.0" },
   ];
   if (JSON.stringify(actual) !== JSON.stringify(expected)) {
     throw new Error(`unexpected release plan: ${JSON.stringify(actual)}`);
@@ -278,7 +279,7 @@ node --input-type=module -e '
 `.changeset/README.md`와 `docs/release/npm-publish.md`에 다음 내용을 반영한다.
 
 1. public package만 version과 publish 대상이다.
-2. private fixture는 `0.0.0`을 유지하고 Changesets release plan에서 제외한다.
+2. private fixture는 `0.0.0`을 유지하고 Changesets 버전 변경 대상에서 제외한다.
 3. fixture가 공개되거나 독립 version contract를 갖게 되면 ignore 정책을 제거한다.
 4. 기존 XHR changeset이 있으므로 첫 alpha용 changeset을 새로 만들지 않는다.
 5. npm 11의 scope 확인 명령은 `npm access list packages @browse-sent-event --json`이다.
@@ -757,7 +758,7 @@ PR 본문에는 다음을 포함한다.
 
 다음 중 하나라도 해당하면 release candidate PR을 ready 또는 merge 상태로 전환하지 않는다.
 
-1. fixture가 release plan 또는 version diff에 포함된다.
+1. fixture가 `type: "none"`이 아니거나 version diff에 포함된다.
 2. core와 plugin-vite가 정확히 `0.1.0-alpha.0`이 아니다.
 3. changelog에 XHR 변경이 누락되거나 중복된다.
 4. lockfile에서 의도하지 않은 dependency resolution 또는 integrity 변경이 발생한다.
