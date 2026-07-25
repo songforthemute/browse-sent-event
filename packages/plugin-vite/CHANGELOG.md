@@ -1,5 +1,11 @@
 # @browse-sent-event/plugin-vite
 
+## 0.1.0-alpha.1
+
+### Patch Changes
+
+- 1dac158: npm 배포 산출물의 내부 core 의존성이 배포 가능한 버전으로 변환되도록 검증된 pnpm tarball을 사용합니다.
+
 ## 0.1.0-alpha.0
 
 ### Minor Changes
