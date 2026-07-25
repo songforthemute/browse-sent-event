@@ -39,6 +39,11 @@ export function normalizePackedPath(packedPath) {
   return packedPath.startsWith("package/") ? packedPath : `package/${packedPath}`;
 }
 
+export function formatPublishCommand(tarballPath, { dryRun = false } = {}) {
+  const dryRunFlag = dryRun ? " --dry-run" : "";
+  return `npm publish ${tarballPath}${dryRunFlag} --access public --tag alpha`;
+}
+
 export function validatePackedFiles(packageName, packedFiles) {
   const normalizedFiles = packedFiles.map((file) => normalizePackedPath(file));
   const fileSet = new Set(normalizedFiles);
@@ -181,6 +186,10 @@ function main() {
     process.stdout.write(
       `${result.name}: ${result.fileCount} files checked (${result.tarballPath})\n`,
     );
+    process.stdout.write(
+      `dry-run: ${formatPublishCommand(result.tarballPath, { dryRun: true })}\n`,
+    );
+    process.stdout.write(`publish: ${formatPublishCommand(result.tarballPath)}\n`);
   }
 }
 
