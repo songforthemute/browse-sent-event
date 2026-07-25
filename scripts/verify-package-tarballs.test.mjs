@@ -8,11 +8,28 @@ import test from "node:test";
 import { gzipSync } from "node:zlib";
 
 import {
+  formatPublishCommand,
   normalizePackedPath,
   readPackageJsonFromTarball,
   validatePackedFiles,
   validatePublishedManifest,
 } from "./verify-package-tarballs.mjs";
+
+void test("formatPublishCommand points npm publish at the verified tarball", () => {
+  assert.equal(
+    formatPublishCommand("/workspace/.tmp-pack/browse-sent-event-plugin-vite-0.1.0-alpha.1.tgz"),
+    "npm publish /workspace/.tmp-pack/browse-sent-event-plugin-vite-0.1.0-alpha.1.tgz --access public --tag alpha",
+  );
+});
+
+void test("formatPublishCommand can produce a dry-run command", () => {
+  assert.equal(
+    formatPublishCommand("/workspace/.tmp-pack/browse-sent-event-core-0.1.0-alpha.0.tgz", {
+      dryRun: true,
+    }),
+    "npm publish /workspace/.tmp-pack/browse-sent-event-core-0.1.0-alpha.0.tgz --dry-run --access public --tag alpha",
+  );
+});
 
 void test("normalizePackedPath accepts pnpm and npm pack path shapes", () => {
   assert.equal(normalizePackedPath("README.md"), "package/README.md");

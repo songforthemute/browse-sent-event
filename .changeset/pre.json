@@ -6,5 +6,5 @@
     "@browse-sent-event/core": "0.0.0",
     "@browse-sent-event/plugin-vite": "0.0.0"
   },
-  "changesets": ["calm-xhrs-observe"]
+  "changesets": ["calm-xhrs-observe", "steady-packs-publish"]
 }

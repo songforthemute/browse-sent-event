@@ -5,7 +5,7 @@
 ## 현재 원칙
 
 1. 실제 publish는 maintainer가 로컬에서 수동으로만 수행한다.
-2. 배포 대상은 `packages/*` 하위 public package로 제한한다.
+2. 배포 대상은 `pnpm pack:check`가 생성하고 검증한 public package tarball로 제한한다.
 3. root workspace와 examples, docs는 npm publish 대상이 아니다.
 4. user-visible package 변경은 Changesets 기록을 요구한다.
 5. npm scope 권한, registry 상태, tarball 내용은 배포 직전에 다시 확인한다.
@@ -121,18 +121,23 @@ tarball에는 다음 파일이 없어야 한다.
 
 `@browse-sent-event/plugin-vite`의 tarball metadata도 확인한다. tarball 안의 `dependencies["@browse-sent-event/core"]`가 `workspace:*`로 남아 있으면 publish하지 않는다. source package는 monorepo 개발을 위해 `workspace:*`를 유지할 수 있지만, publish manifest에는 배포 가능한 semver 범위로 변환되어야 한다.
 
+`pack:check`는 각 package마다 실제로 생성된 tarball의 절대 경로와 dry-run, publish 명령을 출력한다. 이후 단계에서는 이 출력에 있는 tarball 경로만 사용한다.
+
 ### 5. npm publish dry-run
 
 ```bash
-npm publish ./packages/core --dry-run --access public --tag alpha
-npm publish ./packages/plugin-vite --dry-run --access public --tag alpha
+pnpm pack:check
+# 위 명령이 출력한 각 `dry-run:` 명령을 실행한다.
 ```
 
 기대 결과:
 
 - 실제 publish가 발생하지 않는다.
 - package name, version, tarball file count, unpacked size를 확인할 수 있다.
+- dry-run 대상 경로가 `pnpm pack:check`가 검증한 `.tmp-pack/*.tgz`와 일치한다.
 - dry-run 결과는 PR 또는 release 문서에 기록한다.
+
+package 디렉터리를 `npm publish ./packages/...`로 직접 배포하면 안 된다. npm은 pnpm이 수행하는 `workspace:*` 변환을 적용하지 않으므로, 검증한 tarball과 다른 manifest가 공개될 수 있다.
 
 ### 6. Changesets version PR 생성
 
@@ -178,11 +183,49 @@ version 적용 후에는 다시 build, pack, dry-run을 실행한다.
 수동 publish 명령은 최종 승인 시점에만 실행한다.
 
 ```bash
-npm publish ./packages/core --access public --tag alpha
-npm publish ./packages/plugin-vite --access public --tag alpha
+pnpm pack:check
+# 위 명령이 출력한 각 `publish:` 명령을 maintainer가 실행한다.
 ```
 
 publish 후에는 npm registry에서 실제 version을 확인하고, README의 설치 문구에서 "배포 후" 표현을 제거한다.
+
+## 0.1.0-alpha.0 plugin-vite 복구
+
+`@browse-sent-event/plugin-vite@0.1.0-alpha.0`은 package 디렉터리에서 `npm publish`되어, 공개 manifest의 `@browse-sent-event/core` 의존성에 `workspace:*`가 남았다. `pnpm pack:check`가 만든 tarball은 올바르게 변환됐지만 실제 publish가 그 산출물을 사용하지 않아 발생한 문제다.
+
+복구 순서는 다음과 같다.
+
+1. `@browse-sent-event/plugin-vite@0.1.0-alpha.1` 후보를 Changesets로 만든다.
+2. `pnpm pack:check`가 생성한 `alpha.1` tarball의 manifest에서 core 의존성이 `0.1.0-alpha.0`인지 확인한다.
+3. 해당 tarball의 dry-run과 소비자 설치 검증을 통과시킨다.
+4. maintainer가 `pack:check` 출력의 `publish:` 명령으로 `alpha.1`을 공개한다.
+5. registry에서 `alpha` dist-tag가 `alpha.1`을 가리키는지 확인한다.
+6. `alpha.0`을 deprecate하고, 첫 publish에서 의도치 않게 생성된 `latest` dist-tag를 제거한다.
+
+`alpha.1` 공개를 확인하기 전에는 deprecate나 dist-tag 정리를 먼저 실행하지 않는다. 공개 후 maintainer가 실행할 명령은 다음과 같다.
+
+```bash
+npm deprecate @browse-sent-event/plugin-vite@0.1.0-alpha.0 "workspace:* 의존성이 포함된 잘못된 배포입니다. 0.1.0-alpha.1 이상을 사용하세요."
+npm dist-tag rm @browse-sent-event/core latest
+npm dist-tag rm @browse-sent-event/plugin-vite latest
+```
+
+## 0.1.0-alpha.1 복구 후보 검증
+
+검증 일시: `2026-07-26 KST`
+
+| gate                    | 결과 | 비고                                                               |
+| ----------------------- | ---- | ------------------------------------------------------------------ |
+| Changesets version 계산 | 통과 | plugin-vite만 `0.1.0-alpha.1`, core는 `0.1.0-alpha.0` 유지         |
+| package build           | 통과 | core와 plugin-vite 강제 재빌드 성공                                |
+| plugin-vite tarball     | 통과 | 7 files, 4,046 bytes, unpacked 10,514 bytes                        |
+| tarball SHA-256         | 기록 | `fe6f31891aee5a91e6fabf4ecfac0995e895ed2af6c1610f5c326db168c69a19` |
+| publish manifest        | 통과 | core 의존성이 `0.1.0-alpha.0`으로 변환됨                           |
+| npm publish dry-run     | 통과 | 검증된 `alpha.1` tarball 대상, `alpha` tag, 실제 publish 없음      |
+| 소비자 설치             | 통과 | 공개 core alpha.0 해석, Vite 8.0.16과 함께 설치, 취약점 0건        |
+| ESM import              | 통과 | plugin-vite default export와 core public export 로드 성공          |
+
+복구 후보 tarball은 `.tmp-pack/browse-sent-event-plugin-vite-0.1.0-alpha.1.tgz`다. `.tmp-pack`은 임시 산출물이므로 Git에는 포함하지 않는다. PR 병합과 최신 CI 확인 후 같은 커밋에서 build와 `pnpm pack:check`를 다시 실행하고, 새로 출력된 plugin-vite `publish:` 명령만 maintainer가 실행한다. 이미 공개되어 정상인 core alpha.0은 다시 publish하지 않는다.
 
 ## 0.1.0-alpha.0 후보 검증
 
@@ -244,6 +287,7 @@ stable `1.0.0` 이후에는 일반 SemVer 기준으로 전환한다.
 - pack tarball에 README 또는 license 정보가 없다.
 - `@browse-sent-event/plugin-vite` tarball의 dependency가 `workspace:*`로 남아 있다.
 - `npm publish --dry-run`이 실패한다.
+- publish 대상이 `pnpm pack:check`가 생성한 tarball이 아니다.
 - maintainer가 직접 publish를 승인하지 않았다.
 - GitHub Actions 또는 repository secret에 npm publish 권한이 연결되어 있다.
 
