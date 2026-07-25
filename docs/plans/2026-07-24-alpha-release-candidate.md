@@ -624,13 +624,14 @@ cd <REPOSITORY_ROOT>
 #### 단계 1: dry-run 실행
 
 ```bash
-npm publish ./packages/core --dry-run --access public
-npm publish ./packages/plugin-vite --dry-run --access public
+npm publish ./packages/core --dry-run --access public --tag alpha
+npm publish ./packages/plugin-vite --dry-run --access public --tag alpha
 ```
 
 기대 결과:
 
 - 실제 publish가 일어나지 않는다.
+- prerelease version이 `latest`가 아니라 `alpha` dist-tag를 사용한다.
 - 두 package의 name과 version이 예상과 같다.
 - tarball file count, package size, unpacked size가 출력된다.
 - `workspace:*` dependency 오류가 없다.

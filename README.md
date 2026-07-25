@@ -4,7 +4,7 @@ WebSocket, HTTP stream, EventSource, XMLHttpRequest의 통신 흐름을 관찰�
 
 ## 상태
 
-이 저장소는 Phase 1 DevTools MVP 구현 단계에 있다.
+이 저장소는 Phase 1 DevTools MVP를 구현하고 `0.1.0-alpha.0` 배포 후보를 검증하는 단계에 있다.
 
 ## 현재 구현 상태
 
@@ -20,7 +20,8 @@ WebSocket, HTTP stream, EventSource, XMLHttpRequest의 통신 흐름을 관찰�
 
 ### 릴리즈 전 필수 후보
 
-- npm publish dry-run과 changeset 정책 확정
+- npm 로그인과 `@browse-sent-event` scope publish 권한 확인
+- maintainer의 첫 alpha 수동 publish 승인
 
 ### 후속 회수
 

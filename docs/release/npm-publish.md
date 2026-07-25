@@ -124,8 +124,8 @@ tarball에는 다음 파일이 없어야 한다.
 ### 5. npm publish dry-run
 
 ```bash
-npm publish ./packages/core --dry-run --access public
-npm publish ./packages/plugin-vite --dry-run --access public
+npm publish ./packages/core --dry-run --access public --tag alpha
+npm publish ./packages/plugin-vite --dry-run --access public --tag alpha
 ```
 
 기대 결과:
@@ -178,11 +178,37 @@ version 적용 후에는 다시 build, pack, dry-run을 실행한다.
 수동 publish 명령은 최종 승인 시점에만 실행한다.
 
 ```bash
-npm publish ./packages/core --access public
-npm publish ./packages/plugin-vite --access public
+npm publish ./packages/core --access public --tag alpha
+npm publish ./packages/plugin-vite --access public --tag alpha
 ```
 
 publish 후에는 npm registry에서 실제 version을 확인하고, README의 설치 문구에서 "배포 후" 표현을 제거한다.
+
+## 0.1.0-alpha.0 후보 검증
+
+검증 일시: `2026-07-25 10:17 KST`
+검증 기준 커밋: `c95b3bf`
+
+| gate                  | 결과        | 비고                                                             |
+| --------------------- | ----------- | ---------------------------------------------------------------- |
+| npm package 이름 조회 | 조건부 통과 | core와 plugin-vite 모두 `E404`; 미로그인 상태라 소유권 단정 불가 |
+| npm scope 접근        | 차단        | `npm whoami`, `npm access list packages`가 `E401` 반환           |
+| frozen install        | 통과        | lockfile 추가 변경 없음                                          |
+| audit moderate        | 통과        | 알려진 취약점 0건                                                |
+| peer dependency       | 통과        | 오류 없음                                                        |
+| format/lint/typecheck | 통과        | 오류 없음                                                        |
+| unit test             | 통과        | core 90건, plugin-vite 12건                                      |
+| release test          | 통과        | tarball validator 6건                                            |
+| Chromium E2E          | 통과        | desktop/mobile 10건                                              |
+| package/docs build    | 통과        | package 2개와 VitePress build 성공                               |
+| core tarball          | 통과        | 7 files, 38,847 bytes, unpacked 169,572 bytes                    |
+| plugin-vite tarball   | 통과        | 7 files, 4,030 bytes, unpacked 10,513 bytes                      |
+| 소비자 tarball 설치   | 통과        | 두 공개 export와 core `0.1.0-alpha.0` 의존성 확인                |
+| npm publish dry-run   | 통과        | `alpha` dist-tag, 실제 publish 없음                              |
+
+첫 dry-run은 prerelease dist-tag를 생략해 npm 11의 `You must specify a tag using --tag when publishing a prerelease version` 오류로 실패했다. 명령에 `--tag alpha`를 추가한 뒤 두 package 모두 성공했다.
+
+이 후보는 실제 npm publish를 실행하지 않았다. npm 로그인과 `@browse-sent-event` scope 권한을 확인할 때까지 publish 승인 gate는 차단 상태다. maintainer는 PR 병합, 최신 CI, npm 로그인과 scope 권한을 다시 확인한 뒤에만 두 package를 수동 publish한다.
 
 ## changeset 작성 기준
 

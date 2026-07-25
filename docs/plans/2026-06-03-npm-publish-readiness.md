@@ -415,8 +415,8 @@ git commit -m "docs(release): changeset 배포 정책 정리"
 `docs/release/npm-publish.md`에 최종 승인 시점의 수동 명령을 남긴다.
 
 ```bash
-npm publish ./packages/core --access public
-npm publish ./packages/plugin-vite --access public
+npm publish ./packages/core --access public --tag alpha
+npm publish ./packages/plugin-vite --access public --tag alpha
 ```
 
 publish 차단 조건에는 maintainer 수동 승인 부재와 GitHub Actions publish 권한 연결을 포함한다.
@@ -496,8 +496,8 @@ pnpm install --frozen-lockfile
 ```bash
 pnpm exec turbo run build --force
 pnpm pack:check
-npm publish ./packages/core --dry-run --access public
-npm publish ./packages/plugin-vite --dry-run --access public
+npm publish ./packages/core --dry-run --access public --tag alpha
+npm publish ./packages/plugin-vite --dry-run --access public --tag alpha
 ```
 
 기대 결과:
@@ -561,8 +561,8 @@ git diff --check
 ```bash
 npm view @browse-sent-event/core name version description --json
 npm view @browse-sent-event/plugin-vite name version description --json
-npm publish ./packages/core --dry-run --access public
-npm publish ./packages/plugin-vite --dry-run --access public
+npm publish ./packages/core --dry-run --access public --tag alpha
+npm publish ./packages/plugin-vite --dry-run --access public --tag alpha
 ```
 
 기대 결과:
