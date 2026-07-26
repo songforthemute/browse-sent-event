@@ -1,13 +1,13 @@
 # browse-sent-event — Architecture Decision Records
 
-**Initial ADR Set (프로젝트 착수 시점)**
+**Architecture Decision Records**
 
 | | |
 |---|---|
-| **Status** | Draft v1 |
+| **Status** | Living document |
 | **Owner** | songforthemute (코코) |
-| **Last updated** | 2026-04-20 |
-| **Scope** | 프로젝트 셋업 및 Phase 1 착수에 필요한 기술 결정 |
+| **Last updated** | 2026-07-26 |
+| **Scope** | 프로젝트 셋업, Phase 1 구현과 공개 alpha 운영에 필요한 기술 결정 |
 
 ---
 
@@ -421,7 +421,7 @@ Phase 2에서 React causality 추적을 위해 `__REACT_DEVTOOLS_GLOBAL_HOOK__`�
 
 **Context:**
 
-pnpm workspace + Changesets + Turborepo 조합을 CI에서 활용해야 한다. 초기 초안은 npm 배포 자동화를 전제로 했지만, 첫 alpha 전까지 실제 npm publish는 maintainer가 수동으로만 수행한다. CI는 배포 가능한 상태를 검증하되, npm publish 권한은 갖지 않는다.
+pnpm workspace + Changesets + Turborepo 조합을 CI에서 활용해야 한다. 초기 초안은 npm 배포 자동화를 전제로 했지만, 공개 alpha의 실제 npm publish는 maintainer가 수동으로만 수행한다. CI는 배포 가능한 상태를 검증하되, npm publish 권한은 갖지 않는다. 구체적인 공개 alpha 운영과 Git identity 정책은 ADR-023에서 확정한다.
 
 **Decision:**
 
@@ -497,7 +497,7 @@ jobs:
 
 **Consequences:**
 
-- (+) 첫 alpha 전까지 npm publish 권한이 CI에 노출되지 않음
+- (+) 공개 alpha 동안 npm publish 권한이 CI에 노출되지 않음
 - (+) 의도치 않은 배포 방지 (maintainer 수동 승인 필요)
 - (+) Changesets로 version/changelog 후보는 유지
 - (+) Turborepo 캐싱으로 CI 시간 최소화
@@ -679,7 +679,9 @@ Claude Code skill ecosystem에서 정립한 원칙을 적용한다.
 
 필요한 유틸은 `packages/core/src/internal/utils/` 에 자체 구현한다. 모니터링 라이브러리가 범용 유틸에 의존하는 것은 **관찰 도구의 단순성 원칙**과 충돌한다.
 
-**예외:** `examples/*` 앱은 데모이므로 현실적인 의존성을 써도 된다. `docs/` 는 Astro 생태계 의존성을 자유롭게 사용 (ADR-017).
+**예외:** `examples/*` 앱은 데모이므로 현실적인 의존성을 써도 된다. `docs/`는
+VitePress 생태계 의존성을 사용할 수 있으며, prerelease 도구는 정확한 버전으로
+고정하고 별도 검증한다(ADR-022).
 
 ### Peer Dependency 정책
 
@@ -727,8 +729,10 @@ Claude Code skill ecosystem에서 정립한 원칙을 적용한다.
 | **014** | **언어 (TS 6)** | **TypeScript 6.x, `isolatedDeclarations`** | **Accepted (supersedes 003)** | **초기** |
 | **015** | **빌드 (tsdown)** | **tsdown (Rolldown 기반, VoidZero)** | **Accepted (supersedes 004)** | **초기** |
 | **016** | **Lint/Format (Oxlint 스택)** | **Oxlint + oxlint-tsgolint + Oxfmt** | **Accepted (supersedes 005)** | **초기** |
-| **017** | **문서 사이트 (Astro)** | **Astro + Starlight** | **Accepted** | **Phase 1 후반** |
+| **017** | **문서 사이트 (Astro)** | **Astro + Starlight** | **Superseded by 022** | **Phase 1 후반** |
 | **018** | **DevTools UI 프레임워크** | **Lit + Shadow DOM closed + Custom Elements** | **Accepted** | **초기** |
+| **022** | **문서 사이트 (VitePress 2)** | **VitePress 2 + GitHub Pages** | **Accepted (supersedes 017)** | **Phase 1 후반** |
+| **023** | **공개 alpha 릴리스 운영** | **독립 version + 수동 publish + package tag** | **Accepted** | **공개 alpha** |
 
 ---
 
@@ -1121,7 +1125,10 @@ oxfmt --check
 
 ## ADR-017: 문서 사이트 도구 (Astro + Starlight)
 
-**Status:** Accepted
+**Status:** Superseded by ADR-022
+
+이 ADR은 당시 비교와 판단 근거를 보존한다. 현재 문서 사이트 도구와 배포 계약은
+ADR-022를 따른다.
 
 **Context:**
 
@@ -1239,7 +1246,7 @@ DevTools 패널 UI를 어떻게 구현할지는 두 가지 독립 질문으로 �
 
 **(d) 표준 친화성**: Lit은 Google/Chrome 팀의 Web Components 레퍼런스 구현. VoidZero 생태계 철학("웹 표준 위 얇은 레이어")과 정합.
 
-**(e) 컴포넌트 재사용**: Custom Element는 Astro 데모 사이트(ADR-017), Phase 3 외부 Dashboard, Phase 5 Collector/Dashboard에서 동일 코드로 재사용 가능.
+**(e) 컴포넌트 재사용**: Custom Element는 VitePress 데모 사이트(ADR-022), Phase 3 외부 Dashboard, Phase 5 Collector/Dashboard에서 동일 코드로 재사용 가능.
 
 **Decision:**
 
@@ -1248,7 +1255,7 @@ DevTools 패널 UI를 어떻게 구현할지는 두 가지 독립 질문으로 �
 **구현 원칙:**
 
 1. **모든 UI 컴포넌트는 Custom Element**
-   - 인라인 패널, Astro 데모, 외부 Dashboard에서 동일 컴포넌트 재사용
+   - 인라인 패널, VitePress 데모, 외부 Dashboard에서 동일 컴포넌트 재사용
    - 네이밍: `bse-` 접두사 (`bse-devtools-panel`, `bse-timeline`, `bse-message-detail`)
 
 2. **Shadow DOM closed mode**
@@ -1336,7 +1343,7 @@ export class Timeline extends LitElement {
 **Consequences:**
 
 - (+) **프레임워크 어그노스틱**: 표준 Custom Element로 컴파일되어 어떤 앱에도 주입 가능
-- (+) **재사용성**: Astro 데모, 외부 Dashboard 등 다른 컨텍스트에서 동일 코드 재사용
+- (+) **재사용성**: VitePress 데모, 외부 Dashboard 등 다른 컨텍스트에서 동일 코드 재사용
 - (+) **Shadow DOM 네이티브**: `adoptedStyleSheets`, `:host`, slot 자동 처리
 - (+) **표준 친화**: Google/Chrome 팀 유지, Web Components 표준 발전에 즉시 반응
 - (+) **VoidZero 철학 정합**: "웹 표준 위 얇은 레이어"
@@ -1350,6 +1357,149 @@ export class Timeline extends LitElement {
 - Lit 3.x 메이저 버전 따라감
 - Lit 4.0 릴리스 시 마이그레이션 검토 (currently no announced timeline)
 - decorator는 Lit이 권장하는 방식 사용, ECMAScript 표준 decorator 안정화 시 전환
+
+---
+
+## ADR-022: 문서 사이트 도구 (VitePress 2 + GitHub Pages)
+
+**Status:** Accepted
+
+**Supersedes:** ADR-017
+
+**Context:**
+
+ADR-017은 Astro + Starlight를 선택했지만 실제 문서 사이트를 구현하는 과정에서
+다음 조건이 더 중요해졌다.
+
+- 기존 PRD, ADR, 계획 문서를 별도 content collection 이동 없이 그대로 제공해야 한다.
+- `@browse-sent-event/core`의 Lit Custom Element를 정적 문서 안에서 직접 실행하는
+  seeded demo가 필요하다.
+- 저장소의 Vite 8 기준과 가까운 도구 체인을 사용하고 GitHub Pages에 단순하게
+  배포해야 한다.
+- VitePress 1.6.4 경로에는 내부 Vite 5/esbuild 관련 audit advisory가 있었고,
+  당시 이를 해소한 stable major가 없었다.
+
+VitePress 2 prerelease로 만든 문서 사이트와 GitHub Pages workflow가 이미 이
+요구를 충족하고 있으며, 실제 seeded panel demo와 local search도 동작한다.
+
+**Decision:**
+
+문서 사이트는 **VitePress 2 + GitHub Pages**를 사용한다.
+
+- VitePress는 `2.0.0-alpha.17`처럼 검증한 정확한 버전으로 고정한다.
+- `docs/`의 Markdown을 source of truth로 유지한다.
+- 인터랙티브 예제는 VitePress Vue component가 core의 Custom Element를 mount하는
+  얇은 adapter로 구현한다.
+- `main` 문서 변경은 GitHub Actions에서 build한 뒤 GitHub Pages로 배포한다.
+- local search를 기본 검색으로 사용한다.
+- 버전 변경 시 `pnpm audit`, 문서 build, seeded demo의 desktop/mobile
+  브라우저 검증을 release gate로 둔다.
+
+**Rejected alternatives:**
+
+- **Astro + Starlight 유지**: 좋은 선택이지만 현재 Markdown 구조를 옮기고 별도
+  content schema와 component integration을 운영해야 한다.
+- **VitePress 1.x**: stable이라는 장점보다 확인된 audit advisory를 유지하는 비용이
+  크다.
+- **자체 Vite SPA**: navigation, 검색, Markdown rendering과 접근성을 직접
+  유지해야 한다.
+
+**Consequences:**
+
+- (+) 현재 Vite 기반 저장소와 설정 및 디버깅 경험을 공유한다.
+- (+) 기존 Markdown 경로를 그대로 공개하고 Vue adapter로 Lit demo를 재사용한다.
+- (+) GitHub Pages 배포 구성이 작고 release 권한과 분리된다.
+- (−) VitePress 2가 prerelease이므로 patch 사이에도 breaking change가 생길 수
+  있다.
+- (−) seeded demo를 포함한 문서 client bundle이 기본 chunk 경고 기준을 넘는다.
+  현재 배포 실패나 사용성 회귀는 아니므로 경고를 기록하고 수용한다.
+
+**의식적으로 수용한 부채:**
+
+- 포기하는 것: stable 문서 framework가 제공하는 장기 API 호환성.
+- 지금 감당 가능한 이유: 정확한 버전을 고정하고 문서 build 및 브라우저
+  회귀 검증이 있으며, 문서 runtime은 배포 package와 격리되어 있다.
+- 회수 시점: VitePress 2 stable 출시, 보안 advisory 발생, 문서 build 실패,
+  또는 seeded demo의 로딩 비용이 실제 사용성을 해칠 때 재평가한다.
+
+---
+
+## ADR-023: 공개 alpha 릴리스 identity와 수동 publish
+
+**Status:** Accepted
+
+**Context:**
+
+첫 공개 과정에서 `@browse-sent-event/core@0.1.0-alpha.0`과
+`@browse-sent-event/plugin-vite@0.1.0-alpha.0`을 배포했지만, plugin의 tarball
+manifest에 `workspace:*` 의존성이 남았다. 문제 버전은 deprecated 처리하고
+수정된 `@browse-sent-event/plugin-vite@0.1.0-alpha.1`을 공개했다.
+
+이 사건으로 다음 identity를 분리해 관리할 필요가 드러났다.
+
+1. npm package와 dist-tag
+2. source commit을 가리키는 Git tag
+3. 사용자에게 변경과 제한을 설명하는 GitHub Release
+
+**Decision:**
+
+공개 alpha는 다음 정책으로 운영한다.
+
+### Package version과 dist-tag
+
+- `@browse-sent-event/core`와 `@browse-sent-event/plugin-vite`는 독립적으로
+  versioning한다.
+- 사용자 설치 문서에서는 mutable channel인 `@alpha` dist-tag를 사용한다.
+- release 기록과 장애 분석에서는 immutable한 정확한 version을 사용한다.
+- 잘못 배포된 version은 deprecated 처리하고 같은 version을 다시 publish하거나
+  정상 release tag로 재사용하지 않는다.
+
+### 수동 npm publish gate
+
+- npm publish 권한은 maintainer만 보유한다.
+- CI에 `NPM_TOKEN`, trusted publishing, 자동 publish workflow를 두지 않는다.
+- publish 전 build, test, typecheck, lint, format, package tarball 검증,
+  `npm publish --dry-run`을 수행한다.
+- publish 후에는 깨끗한 임시 project에서 `@alpha`를 설치하고 package version,
+  내부 dependency 해석, ESM import와 audit 결과를 확인한다.
+
+### Git tag와 GitHub Release
+
+- Git tag 형식은 `<package-name>@<exact-version>`을 사용한다.
+- tag는 npm에 공개된 tarball의 source commit을 가리키며 이동시키지 않는다.
+- GitHub Release는 해당 package tag로 만들고 alpha는 prerelease로 표시한다.
+- npm publish, Git tag, GitHub Release는 같은 identity를 공유하지만 서로 자동
+  성공으로 간주하지 않고 각 단계를 검증한다.
+- 잘못 배포된 plugin-vite `0.1.0-alpha.0`에는 정상 release tag와 GitHub Release를
+  만들지 않는다.
+
+**Rejected alternatives:**
+
+- **모든 package의 version 고정**: 관련 없는 package까지 bump되어 변경 identity가
+  흐려진다.
+- **npm publish 자동화 즉시 도입**: 현재 maintainer 단독 운영 규모에서 credential과
+  공급망 권한 표면이 늘어난다.
+- **저장소 단일 tag 사용**: package별 version이 달라진 이후 source와 tarball의
+  대응 관계가 불명확해진다.
+- **문제 version 삭제 또는 tag 재사용**: 이미 설치한 사용자의 재현 가능성과
+  immutable release 원칙을 훼손한다.
+
+**Consequences:**
+
+- (+) package, source, release note의 대응 관계를 정확히 추적할 수 있다.
+- (+) publish 권한을 작게 유지하고 자동화 credential 노출을 피한다.
+- (+) 한 package의 수정이 다른 package version을 불필요하게 올리지 않는다.
+- (−) maintainer가 여러 검증과 publish 단계를 직접 수행해야 한다.
+- (−) npm 공개와 Git tag/GitHub Release 생성 사이에 짧은 시간 차가 생길 수 있다.
+
+**의식적으로 수용한 부채:**
+
+- 포기하는 것: 완전 자동화된 원자적 publish와 release 생성.
+- 지금 감당 가능한 이유: 공개 package가 두 개이고 publish 주체가 한 명이며,
+  수동 gate가 공급망 권한을 최소화한다.
+- 회수 시점: 정기 release가 월 2회 이상이 되거나 maintainer가 늘거나, 수동 절차
+  누락이 재발하면 trusted publishing과 보호된 release workflow를 별도 ADR로
+  검토한다.
 
 ---
 
