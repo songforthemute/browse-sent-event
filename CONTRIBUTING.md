@@ -2,8 +2,8 @@
 
 ## 요구사항
 
-- Node.js 20+
-- pnpm 11.2.2+
+- Node.js `^20.19.0` 또는 `>=22.12.0`
+- pnpm `11.2.2`
 
 ## 작업 흐름
 
@@ -23,6 +23,7 @@ pnpm test:e2e
 pnpm typecheck
 pnpm lint
 pnpm format:check
+pnpm test:release
 ```
 
 ## Changesets
@@ -34,4 +35,13 @@ pnpm format:check
 
 ## npm publish
 
-npm publish는 자동화하지 않는다. 첫 alpha 전까지 `NPM_TOKEN`, trusted publishing, GitHub Actions publish workflow를 사용하지 않고, maintainer가 release gate를 확인한 뒤 로컬에서 수동으로만 실행한다.
+npm publish는 자동화하지 않는다. 현재 공개 alpha도 `NPM_TOKEN`, trusted
+publishing, GitHub Actions publish workflow를 사용하지 않고 maintainer가 release
+gate를 확인한 뒤 로컬에서 수동으로만 실행한다.
+
+package version은 서로 독립적으로 관리한다. 한 package의 변경 때문에 다른
+package의 version을 불필요하게 올리지 않는다. 다만 내부 dependency 범위가 바뀌면
+Changesets가 의존 package의 필요한 bump를 함께 계산하도록 한다.
+
+배포 절차와 현재 alpha 상태는 `docs/release/npm-publish.md`를 따른다. Git tag와
+GitHub Release는 npm publish를 검증한 뒤 별도로 생성한다.
