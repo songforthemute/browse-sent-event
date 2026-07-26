@@ -132,7 +132,8 @@ LLM 스트리밍, WebView 하이브리드 앱, MFE iframe 통신 등 실시간 �
 **F2.3 메시지 타임라인 뷰**
 - 역순 정렬 (최신이 위), auto-scroll 토글
 - 각 메시지 행: 방향(↑↓), timestamp(HH:MM:SS.mmm), 프로토콜, type, payload preview (100자), 크기
-- 메시지 클릭 시 상세 패널: 전체 payload (JSON pretty-print), 헤더/메타데이터
+- 현재 alpha 상세 패널: 방향, 프로토콜, type, 크기, payload preview (100자)
+- 후속 목표: 전체 payload (JSON pretty-print), 헤더/메타데이터
 
 **F2.4 집계 메트릭 패널**
 - 연결별: 총 msg/s (↓/↑ 분리), 평균 size, reconnect 횟수
@@ -147,7 +148,9 @@ LLM 스트리밍, WebView 하이브리드 앱, MFE iframe 통신 등 실시간 �
 
 **F3.2 설정**
 ```typescript
-browseSentEvent({
+import { installBrowseSentEvent } from '@browse-sent-event/core';
+
+installBrowseSentEvent({
   capacity: 10_000,    // 링 버퍼 크기
 });
 ```

@@ -26,9 +26,10 @@ const installation = installBrowseSentEvent({
     position: "bottom-right",
   },
 });
-
-installation.uninstall();
 ```
+
+개발 도구를 제거할 때 반환된 `installation.uninstall()`을 호출합니다. 설치 직후
+호출하면 interceptor와 panel이 바로 제거됩니다.
 
 애플리케이션 소스에서 직접 import하면 bundler 설정에 따라 프로덕션 bundle에
 포함될 수 있습니다. 개발 전용 entry나 조건부 import를 사용하고 최종 산출물을

@@ -20,24 +20,31 @@ connection과 message를 이어서 볼 수 있다.
 ## 연결과 타임라인 탐색
 
 왼쪽 connection 목록에서 항목을 선택하면 해당 연결의 메시지만 timeline에
-표시된다. 전체 항목을 선택하면 모든 연결을 시간순으로 볼 수 있다.
+표시된다. 현재 alpha에는 connection 선택을 해제해 전체 보기로 돌아가는 control이
+없다. 전체 timeline이 다시 필요하면 페이지를 새로고침해 runtime과 panel을 다시
+설치해야 한다.
 
 timeline에서는 다음 정보를 확인할 수 있다.
 
 - transport 종류와 연결 상태
 - 메시지의 incoming 또는 outgoing 방향
 - 메시지가 기록된 시각과 크기
-- 텍스트, JSON, binary metadata 등 정규화된 payload
+- 텍스트와 JSON payload의 100자 preview, binary payload의 크기 요약
 
-메시지를 선택하면 상세 영역에서 전체 payload와 metadata를 확인할 수 있다.
+메시지를 선택하면 상세 영역에서 방향, 프로토콜, type, 크기와 payload preview를
+확인할 수 있다. 전체 payload와 metadata를 펼쳐 보는 UI는 아직 제공하지 않는다.
 
 ## 검색과 방향 필터
 
-검색어는 현재 timeline의 메시지 내용과 metadata에 적용된다. 방향 필터로 전체,
-incoming, outgoing 중 하나를 선택할 수 있다.
+검색어는 현재 timeline에 표시하는 100자 `payloadPreview`에 대소문자 없이
+적용된다. metadata는 검색하지 않는다. 방향 필터로 전체, incoming, outgoing 중
+하나를 선택할 수 있다.
 
-connection 선택, 검색어, 방향 필터는 함께 적용된다. 내보내기도 화면에 표시된
-결과와 같은 조건을 사용한다.
+connection 선택과 방향 필터는 timeline과 내보내기에 같은 방식으로 적용된다.
+검색은 현재 차이가 있다. timeline은 100자 preview를 검색하지만 export는 문자열
+payload 전체를 검색한다. 따라서 검색어가 100자 뒤에만 있으면 화면에는 보이지
+않은 message가 export 결과에 포함될 수 있다. binary payload는 두 경로 모두
+preview를 검색한다.
 
 ## JSONL과 log 내보내기
 

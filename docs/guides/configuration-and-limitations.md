@@ -47,10 +47,11 @@ const installation = installBrowseSentEvent({
     position: "bottom-right",
   },
 });
-
-// 개발 환경을 종료하거나 hot reload 경계를 정리할 때 호출한다.
-installation.uninstall();
 ```
+
+개발 도구를 제거하거나 hot reload 경계를 정리할 때 반환된
+`installation.uninstall()`을 호출한다. 설치 직후 호출하면 interceptor와 panel이
+바로 제거된다.
 
 | 옵션                 | 기본값           | 현재 동작                                        |
 | -------------------- | ---------------- | ------------------------------------------------ |
@@ -94,13 +95,16 @@ XMLHttpRequest는 native 동작을 보존하면서 안전하게 snapshot할 수 
 
 ## 알려진 alpha 제한
 
-| 제한                           | 영향                                            | 대응                                               |
-| ------------------------------ | ----------------------------------------------- | -------------------------------------------------- |
-| custom hotkey 미지원           | `panel.hotkey`에 다른 값을 넣어도 동작하지 않음 | 기본 단축키 또는 launcher 사용                     |
-| `excludeUrls` 미적용           | URL 제외 설정이 실제 기록을 차단하지 않음       | 민감한 endpoint가 있는 환경에서는 사용 범위를 제한 |
-| Vite plugin option 전달 미지원 | plugin 경로에서 capacity와 panel 세부 설정 불가 | `enabled`만 사용하고 후속 alpha 변경을 확인        |
-| 자동 파일 다운로드 없음        | export만으로 로컬 파일이 생기지 않음            | `bse-export` listener에서 저장 동작 구현           |
-| Worker 계측 미지원             | Worker 안의 transport가 panel에 나타나지 않음   | main thread 연결로 검증하거나 별도 관찰 도구 사용  |
+| 제한                           | 영향                                                                 | 대응                                               |
+| ------------------------------ | -------------------------------------------------------------------- | -------------------------------------------------- |
+| custom hotkey 미지원           | `panel.hotkey`에 다른 값을 넣어도 동작하지 않음                      | 기본 단축키 또는 launcher 사용                     |
+| `excludeUrls` 미적용           | URL 제외 설정이 실제 기록을 차단하지 않음                            | 민감한 endpoint가 있는 환경에서는 사용 범위를 제한 |
+| Vite plugin option 전달 미지원 | plugin 경로에서 capacity와 panel 세부 설정 불가                      | `enabled`만 사용하고 후속 alpha 변경을 확인        |
+| 자동 파일 다운로드 없음        | export만으로 로컬 파일이 생기지 않음                                 | `bse-export` listener에서 저장 동작 구현           |
+| timeline/export 검색 범위 차이 | 문자열 payload의 100자 뒤 검색 결과가 화면과 export에서 다를 수 있음 | export 내용을 별도로 확인                          |
+| connection 선택 해제 없음      | 선택 후 panel 안에서 전체 timeline으로 돌아갈 수 없음                | 페이지를 새로고침해 runtime과 panel 재설치         |
+| 전체 payload 상세 UI 없음      | panel 상세 영역은 100자 preview만 표시                               | JSONL export에서 전체 문자열 payload 확인          |
+| Worker 계측 미지원             | Worker 안의 transport가 panel에 나타나지 않음                        | main thread 연결로 검증하거나 별도 관찰 도구 사용  |
 
 공개 alpha에서는 민감한 payload를 다루는 운영 환경보다 로컬 개발과 제한된
 평가 환경에서 사용하는 것을 권장한다.
