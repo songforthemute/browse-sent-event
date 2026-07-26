@@ -18,68 +18,64 @@ export default defineConfig({
   },
   themeConfig: {
     nav: [
-      { text: "문서", link: "/" },
-      { text: "PRD", link: "/browse-sent-event-prd" },
-      { text: "ADR", link: "/browse-sent-event-adr" },
-      { text: "계획", link: "/plans/2026-06-03-npm-publish-readiness" },
+      { text: "시작하기", link: "/guides/getting-started" },
+      {
+        text: "가이드",
+        items: [
+          { text: "패널과 내보내기", link: "/guides/panel-and-export" },
+          { text: "설정과 제한 사항", link: "/guides/configuration-and-limitations" },
+        ],
+      },
+      { text: "예제", link: "/examples/devtools-panel" },
+      {
+        text: "프로젝트",
+        items: [
+          { text: "제품 요구사항", link: "/browse-sent-event-prd" },
+          { text: "아키텍처 결정", link: "/browse-sent-event-adr" },
+          { text: "구현 계획 기록", link: "/plans/" },
+        ],
+      },
     ],
     search: {
       provider: "local",
     },
     sidebar: [
       {
-        text: "프로젝트",
+        text: "시작하기",
         items: [
           { text: "문서 홈", link: "/" },
-          { text: "제품 요구사항", link: "/browse-sent-event-prd" },
-          { text: "아키텍처 결정 기록", link: "/browse-sent-event-adr" },
-          { text: "v2 설계 메모", link: "/browse-sent-event-v2" },
+          { text: "설치와 Vite 설정", link: "/guides/getting-started" },
         ],
       },
       {
-        text: "릴리즈",
-        items: [{ text: "npm 배포", link: "/release/npm-publish" }],
+        text: "사용 가이드",
+        items: [
+          { text: "패널과 내보내기", link: "/guides/panel-and-export" },
+          { text: "설정과 제한 사항", link: "/guides/configuration-and-limitations" },
+        ],
       },
       {
         text: "예제",
         items: [{ text: "DevTools panel", link: "/examples/devtools-panel" }],
       },
       {
-        text: "구현 계획",
+        text: "프로젝트",
         items: [
-          {
-            text: "Runtime/UI 하드닝 설계",
-            link: "/plans/2026-06-08-runtime-ui-hardening-design",
-          },
-          {
-            text: "문서 SPA 인터랙티브 예제 데모",
-            link: "/plans/2026-06-03-docs-interactive-demo",
-          },
-          {
-            text: "npm 배포 준비",
-            link: "/plans/2026-06-03-npm-publish-readiness",
-          },
-          {
-            text: "Export 검색어 필터 회수",
-            link: "/plans/2026-06-03-export-search-filter",
-          },
-          {
-            text: "문서 공개와 릴리즈 준비",
-            link: "/plans/2026-05-27-docs-release-readiness",
-          },
-          {
-            text: "기술 문서 배포와 공급망 보안",
-            link: "/plans/2026-05-25-docs-site-supply-chain",
-          },
-          {
-            text: "DevTools 브라우저 검증",
-            link: "/plans/2026-05-25-devtools-browser-verification",
-          },
-          { text: "DevTools UI", link: "/plans/2026-05-19-devtools-ui" },
-          { text: "DevTools UI 배치 2", link: "/plans/2026-05-19-devtools-ui-batch-2" },
-          { text: "프로토콜 인터셉터", link: "/plans/2026-05-19-protocol-interceptors" },
-          { text: "Vite 8 정렬", link: "/plans/2026-05-18-vite-8-alignment" },
+          { text: "제품 요구사항", link: "/browse-sent-event-prd" },
+          { text: "아키텍처 결정 기록", link: "/browse-sent-event-adr" },
+          { text: "v2 설계 메모", link: "/browse-sent-event-v2" },
         ],
+      },
+      {
+        text: "릴리스",
+        items: [
+          { text: "npm 배포", link: "/release/npm-publish" },
+          { text: "GitHub Release", link: "/release/github-release" },
+        ],
+      },
+      {
+        text: "개발 기록",
+        items: [{ text: "구현 계획 인덱스", link: "/plans/" }],
       },
     ],
     socialLinks: [

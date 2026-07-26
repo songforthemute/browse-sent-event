@@ -1,6 +1,21 @@
 # npm 배포 가이드
 
-`browse-sent-event`의 npm 배포는 첫 alpha 공개 전까지 dry-run과 승인 gate를 통과해야 한다. 실제 publish는 자동화하지 않고 maintainer가 수동으로만 실행한다. 이 문서는 실제 publish를 누르기 전 확인해야 할 절차를 한곳에 모은다.
+`browse-sent-event`는 공개 alpha를 npm에 배포했다. 실제 publish는 자동화하지 않고
+maintainer가 수동으로만 실행한다. 이 문서는 현재 registry 상태, 다음 alpha를
+publish하기 전의 gate, 첫 배포에서 얻은 교훈을 한곳에 모은다.
+
+## 현재 공개 상태
+
+검증 기준: `2026-07-26 KST`
+
+| package                          | `alpha`         | `latest`        | 상태 |
+| -------------------------------- | --------------- | --------------- | ---- |
+| `@browse-sent-event/core`        | `0.1.0-alpha.0` | `0.1.0-alpha.0` | 정상 |
+| `@browse-sent-event/plugin-vite` | `0.1.0-alpha.1` | `0.1.0-alpha.1` | 정상 |
+
+`@browse-sent-event/plugin-vite@0.1.0-alpha.0`은 공개 manifest에 `workspace:*`
+의존성이 남은 잘못된 배포이며 deprecated 상태다. 재사용하거나 정상 release로
+기록하지 않는다.
 
 ## 현재 원칙
 
@@ -11,6 +26,8 @@
 5. npm scope 권한, registry 상태, tarball 내용은 배포 직전에 다시 확인한다.
 6. 공급망 보안 gate를 통과하지 못하면 publish하지 않는다.
 7. GitHub Actions에는 npm publish 권한, `NPM_TOKEN`, trusted publishing 설정을 두지 않는다.
+8. package는 독립적으로 versioning하고 설치 문서에서는 `@alpha` dist-tag를 사용한다.
+9. Git tag와 GitHub Release는 npm publish 검증 후 별도 절차로 만든다.
 
 ## 배포 대상
 
@@ -25,7 +42,7 @@
 
 비공개 브라우저 fixture는 `0.0.0`을 유지하고 Changesets 버전 변경 대상에서 제외한다. `changeset status --output` JSON에는 `type: "none"`으로 남을 수 있지만, version과 changelog는 만들지 않는다. fixture가 외부 배포 대상이나 독립 version contract를 갖게 되면 ignore 정책을 제거하고 별도 version 정책을 정한다.
 
-## 배포 전 확인 순서
+## 다음 alpha 배포 runbook
 
 ### 1. registry와 scope 권한 확인
 
@@ -39,8 +56,7 @@ npm access list packages @browse-sent-event --json
 
 기대 결과:
 
-- `npm view`가 `E404`를 반환하거나, 의도한 owner의 기존 package만 보여야 한다.
-- 같은 package name이 다른 owner에게 점유되어 있으면 배포를 중단한다.
+- `npm view`가 위 현재 공개 상태와 일치해야 한다.
 - `npm access list packages`로 현재 계정이 `@browse-sent-event` scope에 접근 가능한지 확인한다.
 
 주의:
@@ -139,9 +155,9 @@ pnpm pack:check
 
 package 디렉터리를 `npm publish ./packages/...`로 직접 배포하면 안 된다. npm은 pnpm이 수행하는 `workspace:*` 변환을 적용하지 않으므로, 검증한 tarball과 다른 manifest가 공개될 수 있다.
 
-### 6. Changesets version PR 생성
+### 6. Changesets version 변경
 
-첫 alpha 배포는 prerelease 흐름으로 시작한다.
+새 prerelease 주기를 시작할 때만 prerelease mode에 진입한다.
 
 ```bash
 pnpm changeset pre enter alpha
@@ -150,18 +166,9 @@ pnpm install
 pnpm install --frozen-lockfile
 ```
 
-첫 alpha 후보는 `0.1.0-alpha.0`를 기준으로 한다.
-
-첫 alpha version은 이미 병합된 사용자 변경 changeset을 사용한다. 배포 준비만을 위한 changeset을 중복 생성하지 않는다. 적용할 changeset은 다음 형태다.
-
-```markdown
----
-"@browse-sent-event/core": minor
-"@browse-sent-event/plugin-vite": minor
----
-
-첫 npm alpha 배포 후보를 준비한다.
-```
+이미 병합된 사용자 변경 changeset을 사용하고 배포 준비만을 위한 changeset을
+중복 생성하지 않는다. package는 독립적으로 versioning하므로 실제 변경이 없는
+package를 같은 번호로 맞추기 위해 bump하지 않는다.
 
 version 적용 후에는 다시 build, pack, dry-run을 실행한다.
 
@@ -169,9 +176,10 @@ version 적용 후에는 다시 build, pack, dry-run을 실행한다.
 
 ### 7. maintainer 수동 publish 승인
 
-실제 publish는 자동 workflow로 수행하지 않는다. `NPM_TOKEN` secret, npm trusted publishing, `changesets/action`의 publish 단계는 첫 alpha 전까지 추가하지 않는다.
+실제 publish는 자동 workflow로 수행하지 않는다. `NPM_TOKEN` secret, npm trusted
+publishing, `changesets/action`의 publish 단계를 추가하지 않는다.
 
-첫 publish 전에는 다음을 다시 확인한다.
+publish 전에는 다음을 다시 확인한다.
 
 - npm scope 권한
 - latest dry-run 결과
@@ -187,9 +195,17 @@ pnpm pack:check
 # 위 명령이 출력한 각 `publish:` 명령을 maintainer가 실행한다.
 ```
 
-publish 후에는 npm registry에서 실제 version을 확인하고, README의 설치 문구에서 "배포 후" 표현을 제거한다.
+publish 후에는 npm registry에서 정확한 version과 dist-tag를 확인하고, 깨끗한 임시
+project에서 설치와 ESM import를 검증한다. 이어서
+[GitHub Release 가이드](./github-release.md)에 따라 package tag와 prerelease를
+준비한다.
 
-## 0.1.0-alpha.0 plugin-vite 복구
+## 역사 기록
+
+아래 내용은 첫 공개 alpha에서 발생한 문제와 복구 검증 기록이다. 현재 실행할
+명령은 위 runbook을 기준으로 판단한다.
+
+### 0.1.0-alpha.0 plugin-vite 복구
 
 `@browse-sent-event/plugin-vite@0.1.0-alpha.0`은 package 디렉터리에서 `npm publish`되어, 공개 manifest의 `@browse-sent-event/core` 의존성에 `workspace:*`가 남았다. `pnpm pack:check`가 만든 tarball은 올바르게 변환됐지만 실제 publish가 그 산출물을 사용하지 않아 발생한 문제다.
 
@@ -219,7 +235,7 @@ npm dist-tag add @browse-sent-event/plugin-vite@0.1.0-alpha.1 latest
 
 정상적으로 공개된 `@browse-sent-event/core@0.1.0-alpha.0`의 `latest`와 `alpha`는 그대로 유지한다.
 
-## 0.1.0-alpha.1 복구 후보 검증
+### 0.1.0-alpha.1 복구 후보 검증
 
 검증 일시: `2026-07-26 KST`
 
@@ -234,7 +250,9 @@ npm dist-tag add @browse-sent-event/plugin-vite@0.1.0-alpha.1 latest
 | 소비자 설치             | 통과 | 공개 core alpha.0 해석, Vite 8.0.16과 함께 설치, 취약점 0건        |
 | ESM import              | 통과 | plugin-vite default export와 core public export 로드 성공          |
 
-복구 후보 tarball은 `.tmp-pack/browse-sent-event-plugin-vite-0.1.0-alpha.1.tgz`다. `.tmp-pack`은 임시 산출물이므로 Git에는 포함하지 않는다. PR 병합과 최신 CI 확인 후 같은 커밋에서 build와 `pnpm pack:check`를 다시 실행하고, 새로 출력된 plugin-vite `publish:` 명령만 maintainer가 실행한다. 이미 공개되어 정상인 core alpha.0은 다시 publish하지 않는다.
+복구 후보 tarball은 `.tmp-pack/browse-sent-event-plugin-vite-0.1.0-alpha.1.tgz`였다.
+`.tmp-pack`은 임시 산출물이므로 Git에는 포함하지 않는다. 이 후보는 검증 후
+공개되었고, 이미 정상인 core alpha.0은 다시 publish하지 않았다.
 
 ### registry 복구 결과
 
@@ -248,7 +266,7 @@ npm dist-tag add @browse-sent-event/plugin-vite@0.1.0-alpha.1 latest
 
 `plugin-vite@alpha.1`의 공개 manifest는 core 의존성을 `0.1.0-alpha.0`으로 포함한다. `npm view`에서 tag를 생략한 plugin-vite version도 `0.1.0-alpha.1`로 확인했다.
 
-## 0.1.0-alpha.0 후보 검증
+### 0.1.0-alpha.0 후보 검증
 
 검증 일시: `2026-07-25 10:17 KST`
 검증 기준 커밋: `c95b3bf`
@@ -272,7 +290,9 @@ npm dist-tag add @browse-sent-event/plugin-vite@0.1.0-alpha.1 latest
 
 첫 dry-run은 prerelease dist-tag를 생략해 npm 11의 `You must specify a tag using --tag when publishing a prerelease version` 오류로 실패했다. 명령에 `--tag alpha`를 추가한 뒤 두 package 모두 성공했다.
 
-이 후보는 실제 npm publish를 실행하지 않았다. npm 로그인과 `@browse-sent-event` scope 권한을 확인할 때까지 publish 승인 gate는 차단 상태다. maintainer는 PR 병합, 최신 CI, npm 로그인과 scope 권한을 다시 확인한 뒤에만 두 package를 수동 publish한다.
+이 표는 publish 전 후보 검증 시점의 기록이다. 이후 npm 로그인과 scope 권한을
+확인하고 수동 publish를 진행했다. plugin-vite alpha.0의 잘못된 manifest와 alpha.1
+복구 결과는 위 역사 기록을 따른다.
 
 ## changeset 작성 기준
 
@@ -314,6 +334,8 @@ stable `1.0.0` 이후에는 일반 SemVer 기준으로 전환한다.
 
 ## 관련 문서
 
+- [GitHub Release 가이드](./github-release.md)
+- [아키텍처 결정 기록 ADR-023](../browse-sent-event-adr.md#adr-023-공개-alpha-릴리스-identity와-수동-publish)
 - [npm 배포 준비 구현 계획](../plans/2026-06-03-npm-publish-readiness.md)
 - [문서 공개와 릴리즈 준비](../plans/2026-05-27-docs-release-readiness.md)
 - [기술 문서 배포와 공급망 보안](../plans/2026-05-25-docs-site-supply-chain.md)

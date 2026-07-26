@@ -4,9 +4,9 @@
 
 | | |
 |---|---|
-| **Status** | Draft v1 |
+| **Status** | Phase 1 공개 alpha |
 | **Owner** | songforthemute (코코) |
-| **Last updated** | 2026-07-23 |
+| **Last updated** | 2026-07-26 |
 | **Scope of this PRD** | Phase 1 (핵심 가치 증명) 집중, Phase 2~6은 개요만 |
 
 ---
@@ -83,7 +83,7 @@ LLM 스트리밍, WebView 하이브리드 앱, MFE iframe 통신 등 실시간 �
 
 **UC5. "로그로 남겨서 공유하고 싶다"**
 - `.jsonl` 또는 `.log`로 export
-- 성공 기준: 이슈 리포트에 첨부 가능한 파일 생성
+- 성공 기준: 이슈 리포트에 저장하거나 첨부할 수 있는 export payload 생성
 
 ---
 
@@ -132,7 +132,8 @@ LLM 스트리밍, WebView 하이브리드 앱, MFE iframe 통신 등 실시간 �
 **F2.3 메시지 타임라인 뷰**
 - 역순 정렬 (최신이 위), auto-scroll 토글
 - 각 메시지 행: 방향(↑↓), timestamp(HH:MM:SS.mmm), 프로토콜, type, payload preview (100자), 크기
-- 메시지 클릭 시 상세 패널: 전체 payload (JSON pretty-print), 헤더/메타데이터
+- 현재 alpha 상세 패널: 방향, 프로토콜, type, 크기, payload preview (100자)
+- 후속 목표: 전체 payload (JSON pretty-print), 헤더/메타데이터
 
 **F2.4 집계 메트릭 패널**
 - 연결별: 총 msg/s (↓/↑ 분리), 평균 size, reconnect 횟수
@@ -147,7 +148,9 @@ LLM 스트리밍, WebView 하이브리드 앱, MFE iframe 통신 등 실시간 �
 
 **F3.2 설정**
 ```typescript
-browseSentEvent({
+import { installBrowseSentEvent } from '@browse-sent-event/core';
+
+installBrowseSentEvent({
   capacity: 10_000,    // 링 버퍼 크기
 });
 ```
@@ -180,12 +183,12 @@ browseSentEvent({
 
 **F6.1 설치 경험**
 ```bash
-npm install -D browse-sent-event
+npm install -D @browse-sent-event/plugin-vite@alpha
 ```
 
 ```typescript
 // vite.config.ts
-import browseSentEvent from 'browse-sent-event/vite';
+import browseSentEvent from '@browse-sent-event/plugin-vite';
 
 export default defineConfig({
   plugins: [browseSentEvent()],
@@ -432,9 +435,9 @@ interface BrowseSentEventOptions {
 - [ ] Chrome, Firefox, Safari 최신 버전 동작
 
 **문서:**
-- [ ] README with quickstart (5분 이내 도입 가능)
-- [ ] 제약사항 명시 (main thread only, Vite only)
-- [ ] 기여 가이드
+- [x] README with quickstart (5분 이내 도입 가능)
+- [x] 제약사항 명시 (main thread only, Vite only)
+- [x] 기여 가이드
 
 ### 6.2 Adoption Metrics (Phase 1 출시 후 3개월)
 
@@ -473,9 +476,11 @@ Phase 1 착수 전 혼선을 줄이기 위해, ADR에서 이미 확정된 항목
 
 ### 8.1 확정된 결정
 
-**D1. 패키지 이름**
-- 결정: `browse-sent-event`
-- 릴리스 전 확인: npm에 동일 패키지명을 사용할 수 있는지 최종 확인
+**D1. 공개 패키지 이름과 역할**
+- 결정: `@browse-sent-event/core`는 runtime과 panel API를 제공한다.
+- 결정: `@browse-sent-event/plugin-vite`는 Vite 개발 서버 entry에 core bootstrap을 주입한다.
+- 배포 상태: core `0.1.0-alpha.0`, plugin-vite `0.1.0-alpha.1`이 npm에 공개되어 있다.
+- 예외: plugin-vite `0.1.0-alpha.0`은 잘못된 `workspace:*` manifest 때문에 deprecated 처리했다.
 
 **D2. 라이선스**
 - 결정: MIT
@@ -489,6 +494,12 @@ Phase 1 착수 전 혼선을 줄이기 위해, ADR에서 이미 확정된 항목
 - 결정: Lit 3.x + Shadow DOM closed mode + Custom Elements
 - 근거: ADR-018. 앱 프레임워크와 충돌하지 않고, 패널 UI를 표준 Web Component로 재사용할 수 있다.
 
+**D5. 공개 alpha 운영**
+- 결정: package는 독립적으로 versioning하며 설치 문서에서는 `@alpha` dist-tag를 사용한다.
+- 결정: npm publish는 maintainer가 release gate를 확인한 뒤 로컬에서 수동 실행한다.
+- 결정: Git tag와 GitHub Release는 검증된 npm package version을 기준으로 별도 생성한다.
+- 근거: ADR-023.
+
 ### 8.2 남은 질문
 
 **OQ1. 텔레메트리**
@@ -496,11 +507,10 @@ Phase 1 착수 전 혼선을 줄이기 위해, ADR에서 이미 확정된 항목
 - 결정 필요: opt-in을 제공할지, 제공한다면 어떤 이벤트와 환경 정보를 수집할지
 - 후속 문서: ADR-020에서 별도 결정
 
-**OQ2. Phase 1 릴리스 단계**
-- 권장안: alpha 2주(내부) → beta 4주(공개) → stable
-- 첫 npm 후보: `0.1.0-alpha.0`
-- 배포 방식: 첫 alpha 전까지 maintainer 수동 publish만 허용
-- 결정 필요: stable 전환 조건을 Release Criteria와 어떤 방식으로 연결할지
+**OQ2. stable 전환 조건**
+- 현재 단계: 공개 alpha
+- 기본 경로: alpha → beta → stable
+- 결정 필요: 호환성 matrix, 외부 채택 사례, API 변경률을 Release Criteria와 어떤 방식으로 연결할지
 
 ---
 

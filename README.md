@@ -4,7 +4,16 @@ WebSocket, HTTP stream, EventSource, XMLHttpRequest의 통신 흐름을 관찰�
 
 ## 상태
 
-이 저장소는 Phase 1 DevTools MVP를 구현하고 `0.1.0-alpha.0` 배포 후보를 검증하는 단계에 있다.
+Phase 1 DevTools MVP를 공개 alpha로 배포했다. 현재 npm 공개 버전은 다음과 같다.
+
+| 패키지                           | alpha 버전      |
+| -------------------------------- | --------------- |
+| `@browse-sent-event/core`        | `0.1.0-alpha.0` |
+| `@browse-sent-event/plugin-vite` | `0.1.0-alpha.1` |
+
+`@browse-sent-event/plugin-vite@0.1.0-alpha.0`은 배포 manifest에 `workspace:*`
+의존성이 남아 있어 deprecated 처리했다. 새 설치에서는 `@alpha` dist-tag를
+사용한다.
 
 ## 현재 구현 상태
 
@@ -16,18 +25,13 @@ WebSocket, HTTP stream, EventSource, XMLHttpRequest의 통신 흐름을 관찰�
 - 연결 목록, 메시지 타임라인, 메트릭, 검색/방향 필터
 - 패널 export 이벤트와 runtime mount/unmount 연결
 
-## 남은 정리 작업
-
-### 릴리즈 전 필수 후보
-
-- npm 로그인과 `@browse-sent-event` scope publish 권한 확인
-- maintainer의 첫 alpha 수동 publish 승인
-
-### 후속 회수
+## 후속 회수
 
 - UI polish와 위치 기억
 - Linux CI 시각 snapshot 비교 회수
 - 브라우저 검증 시나리오 확대
+- Vite plugin의 core 설정 전달
+- custom hotkey와 URL 제외 filter 구현
 
 ## Phase 1 목표
 
@@ -35,14 +39,17 @@ Vite 전용, main thread 전용 개발 도구를 제공하고, 실시간 transpo
 
 ## 호환성 기준
 
-현재 개발/테스트 기준은 Vite 8.0.16과 Vitest 4.1.8이다. `packages/plugin-vite`는 Vite 공개 Plugin API만 사용하고, peer dependency 범위는 Vite 5.x부터 8.x까지로 둔다.
+현재 개발/테스트 기준은 Vite 8.0.16과 Vitest 4.1.8이다.
+`packages/plugin-vite`는 Vite 공개 Plugin API만 사용하고, peer dependency 범위는
+Vite 5.x부터 8.x까지로 둔다. 이 범위가 모든 Vite 버전 조합을 같은 수준으로
+검증한다는 의미는 아니다.
 
 ## 설치와 Vite 사용법
 
-패키지 배포 후 Vite 앱에서는 plugin 패키지를 개발 의존성으로 설치한다.
+Vite 앱에서는 plugin 패키지의 공개 alpha를 개발 의존성으로 설치한다.
 
 ```bash
-pnpm add -D @browse-sent-event/plugin-vite
+pnpm add -D @browse-sent-event/plugin-vite@alpha
 ```
 
 `vite.config.ts`에서 plugin을 추가한다.
@@ -64,9 +71,11 @@ XMLHttpRequest는 `open()`에 문자열 URL을 전달한 요청만 계측한다.
 
 공개 기술 문서는 <https://songforthemute.github.io/browse-sent-event/>에서 확인한다.
 
-- `docs/browse-sent-event-prd.md`
-- `docs/browse-sent-event-adr.md`
-- `docs/browse-sent-event-v2.md`
+- [시작하기](https://songforthemute.github.io/browse-sent-event/guides/getting-started)
+- [패널과 내보내기](https://songforthemute.github.io/browse-sent-event/guides/panel-and-export)
+- [설정과 제한 사항](https://songforthemute.github.io/browse-sent-event/guides/configuration-and-limitations)
+- [제품 요구사항](https://songforthemute.github.io/browse-sent-event/browse-sent-event-prd)
+- [아키텍처 결정 기록](https://songforthemute.github.io/browse-sent-event/browse-sent-event-adr)
 
 정적 기술 문서 사이트는 VitePress로 빌드한다. VitePress 1.6.4는 내부 Vite 5.x/esbuild 경로에서 audit advisory가 발생하므로, 문서 빌드 도구에 한해 VitePress 2.0.0 alpha를 사용한다. `packages/plugin-vite`의 개발/테스트 기준과 peer dependency 계약은 Vite 8.x 경로를 기준으로 유지한다.
 
@@ -81,4 +90,5 @@ pnpm test:e2e
 pnpm typecheck
 pnpm lint
 pnpm format:check
+pnpm test:release
 ```

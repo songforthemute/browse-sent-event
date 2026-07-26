@@ -125,12 +125,17 @@ Shadow DOM으로 앱 스타일과 격리된 플로팅 패널에 연결 목록, �
 
 ```typescript
 // vite.config.ts — 설정 한 줄이 전부
-import browseSentEvent from 'browse-sent-event/vite';
+import browseSentEvent from '@browse-sent-event/plugin-vite';
 
 export default defineConfig({
   plugins: [browseSentEvent()],
 });
 ```
+
+현재 npm 공개 alpha는 `@browse-sent-event/core@0.1.0-alpha.0`과
+`@browse-sent-event/plugin-vite@0.1.0-alpha.1`이다. 두 package는 역할과 변경
+속도가 다르므로 독립적으로 versioning한다. 설치 문서에서는 다음 alpha로
+자연스럽게 이동할 수 있도록 `@browse-sent-event/plugin-vite@alpha`를 사용한다.
 
 **해소하는 고통**: 디버깅 도구 도입을 위해 앱 코드에 import를 추가하고, 개발/프로덕션 분기를 만들고, 실행 순서를 확인하는 반복 작업.
 
@@ -468,6 +473,20 @@ WebSocket/SSE 영역은 Swagger/OpenAPI처럼 스펙이 잘 유지되지 않는�
 ---
 
 ## 패키지 구조
+
+현재 monorepo의 공개 package 경계는 다음과 같다.
+
+```text
+packages/
+├── core/                         ← Phase 1 공개 alpha
+│   └── src/
+│       ├── interceptors/
+│       ├── runtime/
+│       └── ui/
+└── plugin-vite/                  ← Phase 1 공개 alpha
+```
+
+아래 구조는 후속 Phase에서 package와 module 경계가 확장될 때의 목표안이다.
 
 ```
 browse-sent-event/
