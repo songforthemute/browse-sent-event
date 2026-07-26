@@ -1,5 +1,10 @@
 # npm 배포 준비 구현 계획
 
+::: warning 역사 기록
+이 문서는 첫 공개 전의 구현 계획과 당시 registry 상태를 보존한다. 현재 공개
+version과 후속 배포 절차는 [npm 배포 가이드](../release/npm-publish.md)를 따른다.
+:::
+
 > **Claude용:** 필수 하위 스킬: `superpowers:executing-plans`, `superpowers:verification-before-completion`를 사용해 이 계획을 작업 단위로 실행한다.
 
 **목표:** `@browse-sent-event/core`와 `@browse-sent-event/plugin-vite`를 첫 npm alpha 배포 후보로 만들기 전에, tarball 산출물, Changesets 정책, 공급망 보안 gate, dry-run 검증 절차를 확정한다.

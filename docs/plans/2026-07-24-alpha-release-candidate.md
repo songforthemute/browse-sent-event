@@ -4,6 +4,12 @@ search: false
 
 # 첫 alpha 배포 후보 구현 계획
 
+::: warning 역사 기록
+이 문서는 `0.1.0-alpha.0` 후보를 만들던 시점의 계획이다. 이후 plugin-vite
+alpha.0 문제를 복구해 `0.1.0-alpha.1`을 공개했다. 현재 상태와 후속 절차는
+[npm 배포 가이드](../release/npm-publish.md)를 따른다.
+:::
+
 > **Claude용:** 구현 단계에서는 `superpowers:executing-plans`, `superpowers:test-driven-development`, `superpowers:verification-before-completion`을 사용해 작업 단위로 진행한다.
 
 **목표:** `@browse-sent-event/core`와 `@browse-sent-event/plugin-vite`의 `0.1.0-alpha.0` 배포 후보를 만들고, 실제 npm publish를 제외한 버전·보안·tarball·소비자 설치 검증을 완료한다.
