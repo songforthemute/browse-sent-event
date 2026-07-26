@@ -200,15 +200,24 @@ publish 후에는 npm registry에서 실제 version을 확인하고, README의 �
 3. 해당 tarball의 dry-run과 소비자 설치 검증을 통과시킨다.
 4. maintainer가 `pack:check` 출력의 `publish:` 명령으로 `alpha.1`을 공개한다.
 5. registry에서 `alpha` dist-tag가 `alpha.1`을 가리키는지 확인한다.
-6. `alpha.0`을 deprecate하고, 첫 publish에서 의도치 않게 생성된 `latest` dist-tag를 제거한다.
+6. `alpha.0`을 deprecate하고, `latest` dist-tag를 깨진 `alpha.0`에서 정상인 `alpha.1`로 이동한다.
 
 `alpha.1` 공개를 확인하기 전에는 deprecate나 dist-tag 정리를 먼저 실행하지 않는다. 공개 후 maintainer가 실행할 명령은 다음과 같다.
 
 ```bash
 npm deprecate @browse-sent-event/plugin-vite@0.1.0-alpha.0 "workspace:* 의존성이 포함된 잘못된 배포입니다. 0.1.0-alpha.1 이상을 사용하세요."
-npm dist-tag rm @browse-sent-event/core latest
-npm dist-tag rm @browse-sent-event/plugin-vite latest
+npm dist-tag add @browse-sent-event/plugin-vite@0.1.0-alpha.1 latest
 ```
+
+첫 publish에서 생성된 `latest`를 제거하려 했지만 npm registry는 두 package 모두 `E400 Bad Request`로 거부했다. npm은 version을 생략한 설치에서 `latest`를 사용하며, registry metadata도 `latest`가 있는 dist-tag 구조를 전제로 한다. 따라서 현재 alpha 단계에서는 `latest`를 삭제하지 않고 설치 가능한 최신 alpha로 유지한다. 자세한 동작은 [npm dist-tag 문서](https://docs.npmjs.com/cli/dist-tag/)와 [npm registry API 문서](https://github.com/npm/registry/blob/main/docs/REGISTRY-API.md)를 참고한다.
+
+이 선택은 다음 조건을 가진 의식적인 기술 부채다.
+
+- 포기하는 것: version이나 tag를 생략한 설치가 stable이 아닌 alpha를 받는다.
+- 지금 감당 가능한 이유: stable version이 아직 없고, `latest`가 deprecated된 깨진 package를 가리키는 위험이 더 크다.
+- 회수 시점: 첫 stable version을 배포하면서 `latest`를 stable로 이동하고, 설치 문서의 prerelease 안내를 갱신한다.
+
+정상적으로 공개된 `@browse-sent-event/core@0.1.0-alpha.0`의 `latest`와 `alpha`는 그대로 유지한다.
 
 ## 0.1.0-alpha.1 복구 후보 검증
 
@@ -226,6 +235,18 @@ npm dist-tag rm @browse-sent-event/plugin-vite latest
 | ESM import              | 통과 | plugin-vite default export와 core public export 로드 성공          |
 
 복구 후보 tarball은 `.tmp-pack/browse-sent-event-plugin-vite-0.1.0-alpha.1.tgz`다. `.tmp-pack`은 임시 산출물이므로 Git에는 포함하지 않는다. PR 병합과 최신 CI 확인 후 같은 커밋에서 build와 `pnpm pack:check`를 다시 실행하고, 새로 출력된 plugin-vite `publish:` 명령만 maintainer가 실행한다. 이미 공개되어 정상인 core alpha.0은 다시 publish하지 않는다.
+
+### registry 복구 결과
+
+검증 일시: `2026-07-26 KST`
+
+| package                                  | `alpha`         | `latest`        | 상태                                   |
+| ---------------------------------------- | --------------- | --------------- | -------------------------------------- |
+| `@browse-sent-event/core`                | `0.1.0-alpha.0` | `0.1.0-alpha.0` | 정상                                   |
+| `@browse-sent-event/plugin-vite`         | `0.1.0-alpha.1` | `0.1.0-alpha.1` | 정상                                   |
+| `@browse-sent-event/plugin-vite@alpha.0` | -               | -               | 잘못된 `workspace:*` 배포로 deprecated |
+
+`plugin-vite@alpha.1`의 공개 manifest는 core 의존성을 `0.1.0-alpha.0`으로 포함한다. `npm view`에서 tag를 생략한 plugin-vite version도 `0.1.0-alpha.1`로 확인했다.
 
 ## 0.1.0-alpha.0 후보 검증
 
