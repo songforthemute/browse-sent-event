@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createDevtoolsEngine } from "../../runtime/engine.js";
 import { installFetchStreamInterceptor } from "../fetch-stream.js";
 
@@ -138,5 +138,27 @@ describe("installFetchStreamInterceptor", () => {
         url: "https://example.test/failing-stream",
       }),
     ]);
+  });
+
+  it("returns excluded fetch responses without cloning or recording them", async () => {
+    const engine = createDevtoolsEngine({ capacity: 10 });
+    const response = createStreamResponse(["native response"]);
+    const clone = vi.spyOn(response, "clone");
+
+    Reflect.set(globalThis.window, "fetch", () => Promise.resolve(response));
+
+    installFetchStreamInterceptor({
+      engine,
+      shouldExcludeUrl: (url) => url.includes("/ignored"),
+      target: globalThis.window,
+    });
+
+    const received = await globalThis.window.fetch("https://example.test/ignored");
+
+    expect(received).toBe(response);
+    await expect(received.text()).resolves.toBe("native response");
+    expect(clone).not.toHaveBeenCalled();
+    expect(engine.getConnections()).toEqual([]);
+    expect(engine.getMessages()).toEqual([]);
   });
 });

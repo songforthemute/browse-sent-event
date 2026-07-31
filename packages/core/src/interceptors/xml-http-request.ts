@@ -3,6 +3,7 @@ import type {
   BrowseSentEventInterceptorContext,
   InstalledBrowseSentEventInterceptor,
 } from "./types.js";
+import { isUrlExcluded } from "./types.js";
 import { installGlobalPatch } from "./global-patch.js";
 
 interface XmlHttpRequestDescriptor {
@@ -653,6 +654,10 @@ function instrumentXmlHttpRequest(
     currentDescriptor: XmlHttpRequestDescriptor,
     body: Document | XMLHttpRequestBodyInit | null,
   ): void {
+    if (isUrlExcluded(context, currentDescriptor.url)) {
+      return;
+    }
+
     observeSafely(() => {
       const knownConnectionIds = new Set(
         context.engine.getConnections().map((connection) => connection.id),

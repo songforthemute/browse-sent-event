@@ -71,4 +71,23 @@ describe("installEventSourceInterceptor", () => {
       }),
     ]);
   });
+
+  it("leaves excluded EventSource instances uninstrumented", () => {
+    const engine = createDevtoolsEngine({ capacity: 10 });
+
+    installEventSourceInterceptor({
+      engine,
+      shouldExcludeUrl: (url) => url.includes("/ignored"),
+      target: globalThis.window,
+    });
+
+    const source = new globalThis.window.EventSource("https://example.test/ignored");
+
+    source.close();
+
+    expect(source.readyState).toBe(FakeEventSource.CLOSED);
+    expect(Object.hasOwn(source, "close")).toBe(false);
+    expect(engine.getConnections()).toEqual([]);
+    expect(engine.getMessages()).toEqual([]);
+  });
 });

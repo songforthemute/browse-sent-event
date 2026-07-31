@@ -2,6 +2,7 @@ import type {
   BrowseSentEventInterceptorContext,
   InstalledBrowseSentEventInterceptor,
 } from "./types.js";
+import { isUrlExcluded } from "./types.js";
 import { installGlobalPatch } from "./global-patch.js";
 
 function isInstrumentableEventSource(value: unknown): value is EventSource {
@@ -28,6 +29,11 @@ export function installEventSourceInterceptor(
       }
 
       const url = String(args[0]);
+
+      if (isUrlExcluded(context, url)) {
+        return source;
+      }
+
       const connection = context.engine.recordConnection({
         protocol: "eventsource",
         url,
