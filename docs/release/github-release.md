@@ -93,7 +93,8 @@ gh release create "@browse-sent-event/plugin-vite@0.1.0-alpha.1" \
 - `pnpm add -D <package>@alpha` 설치 명령
 - package가 제공하는 기능
 - Vite 개발 서버와 main thread라는 현재 범위
-- custom hotkey, `excludeUrls`, plugin option 전달 등 알려진 alpha 제한
+- 해당 exact version의 custom hotkey, `excludeUrls`, plugin option 전달과 그 밖의
+  알려진 alpha 제한
 - build, test, tarball, registry smoke와 audit 결과
 - plugin-vite alpha.0을 사용하지 말아야 한다는 경고
 

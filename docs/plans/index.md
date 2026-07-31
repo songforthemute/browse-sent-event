@@ -17,8 +17,8 @@ outline: deep
 
 | 날짜 | 계획 | 상태 |
 | --- | --- | --- |
-| 2026-07-27 | [Vite plugin runtime 옵션 설계](./2026-07-27-vite-plugin-runtime-options-design.md) | 승인됨, 구현 예정 |
-| 2026-07-27 | [Vite plugin runtime 옵션 구현](./2026-07-27-vite-plugin-runtime-options.md) | 작성됨, 실행 전 |
+| 2026-07-27 | [Vite plugin runtime 옵션 설계](./2026-07-27-vite-plugin-runtime-options-design.md) | 완료 |
+| 2026-07-27 | [Vite plugin runtime 옵션 구현](./2026-07-27-vite-plugin-runtime-options.md) | 완료 |
 | 2026-07-26 | [공개 alpha 문서 기준선 설계](./2026-07-26-public-alpha-docs-baseline-design.md) | 완료 |
 | 2026-07-26 | [공개 alpha 문서 기준선 구현](./2026-07-26-public-alpha-docs-baseline.md) | 완료 |
 | 2026-07-24 | [첫 alpha 배포 후보](./2026-07-24-alpha-release-candidate.md) | 완료, 역사 기록 |

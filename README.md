@@ -24,14 +24,14 @@ Phase 1 DevTools MVP를 공개 alpha로 배포했다. 현재 npm 공개 버전�
 - Shadow DOM 기반 DevTools 패널 MVP
 - 연결 목록, 메시지 타임라인, 메트릭, 검색/방향 필터
 - 패널 export 이벤트와 runtime mount/unmount 연결
+- Vite plugin의 core runtime 옵션 전달
+- 사용자 정의 panel 단축키와 URL 기록 제외 filter
 
 ## 후속 회수
 
 - UI polish와 위치 기억
 - Linux CI 시각 snapshot 비교 회수
 - 브라우저 검증 시나리오 확대
-- Vite plugin의 core 설정 전달
-- custom hotkey와 URL 제외 filter 구현
 
 ## Phase 1 목표
 
@@ -59,9 +59,30 @@ import { defineConfig } from "vite";
 import browseSentEvent from "@browse-sent-event/plugin-vite";
 
 export default defineConfig({
-  plugins: [browseSentEvent()],
+  plugins: [
+    browseSentEvent({
+      capacity: 5_000,
+      panel: {
+        autoOpen: true,
+        position: "bottom-left",
+        hotkey: "cmd+shift+b",
+      },
+      filter: {
+        excludeUrls: ["/health", /\/internal\/events(?:\?|$)/],
+      },
+    }),
+  ],
 });
 ```
+
+전체 runtime 옵션 전달은 저장소의 다음 alpha 후보 기준이다. 현재 공개된
+`@browse-sent-event/plugin-vite@0.1.0-alpha.1`은 `enabled`만 지원하며, 새
+changeset을 반영한 다음 alpha가 배포되기 전에는 위 추가 옵션이 적용되지 않는다.
+
+문자열 URL filter는 기록될 URL 원문에 대한 대소문자 구분 부분 문자열
+일치이고, 정규식은 JavaScript `RegExp` 의미를 따른다. 일치한 요청도 native
+통신은 실행되며 DevTools 기록만 생략된다. filter는 network 차단이나 payload
+redaction 기능이 아니다.
 
 Phase 1은 Vite 개발 서버, 브라우저 main thread, WebSocket/fetch ReadableStream/EventSource/XMLHttpRequest 수집을 우선 대상으로 한다. production build instrumentation과 browser extension 형태의 배포는 현재 범위에 포함하지 않는다.
 

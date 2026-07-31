@@ -24,6 +24,10 @@ const installation = installBrowseSentEvent({
   panel: {
     autoOpen: false,
     position: "bottom-right",
+    hotkey: "cmd+shift+b",
+  },
+  filter: {
+    excludeUrls: ["/health", /\/internal\/events(?:\?|$)/],
   },
 });
 ```
@@ -34,6 +38,19 @@ const installation = installBrowseSentEvent({
 애플리케이션 소스에서 직접 import하면 bundler 설정에 따라 프로덕션 bundle에
 포함될 수 있습니다. 개발 전용 entry나 조건부 import를 사용하고 최종 산출물을
 확인해야 합니다.
+
+문자열 `excludeUrls`는 기록될 URL 원문에 대한 대소문자 구분 부분 문자열
+일치입니다. `RegExp`도 사용할 수 있으며 `g`와 `y` flag를 사용해도 반복 판정
+결과가 달라지지 않습니다. 제외된 URL의 native 통신은 그대로 실행되고 DevTools
+connection과 message만 기록하지 않습니다.
+
+단축키는 `cmd`, `meta`, `ctrl`, `alt`, `shift` modifier와 key 하나를 조합합니다.
+`cmd`는 Meta 또는 Control 중 하나를 뜻합니다. 문법이 잘못되면 단축키만
+비활성화되고 panel launcher는 계속 사용할 수 있습니다.
+
+이 동작은 저장소의 다음 alpha 후보 기준입니다. 현재 npm의
+`0.1.0-alpha.0`에는 custom hotkey와 URL filter가 실제 interceptor에 연결되지
+않았으므로 다음 alpha 배포 전에는 기본 단축키와 제한된 개발 환경을 사용합니다.
 
 ## 관찰 범위
 
