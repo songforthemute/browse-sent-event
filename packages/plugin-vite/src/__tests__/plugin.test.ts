@@ -28,6 +28,29 @@ describe("browseSentEvent vite plugin", () => {
     );
   });
 
+  it("loads the virtual bootstrap module with core runtime options", async () => {
+    const plugin = browseSentEvent({
+      capacity: 321,
+      filter: {
+        excludeUrls: [/\/ignored(?:\?|$)/],
+      },
+      panel: {
+        hotkey: "ctrl+alt+b",
+      },
+    });
+    const load = plugin.load;
+
+    if (typeof load !== "function") {
+      throw new TypeError("Expected a function hook");
+    }
+
+    const code = await Reflect.apply(load, undefined, [resolvedBootstrapModuleId]);
+
+    expect(code).toContain('"capacity":321');
+    expect(code).toContain('"hotkey":"ctrl+alt+b"');
+    expect(code).toContain("new RegExp");
+  });
+
   it("does not inject when disabled", async () => {
     const plugin = browseSentEvent({ enabled: false });
     const transform = plugin.transform;

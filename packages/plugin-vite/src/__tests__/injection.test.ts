@@ -45,6 +45,42 @@ describe("vite injection helpers", () => {
     expect(createBootstrapModuleCode()).toContain("installBrowseSentEvent");
   });
 
+  it("serializes core runtime options into the virtual bootstrap module", () => {
+    const pattern = /\/internal\/events(?:\?|$)/gi;
+    const code = createBootstrapModuleCode({
+      capacity: 250,
+      filter: {
+        excludeUrls: ["/health", pattern],
+      },
+      panel: {
+        autoOpen: true,
+        hotkey: "ctrl+alt+k",
+        position: "top-left",
+      },
+    });
+
+    expect(code).toContain('"capacity":250');
+    expect(code).toContain('"autoOpen":true');
+    expect(code).toContain('"hotkey":"ctrl+alt+k"');
+    expect(code).toContain('"position":"top-left"');
+    expect(code).toContain(JSON.stringify("/health"));
+    expect(code).toContain(
+      `new RegExp(${JSON.stringify(pattern.source)}, ${JSON.stringify(pattern.flags)})`,
+    );
+  });
+
+  it("uses JSON string escaping and omits plugin-only options", () => {
+    const specialUrl = '</script>\n"한글"';
+    const code = createBootstrapModuleCode({
+      filter: {
+        excludeUrls: [specialUrl],
+      },
+    });
+
+    expect(code).toContain(JSON.stringify(specialUrl));
+    expect(code).not.toContain('"enabled"');
+  });
+
   it("uses the Vite virtual module resolved id convention", () => {
     expect(resolvedBootstrapModuleId).toBe(`\0${bootstrapModuleId}`);
   });
