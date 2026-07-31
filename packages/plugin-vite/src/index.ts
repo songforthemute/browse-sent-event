@@ -1,3 +1,4 @@
+import type { BrowseSentEventOptions } from "@browse-sent-event/core";
 import type { Plugin, ResolvedConfig, Rolldown } from "vite";
 import {
   bootstrapModuleId,
@@ -8,12 +9,13 @@ import {
   resolvedBootstrapModuleId,
 } from "./injection.js";
 
-export interface BrowseSentEventVitePluginOptions {
+export interface BrowseSentEventVitePluginOptions extends BrowseSentEventOptions {
   readonly enabled?: boolean;
 }
 
 export default function browseSentEvent(options: BrowseSentEventVitePluginOptions = {}): Plugin {
   const enabled = options.enabled ?? true;
+  const bootstrapModuleCode = createBootstrapModuleCode(options);
   const htmlEntries = new Set<string>();
   let config: ResolvedConfig | undefined;
 
@@ -42,7 +44,7 @@ export default function browseSentEvent(options: BrowseSentEventVitePluginOption
     },
     load(id) {
       if (id === resolvedBootstrapModuleId) {
-        return createBootstrapModuleCode();
+        return bootstrapModuleCode;
       }
 
       return undefined;

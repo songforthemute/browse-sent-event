@@ -56,6 +56,56 @@ describe("mountDevtoolsPanel", () => {
     mounted.unmount();
   });
 
+  it("toggles the panel with a custom hotkey", () => {
+    const engine = createDevtoolsEngine({ capacity: 10 });
+    const mounted = mountDevtoolsPanel({
+      engine,
+      options: {
+        autoOpen: false,
+        hotkey: "ctrl+alt+k",
+        position: "bottom-right",
+      },
+      target: globalThis.window,
+    });
+
+    globalThis.window.dispatchEvent(
+      new globalThis.KeyboardEvent("keydown", {
+        altKey: true,
+        ctrlKey: true,
+        key: "k",
+      }),
+    );
+
+    expect(mounted.element.hasAttribute("open")).toBe(true);
+
+    mounted.unmount();
+  });
+
+  it("keeps the panel mounted when the hotkey is invalid", () => {
+    const engine = createDevtoolsEngine({ capacity: 10 });
+    const mounted = mountDevtoolsPanel({
+      engine,
+      options: {
+        autoOpen: false,
+        hotkey: "cmd+ctrl+r",
+        position: "bottom-right",
+      },
+      target: globalThis.window,
+    });
+
+    globalThis.window.dispatchEvent(
+      new globalThis.KeyboardEvent("keydown", {
+        ctrlKey: true,
+        key: "r",
+      }),
+    );
+
+    expect(globalThis.document.querySelector("bse-devtools-panel")).toBe(mounted.element);
+    expect(mounted.element.hasAttribute("open")).toBe(false);
+
+    mounted.unmount();
+  });
+
   it("subscribes to engine snapshots while mounted", async () => {
     const engine = createDevtoolsEngine({ capacity: 10 });
     const mounted = mountDevtoolsPanel({

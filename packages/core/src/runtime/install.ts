@@ -9,6 +9,7 @@ import { installWebSocketInterceptor } from "../interceptors/websocket.js";
 import { installXmlHttpRequestInterceptor } from "../interceptors/xml-http-request.js";
 import { mountDevtoolsPanel, type MountedDevtoolsPanel } from "../ui/mount.js";
 import { resolveOptions, type BrowseSentEventOptions } from "./options.js";
+import { createUrlFilter } from "./url-filter.js";
 
 const runtimeKey = "__browseSentEventRuntime__";
 
@@ -63,38 +64,31 @@ export function installBrowseSentEvent(options?: BrowseSentEventOptions): Browse
       Reflect.deleteProperty(target, runtimeKey);
     },
   });
-
-  const webSocketInterceptor = installWebSocketInterceptor({
+  const interceptorContext = {
     engine: runtime.engine,
+    shouldExcludeUrl: createUrlFilter(resolvedOptions.filter.excludeUrls),
     target,
-  });
+  };
+
+  const webSocketInterceptor = installWebSocketInterceptor(interceptorContext);
 
   if (webSocketInterceptor) {
     installedInterceptors.push(webSocketInterceptor);
   }
 
-  const fetchStreamInterceptor = installFetchStreamInterceptor({
-    engine: runtime.engine,
-    target,
-  });
+  const fetchStreamInterceptor = installFetchStreamInterceptor(interceptorContext);
 
   if (fetchStreamInterceptor) {
     installedInterceptors.push(fetchStreamInterceptor);
   }
 
-  const eventSourceInterceptor = installEventSourceInterceptor({
-    engine: runtime.engine,
-    target,
-  });
+  const eventSourceInterceptor = installEventSourceInterceptor(interceptorContext);
 
   if (eventSourceInterceptor) {
     installedInterceptors.push(eventSourceInterceptor);
   }
 
-  const xmlHttpRequestInterceptor = installXmlHttpRequestInterceptor({
-    engine: runtime.engine,
-    target,
-  });
+  const xmlHttpRequestInterceptor = installXmlHttpRequestInterceptor(interceptorContext);
 
   if (xmlHttpRequestInterceptor) {
     installedInterceptors.push(xmlHttpRequestInterceptor);

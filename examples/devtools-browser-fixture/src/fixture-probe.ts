@@ -10,6 +10,12 @@ export interface BrowseSentEventFixtureMinimumCounts {
   readonly messages: number;
 }
 
+export interface BrowseSentEventIgnoredFetchResult {
+  readonly after: BrowseSentEventFixtureCounts;
+  readonly before: BrowseSentEventFixtureCounts;
+  readonly payload: string;
+}
+
 export interface BrowseSentEventXmlHttpRequestCapture {
   readonly connection:
     | {
@@ -131,6 +137,18 @@ export async function runFetchStream(): Promise<void> {
   const response = await fetch("/__bse-fixture/stream");
   await response.text();
   await waitForSnapshotCounts({ connections: 1, messages: 1 });
+}
+
+export async function runIgnoredFetchStream(): Promise<BrowseSentEventIgnoredFetchResult> {
+  const before = getSnapshotCounts();
+  const response = await fetch("/__bse-fixture/ignored-stream");
+  const payload = await response.text();
+
+  return {
+    after: getSnapshotCounts(),
+    before,
+    payload,
+  };
 }
 
 export async function runEventSource(): Promise<void> {

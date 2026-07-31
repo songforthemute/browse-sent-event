@@ -57,6 +57,11 @@ function fixtureEndpoints(): Plugin {
           return;
         }
 
+        if (pathname === "/__bse-fixture/ignored-stream") {
+          writeStream(res, ["ignored stream response"]);
+          return;
+        }
+
         if (pathname === "/__bse-fixture/events") {
           writeSse(res, ["eventsource hello", "eventsource goodbye"]);
           return;
@@ -74,5 +79,16 @@ function fixtureEndpoints(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [fixtureEndpoints(), browseSentEvent()],
+  plugins: [
+    fixtureEndpoints(),
+    browseSentEvent({
+      capacity: 25,
+      filter: {
+        excludeUrls: [/\/__bse-fixture\/ignored-stream(?:\?|$)/],
+      },
+      panel: {
+        hotkey: "ctrl+alt+b",
+      },
+    }),
+  ],
 });

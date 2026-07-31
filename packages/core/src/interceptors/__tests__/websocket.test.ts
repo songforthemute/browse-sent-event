@@ -70,4 +70,23 @@ describe("installWebSocketInterceptor", () => {
     installed?.uninstall();
     expect(globalThis.window.WebSocket).toBe(FakeWebSocket);
   });
+
+  it("leaves excluded WebSocket instances uninstrumented", () => {
+    const engine = createDevtoolsEngine({ capacity: 10 });
+
+    installWebSocketInterceptor({
+      engine,
+      shouldExcludeUrl: (url) => url.includes("/ignored"),
+      target: globalThis.window,
+    });
+
+    const socket = new globalThis.window.WebSocket("wss://example.test/ignored");
+
+    socket.send("native message");
+
+    expect(Reflect.get(socket, "sent")).toEqual(["native message"]);
+    expect(Object.hasOwn(socket, "send")).toBe(false);
+    expect(engine.getConnections()).toEqual([]);
+    expect(engine.getMessages()).toEqual([]);
+  });
 });

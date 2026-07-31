@@ -1,5 +1,6 @@
 import type { BrowseSentEventEngine } from "../runtime/engine.js";
 import type { ResolvedBrowseSentEventOptions } from "../runtime/options.js";
+import { createHotkeyMatcher } from "./hotkey.js";
 import { devtoolsPanelTagName, registerDevtoolsElements } from "./register.js";
 
 export interface MountedDevtoolsPanel {
@@ -11,17 +12,6 @@ export interface MountDevtoolsPanelOptions {
   readonly engine: BrowseSentEventEngine;
   readonly options: ResolvedBrowseSentEventOptions["panel"];
   readonly target: Window & typeof globalThis;
-}
-
-function matchesHotkey(event: KeyboardEvent, hotkey: string): boolean {
-  const normalized = hotkey.toLowerCase();
-
-  return (
-    normalized === "cmd+shift+r" &&
-    (event.metaKey || event.ctrlKey) &&
-    event.shiftKey &&
-    event.key.toLowerCase() === "r"
-  );
 }
 
 export function mountDevtoolsPanel(options: MountDevtoolsPanelOptions): MountedDevtoolsPanel {
@@ -39,26 +29,34 @@ export function mountDevtoolsPanel(options: MountDevtoolsPanelOptions): MountedD
 
   options.target.document.body.append(element);
 
-  const onKeyDown = (event: KeyboardEvent): void => {
-    if (!matchesHotkey(event, options.options.hotkey)) {
-      return;
-    }
+  const matchesHotkey = createHotkeyMatcher(options.options.hotkey);
+  const onKeyDown = matchesHotkey
+    ? (event: KeyboardEvent): void => {
+        if (!matchesHotkey(event)) {
+          return;
+        }
 
-    event.preventDefault();
+        event.preventDefault();
 
-    const setOpen = Reflect.get(element, "setOpen");
+        const setOpen = Reflect.get(element, "setOpen");
 
-    if (typeof setOpen === "function") {
-      setOpen.call(element, !element.hasAttribute("open"));
-    }
-  };
+        if (typeof setOpen === "function") {
+          setOpen.call(element, !element.hasAttribute("open"));
+        }
+      }
+    : undefined;
 
-  options.target.addEventListener("keydown", onKeyDown);
+  if (onKeyDown) {
+    options.target.addEventListener("keydown", onKeyDown);
+  }
 
   return {
     element,
     unmount() {
-      options.target.removeEventListener("keydown", onKeyDown);
+      if (onKeyDown) {
+        options.target.removeEventListener("keydown", onKeyDown);
+      }
+
       element.remove();
     },
   };

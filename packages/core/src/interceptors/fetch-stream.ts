@@ -3,6 +3,7 @@ import type {
   BrowseSentEventInterceptorContext,
   InstalledBrowseSentEventInterceptor,
 } from "./types.js";
+import { isUrlExcluded } from "./types.js";
 import { installGlobalPatch } from "./global-patch.js";
 
 type FetchFunction = typeof globalThis.fetch;
@@ -106,11 +107,17 @@ export function installFetchStreamInterceptor(
       return response;
     }
 
+    const url = getRequestUrl(input);
+
+    if (isUrlExcluded(context, url)) {
+      return response;
+    }
+
     const contentType = response.headers.get("content-type");
     const protocol = classifyProtocol(contentType);
     const connection = context.engine.recordConnection({
       protocol,
-      url: getRequestUrl(input),
+      url,
       state: "open",
       metadata: {
         contentType,

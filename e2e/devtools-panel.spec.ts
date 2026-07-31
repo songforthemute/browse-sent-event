@@ -11,6 +11,44 @@ test("mounts the closed-shadow DevTools panel host", async ({ page }) => {
   await expect(panel).not.toHaveAttribute("open", "");
 });
 
+test("applies runtime options from the Vite plugin", async ({ page }) => {
+  await page.goto("/");
+
+  const panel = page.locator("bse-devtools-panel");
+
+  await expect(panel).not.toHaveAttribute("open", "");
+  await page.keyboard.press("Control+Alt+B");
+  await expect(panel).toHaveAttribute("open", "");
+
+  const result = await page.evaluate(async () => {
+    const fixture = Reflect.get(globalThis, "__bseFixture");
+    const runtime = Reflect.get(globalThis, "__browseSentEventRuntime__");
+
+    if (typeof fixture !== "object" || fixture === null) {
+      throw new Error("Fixture bridge is missing");
+    }
+
+    if (typeof runtime !== "object" || runtime === null) {
+      throw new Error("Runtime is missing");
+    }
+
+    const runIgnoredFetchStream = Reflect.get(fixture, "runIgnoredFetchStream");
+
+    if (typeof runIgnoredFetchStream !== "function") {
+      throw new Error("Ignored fetch fixture bridge is missing");
+    }
+
+    return {
+      capacity: Reflect.get(runtime, "capacity"),
+      ignoredFetch: await runIgnoredFetchStream(),
+    };
+  });
+
+  expect(result.capacity).toBe(25);
+  expect(result.ignoredFetch.payload).toBe("ignored stream response");
+  expect(result.ignoredFetch.after).toEqual(result.ignoredFetch.before);
+});
+
 test("renders seeded transport data in the panel", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Seed panel" }).click();

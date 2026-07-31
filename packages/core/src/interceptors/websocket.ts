@@ -3,6 +3,7 @@ import type {
   BrowseSentEventInterceptorContext,
   InstalledBrowseSentEventInterceptor,
 } from "./types.js";
+import { isUrlExcluded } from "./types.js";
 import { installGlobalPatch } from "./global-patch.js";
 
 function copyArrayBuffer(
@@ -53,6 +54,11 @@ export function installWebSocketInterceptor(
       }
 
       const url = String(args[0]);
+
+      if (isUrlExcluded(context, url)) {
+        return socket;
+      }
+
       const connection = context.engine.recordConnection({
         protocol: "websocket",
         url,

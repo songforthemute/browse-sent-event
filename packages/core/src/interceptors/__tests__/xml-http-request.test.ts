@@ -133,6 +133,26 @@ describe("installXmlHttpRequestInterceptor", () => {
     expect(globalThis.window.XMLHttpRequest).toBe(FakeXmlHttpRequest);
   });
 
+  it("sends excluded XHR requests without recording them", () => {
+    const engine = createDevtoolsEngine({ capacity: 10 });
+
+    installXmlHttpRequestInterceptor({
+      engine,
+      shouldExcludeUrl: (url) => url.includes("/ignored"),
+      target: globalThis.window,
+    });
+
+    const request = new globalThis.window.XMLHttpRequest();
+
+    request.open("POST", "https://example.test/ignored");
+    request.send("native body");
+    Reflect.apply(Reflect.get(request, "succeed"), request, ["native response"]);
+
+    expect(Reflect.get(request, "sentBodies")).toEqual(["native body"]);
+    expect(engine.getConnections()).toEqual([]);
+    expect(engine.getMessages()).toEqual([]);
+  });
+
   it("preserves custom method casing in recorded metadata", () => {
     const engine = createDevtoolsEngine({ capacity: 10 });
 

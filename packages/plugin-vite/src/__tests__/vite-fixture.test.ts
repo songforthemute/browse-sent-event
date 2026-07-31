@@ -4,6 +4,7 @@ import { cwd } from "node:process";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { build, createServer, type ViteDevServer } from "vite";
 import browseSentEvent from "../index.js";
+import { resolvedBootstrapModuleId } from "../injection.js";
 
 let root: string;
 let server: ViteDevServer | undefined;
@@ -52,7 +53,14 @@ describe("browseSentEvent Vite integration", () => {
       root,
       configFile: false,
       logLevel: "silent",
-      plugins: [browseSentEvent()],
+      plugins: [
+        browseSentEvent({
+          capacity: 432,
+          filter: {
+            excludeUrls: [/\/ignored(?:\?|$)/],
+          },
+        }),
+      ],
       server: {
         middlewareMode: true,
       },
@@ -68,6 +76,12 @@ describe("browseSentEvent Vite integration", () => {
     expect(code.indexOf("virtual:browse-sent-event/bootstrap")).toBeLessThan(
       code.indexOf("__fixtureLoaded"),
     );
+
+    const bootstrap = await server.pluginContainer.load(resolvedBootstrapModuleId);
+    const bootstrapCode = typeof bootstrap === "string" ? bootstrap : (bootstrap?.code ?? "");
+
+    expect(bootstrapCode).toContain('"capacity":432');
+    expect(bootstrapCode).toContain("new RegExp");
   });
 
   it("does not include browse-sent-event code in a production build", async () => {
