@@ -47,9 +47,8 @@ plugin은 `enabled`와 `@browse-sent-event/core`의 모든 runtime 옵션을 받
 생략됩니다. `cmd`, `meta`, `ctrl`, `alt`, `shift` modifier와 key 하나를 조합해
 panel 단축키를 설정할 수 있습니다.
 
-이 전체 옵션 계약은 저장소의 다음 alpha 후보 기준입니다. 현재 npm의
-`0.1.0-alpha.1`은 `enabled`만 지원하며 다음 alpha 배포 전에는 나머지 옵션이
-적용되지 않습니다.
+전체 runtime 옵션 전달은 `0.1.0-alpha.2`부터 지원합니다. `0.1.0-alpha.1`은
+`enabled`만 지원하며 나머지 옵션은 적용하지 않습니다.
 
 peer dependency 범위는 Vite `>=5.0.0 <9.0.0`이며 저장소와 CI의 현재 기준은 Vite
 8.0.16입니다. 범위 안의 모든 버전 조합을 같은 수준으로 검증한다는 뜻은

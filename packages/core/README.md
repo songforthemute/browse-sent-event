@@ -48,9 +48,9 @@ connection과 message만 기록하지 않습니다.
 `cmd`는 Meta 또는 Control 중 하나를 뜻합니다. 문법이 잘못되면 단축키만
 비활성화되고 panel launcher는 계속 사용할 수 있습니다.
 
-이 동작은 저장소의 다음 alpha 후보 기준입니다. 현재 npm의
-`0.1.0-alpha.0`에는 custom hotkey와 URL filter가 실제 interceptor에 연결되지
-않았으므로 다음 alpha 배포 전에는 기본 단축키와 제한된 개발 환경을 사용합니다.
+custom hotkey와 URL filter는 `0.1.0-alpha.1`부터 지원합니다.
+`0.1.0-alpha.0`은 이 설정을 실제 interceptor에 연결하지 않으므로 기본 단축키와
+제한된 개발 환경을 사용합니다.
 
 ## 관찰 범위
 
