@@ -206,15 +206,116 @@ dry-run 결과, 임시 소비자 결과를 기록한다. maintainer가 실행할
 
 ## 완료 기준
 
-- [ ] 공개 package version과 changelog가 후보 값과 일치한다.
-- [ ] fixture version은 `0.0.0`을 유지한다.
-- [ ] 전체 품질·보안 gate가 통과한다.
-- [ ] 두 tarball의 내용과 publish manifest가 검증된다.
-- [ ] 두 tarball의 npm dry-run이 통과한다.
-- [ ] 임시 소비자 설치, ESM import, Vite build가 통과한다.
-- [ ] 실제 npm publish는 실행되지 않는다.
-- [ ] 검증 결과와 수동 publish 경계가 한국어 문서에 기록된다.
+- [x] 공개 package version과 changelog가 후보 값과 일치한다.
+- [x] fixture version은 `0.0.0`을 유지한다.
+- [x] 전체 품질·보안 gate가 통과한다.
+- [x] 두 tarball의 내용과 publish manifest가 검증된다.
+- [x] 두 tarball의 npm dry-run이 통과한다.
+- [x] 임시 소비자 설치, ESM import, Vite build가 통과한다.
+- [x] 실제 npm publish는 실행되지 않는다.
+- [x] 검증 결과와 수동 publish 경계가 한국어 문서에 기록된다.
 
 ## 검증 결과
 
-구현과 검증이 끝난 뒤 실제 결과를 기록한다.
+검증 일시: `2026-07-31 KST`
+
+| 항목 | 값 |
+| --- | --- |
+| 기준 `main` | `6def7a742072b1454ddda44b204b83e7063248db` |
+| version commit | `1f6aeca35a280f48541d3ef5e5a43304e5103404` |
+| Node.js | `24.13.0` |
+| npm | `11.6.2` |
+| pnpm | `11.2.2` |
+
+### Version과 registry
+
+| package | 공개 `alpha` | 후보 | 결과 |
+| --- | --- | --- | --- |
+| `@browse-sent-event/core` | `0.1.0-alpha.0` | `0.1.0-alpha.1` | version과 changelog 일치 |
+| `@browse-sent-event/plugin-vite` | `0.1.0-alpha.1` | `0.1.0-alpha.2` | version과 changelog 일치 |
+| `@browse-sent-event/devtools-browser-fixture` | 비공개 | `0.0.0` | 변경 없음 |
+
+`pnpm changeset version`은 `bright-options-flow`를 `.changeset/pre.json`의 소비
+목록에 추가했다. plugin changelog에는 core `0.1.0-alpha.1` dependency update가
+함께 기록됐다. `pnpm install`과 `pnpm install --frozen-lockfile` 이후
+`pnpm-lock.yaml` 변경은 없었다.
+
+공개 registry의 `alpha`와 `latest`는 아직 기존 version을 가리킨다. 이 문서와
+README의 현재 공개 상태는 실제 publish 전까지 이 값을 유지한다.
+
+### 품질과 보안 gate
+
+| gate | 결과 | 비고 |
+| --- | --- | --- |
+| frozen install | 통과 | lockfile 변경 없음 |
+| `pnpm audit --audit-level moderate` | 통과 | 알려진 취약점 없음 |
+| `pnpm peers check` | 통과 | peer dependency 문제 없음 |
+| format | 통과 | 102 files |
+| lint | 통과 | warning과 error 없음 |
+| typecheck | 통과 | core, plugin-vite, browser fixture |
+| unit test | 통과 | core 113건, plugin-vite 15건 |
+| browser E2E | 통과 | Chromium desktop/mobile 12건 |
+| package build | 통과 | Turbo cache를 우회한 강제 build |
+| docs build | 통과 | 기존 VueUse PURE 주석과 500 kB chunk 경고만 발생 |
+| release validator | 통과 | Node test 8건 |
+| `git diff --check` | 통과 | whitespace 오류 없음 |
+
+### Tarball과 dry-run
+
+| package | 파일 | 크기 | SHA-256 |
+| --- | --- | ---: | --- |
+| core | `browse-sent-event-core-0.1.0-alpha.1.tgz` | 42,042 bytes | `427f95df7e715d3759d4bceb60ddae3185cda2edbda55e07b78d7f9615219315` |
+| plugin-vite | `browse-sent-event-plugin-vite-0.1.0-alpha.2.tgz` | 6,020 bytes | `b11e079d6784cbe4374ba80ef1406d8b49472a74c1026b99999ff59a1cd8c07f` |
+
+두 tarball은 LICENSE, README, package manifest와 네 개의 dist 파일로 구성된 7개
+파일만 포함한다. plugin publish manifest의 core dependency는
+`0.1.0-alpha.1`이며 `workspace:*`가 없다.
+
+두 tarball 모두 다음 조건의 npm dry-run을 통과했다.
+
+```text
+access: public
+tag: alpha
+actual publish: false
+```
+
+npm이 보고한 unpacked size는 core `179.0 kB`, plugin-vite `17.4 kB`다.
+
+### 임시 소비자 검증
+
+`/private/tmp/browse-sent-event-alpha-consumer-019e3ac1`에서 Vite `8.0.16`,
+TypeScript `6.0.3`, pnpm `11.2.2`를 사용했다. 후보 core는 아직 registry에 없으므로
+임시 `pnpm-workspace.yaml` override로 plugin의 정확한 core dependency를 같은
+tarball에 연결했다. 이 override는 publish 이후 소비자에게 필요하지 않다.
+
+다음 검증이 통과했다.
+
+- 두 tarball 설치와 frozen lockfile 재설치
+- core public ESM export와 plugin default export 로드
+- `capacity`, `panel.hotkey`, `filter.excludeUrls` Vite config typecheck
+- Vite production build
+- production dist의 bootstrap module과 `installBrowseSentEvent` 미포함
+- 설치된 plugin manifest의 core dependency `0.1.0-alpha.1`
+- 임시 소비자 audit moderate, 알려진 취약점 없음
+
+### Publish 차단 조건
+
+`npm whoami`와 `npm access list packages @browse-sent-event --json`은 `E401`을
+반환했다. 현재 npm 인증 token이 만료됐으므로 실제 publish는 차단된 상태다.
+maintainer가 `npm login`을 완료한 뒤 다음 두 명령이 성공해야 후보를 공개할 수
+있다.
+
+```bash
+npm whoami
+npm access list packages @browse-sent-event --json
+```
+
+인증 확인 후 publish 순서는 다음과 같다.
+
+1. 검증된 core `0.1.0-alpha.1` tarball을 publish한다.
+2. registry에서 core `alpha`와 정확한 version 설치를 확인한다.
+3. 검증된 plugin-vite `0.1.0-alpha.2` tarball을 publish한다.
+4. 두 package의 `alpha`와 `latest`, 임시 registry 소비자 설치를 확인한다.
+
+이 작업에서는 실제 `npm publish`, dist-tag 변경, Git tag와 GitHub Release 생성을
+실행하지 않았다.

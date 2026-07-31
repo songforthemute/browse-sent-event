@@ -17,7 +17,7 @@ outline: deep
 
 | 날짜 | 계획 | 상태 |
 | --- | --- | --- |
-| 2026-07-31 | [Runtime 옵션 alpha 릴리스 후보](./2026-07-31-runtime-options-alpha-release-candidate.md) | 진행 중 |
+| 2026-07-31 | [Runtime 옵션 alpha 릴리스 후보](./2026-07-31-runtime-options-alpha-release-candidate.md) | 검증 완료, npm 인증 대기 |
 | 2026-07-27 | [Vite plugin runtime 옵션 설계](./2026-07-27-vite-plugin-runtime-options-design.md) | 완료 |
 | 2026-07-27 | [Vite plugin runtime 옵션 구현](./2026-07-27-vite-plugin-runtime-options.md) | 완료 |
 | 2026-07-26 | [공개 alpha 문서 기준선 설계](./2026-07-26-public-alpha-docs-baseline-design.md) | 완료 |
