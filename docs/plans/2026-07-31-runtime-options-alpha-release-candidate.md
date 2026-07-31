@@ -55,7 +55,7 @@ Vite 8, Vitest 4, Playwright, VitePress 2, Node.js test runner.
 
 1. 실제 `npm publish`
 2. npm token, trusted publishing, GitHub Actions publish 권한 설정
-3. npm 공개 전 README의 현재 공개 version 변경
+3. npm 공개 전 root README와 문서 사이트의 현재 공개 version 변경
 4. Git tag와 GitHub Release 생성
 5. Phase 2 causality 기능과 이번 후보에 필요하지 않은 dependency 업데이트
 
@@ -94,9 +94,10 @@ dry-run, 임시 소비자 설치, maintainer용 publish 명령은 모두 `pnpm p
 
 ### 4. 공개 전과 공개 후 문서를 분리
 
-후보 PR에서는 package version과 changelog만 바꾸고 README의 현재 공개 version은
-registry 값을 유지한다. maintainer가 publish한 뒤 별도 후속 작업에서 공개 version,
-`alpha`/`latest` dist-tag, Git tag, GitHub Release를 갱신한다.
+후보 tarball에 포함되는 package README는 후보 version의 지원 계약을 명시한다.
+root README와 문서 사이트의 현재 공개 version은 registry 값을 유지한다.
+maintainer가 publish한 뒤 별도 후속 작업에서 공개 version, `alpha`/`latest`
+dist-tag, Git tag, GitHub Release를 갱신한다.
 
 ## 의식적 기술 부채
 
@@ -113,6 +114,8 @@ registry 값을 유지한다. maintainer가 publish한 뒤 별도 후속 작업�
 | 1 | 실행 계획과 범위 | `docs(plan): runtime 옵션 alpha 후보 계획 수립` |
 | 2 | version과 changelog | `chore(release): runtime 옵션 alpha 후보 생성` |
 | 3 | 검증 결과와 수동 publish 경계 | `docs(release): runtime 옵션 alpha 후보 검증 기록` |
+| 4 | tarball package README의 지원 version | `docs(package): alpha 후보 지원 버전 명시` |
+| 5 | 최종 tarball 재검증 결과 | `docs(release): 최종 tarball 검증 증거 갱신` |
 
 기능 오류, 보안 advisory 영향, dependency 변경 필요성이 발견되면 release 커밋에
 섞지 않는다. 별도 수정 PR을 먼저 병합하고 후보 브랜치를 최신 `main` 위로
@@ -223,6 +226,7 @@ dry-run 결과, 임시 소비자 결과를 기록한다. maintainer가 실행할
 | --- | --- |
 | 기준 `main` | `6def7a742072b1454ddda44b204b83e7063248db` |
 | version commit | `1f6aeca35a280f48541d3ef5e5a43304e5103404` |
+| package README commit | `0126ffb155b8ff002479e1ced9bad27b7bbfb7d8` |
 | Node.js | `24.13.0` |
 | npm | `11.6.2` |
 | pnpm | `11.2.2` |
@@ -240,8 +244,10 @@ dry-run 결과, 임시 소비자 결과를 기록한다. maintainer가 실행할
 함께 기록됐다. `pnpm install`과 `pnpm install --frozen-lockfile` 이후
 `pnpm-lock.yaml` 변경은 없었다.
 
-공개 registry의 `alpha`와 `latest`는 아직 기존 version을 가리킨다. 이 문서와
-README의 현재 공개 상태는 실제 publish 전까지 이 값을 유지한다.
+공개 registry의 `alpha`와 `latest`는 아직 기존 version을 가리킨다. 이 문서와 root
+README의 현재 공개 상태는 실제 publish 전까지 이 값을 유지한다. tarball의 package
+README는 core `alpha.1`, plugin-vite `alpha.2`부터 새 옵션 계약을 지원한다는
+version 기준으로 작성했다.
 
 ### 품질과 보안 gate
 
@@ -264,12 +270,12 @@ README의 현재 공개 상태는 실제 publish 전까지 이 값을 유지한�
 
 | package | 파일 | 크기 | SHA-256 |
 | --- | --- | ---: | --- |
-| core | `browse-sent-event-core-0.1.0-alpha.1.tgz` | 42,042 bytes | `427f95df7e715d3759d4bceb60ddae3185cda2edbda55e07b78d7f9615219315` |
-| plugin-vite | `browse-sent-event-plugin-vite-0.1.0-alpha.2.tgz` | 6,020 bytes | `b11e079d6784cbe4374ba80ef1406d8b49472a74c1026b99999ff59a1cd8c07f` |
+| core | `browse-sent-event-core-0.1.0-alpha.1.tgz` | 41,988 bytes | `2bf46ac8bccfcf8782b1b06b5480d22473d83a3c161f4e2b520c212ddc84859d` |
+| plugin-vite | `browse-sent-event-plugin-vite-0.1.0-alpha.2.tgz` | 5,990 bytes | `acd511344e567831d2e9d9a331c67627cddd277b7488a3c3181bb75163782fa4` |
 
 두 tarball은 LICENSE, README, package manifest와 네 개의 dist 파일로 구성된 7개
-파일만 포함한다. plugin publish manifest의 core dependency는
-`0.1.0-alpha.1`이며 `workspace:*`가 없다.
+파일만 포함한다. package README는 후보 version의 지원 계약을 명시한다. plugin
+publish manifest의 core dependency는 `0.1.0-alpha.1`이며 `workspace:*`가 없다.
 
 두 tarball 모두 다음 조건의 npm dry-run을 통과했다.
 
@@ -279,11 +285,11 @@ tag: alpha
 actual publish: false
 ```
 
-npm이 보고한 unpacked size는 core `179.0 kB`, plugin-vite `17.4 kB`다.
+npm이 보고한 unpacked size는 core `179.0 kB`, plugin-vite `17.3 kB`다.
 
 ### 임시 소비자 검증
 
-`/private/tmp/browse-sent-event-alpha-consumer-019e3ac1`에서 Vite `8.0.16`,
+`/private/tmp/browse-sent-event-alpha-consumer-final-019e3ac1`에서 Vite `8.0.16`,
 TypeScript `6.0.3`, pnpm `11.2.2`를 사용했다. 후보 core는 아직 registry에 없으므로
 임시 `pnpm-workspace.yaml` override로 plugin의 정확한 core dependency를 같은
 tarball에 연결했다. 이 override는 publish 이후 소비자에게 필요하지 않다.
