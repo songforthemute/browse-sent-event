@@ -1,5 +1,17 @@
 # @browse-sent-event/plugin-vite
 
+## 0.1.0-alpha.2
+
+### Minor Changes
+
+- 27e7515: Vite plugin에서 core runtime 옵션 전체를 전달하고, 모든 browser interceptor의
+  URL 제외 필터와 사용자 정의 panel 단축키를 지원합니다.
+
+### Patch Changes
+
+- Updated dependencies [27e7515]
+  - @browse-sent-event/core@0.1.0-alpha.1
+
 ## 0.1.0-alpha.1
 
 ### Patch Changes

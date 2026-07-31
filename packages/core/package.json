@@ -1,6 +1,6 @@
 {
   "name": "@browse-sent-event/core",
-  "version": "0.1.0-alpha.0",
+  "version": "0.1.0-alpha.1",
   "description": "Core runtime for observing WebSocket, fetch stream, EventSource, and XMLHttpRequest traffic in browser dev builds.",
   "keywords": [
     "devtools",
