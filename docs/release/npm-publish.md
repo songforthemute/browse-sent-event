@@ -19,7 +19,8 @@ publish하기 전의 gate, 첫 배포에서 얻은 교훈을 한곳에 모은다
 
 이번 공개에서는 `alpha` dist-tag만 새 version으로 이동했고 `latest`는 기존
 version을 유지했다. 설치 문서는 version 생략 대신 `@alpha`를 사용한다. npm
-publish는 완료됐지만 Git tag와 GitHub Release는 아직 만들지 않았다.
+publish와 source commit `0e3f9dd`를 가리키는 원격 annotated tag push는 완료됐다.
+두 GitHub Release는 Pre-release draft로 저장했으며 최종 검토와 publish를 기다린다.
 
 ## 현재 원칙
 

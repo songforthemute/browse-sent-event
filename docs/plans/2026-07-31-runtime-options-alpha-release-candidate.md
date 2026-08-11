@@ -7,7 +7,9 @@ search: false
 > **2026-08-11 후속 상태:** 이 문서에서 검증한 core `0.1.0-alpha.1`과
 > plugin-vite `0.1.0-alpha.2`는 npm에 수동 publish됐고 각 package의 `alpha`
 > dist-tag가 해당 version을 가리킨다. `latest`는 각각 `0.1.0-alpha.0`,
-> `0.1.0-alpha.1`을 유지한다. Git tag와 GitHub Release는 아직 만들지 않았다.
+> `0.1.0-alpha.1`을 유지한다. 두 원격 annotated tag는 source commit `0e3f9dd`를
+> 가리키며 push를 완료했다. GitHub Release는 각각 Pre-release draft로 저장했고
+> 아직 publish하지 않았다.
 > 아래의 인증 차단과 publish 제외 내용은 후보 검증 작업 당시의 기록이다.
 
 > **Codex용:** 구현 단계에서는 `executing-plans`,
@@ -342,5 +344,7 @@ npm access list packages @browse-sent-event --json
 | `@browse-sent-event/plugin-vite` | `0.1.0-alpha.2` | `0.1.0-alpha.1` | publish 완료 |
 
 후속 maintainer 인증과 수동 publish로 후보의 npm 공개를 완료했다. 이번 publish에서
-`latest`는 이동하지 않았으며 설치 문서는 계속 `@alpha`를 사용한다. npm publish와
-별개인 Git tag와 GitHub Release 생성은 아직 남아 있다.
+`latest`는 이동하지 않았으며 설치 문서는 계속 `@alpha`를 사용한다. 두 원격
+annotated tag는 source commit `0e3f9dd`를 가리키며 push를 완료했다. GitHub
+Release는 올바른 tag, 제목, 본문과 Pre-release 표시를 사용한 draft로 저장했으며
+maintainer의 최종 검토와 publish를 기다린다.

@@ -10,13 +10,17 @@ Git tag와 GitHub Release는 npm에 공개한 package의 source identity와 사�
 
 ## 현재 baseline
 
-`2026-08-11 KST` 기준 npm package는 공개됐지만 Git tag와 GitHub Release는 아직
-없다.
+`2026-08-11 KST` 기준 npm package와 원격 annotated tag는 공개됐다. 두 GitHub
+Release는 올바른 tag, 제목, 본문과 Pre-release 표시를 사용한 draft로 저장했으며
+maintainer의 최종 검토와 publish를 기다린다.
 
-| package                          | npm version     | source commit | tag와 release |
-| -------------------------------- | --------------- | ------------- | ------------- |
-| `@browse-sent-event/core`        | `0.1.0-alpha.1` | `0e3f9dd`     | 생성 필요     |
-| `@browse-sent-event/plugin-vite` | `0.1.0-alpha.2` | `0e3f9dd`     | 생성 필요     |
+| package                          | npm version     | source commit | 원격 tag  | GitHub Release      |
+| -------------------------------- | --------------- | ------------- | --------- | ------------------- |
+| `@browse-sent-event/core`        | `0.1.0-alpha.1` | `0e3f9dd`     | push 완료 | draft, publish 대기 |
+| `@browse-sent-event/plugin-vite` | `0.1.0-alpha.2` | `0e3f9dd`     | push 완료 | draft, publish 대기 |
+
+두 원격 tag는 모두 source commit `0e3f9dd`를 가리킨다. Draft는 아직 publish하지
+않았으므로 공개 GitHub Release 완료 상태로 기록하지 않는다.
 
 `@browse-sent-event/plugin-vite@0.1.0-alpha.0`은 잘못 배포된 deprecated
 version이므로 정상 tag와 release를 만들지 않는다.
