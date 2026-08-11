@@ -36,7 +36,10 @@ npm install -D @browse-sent-event/plugin-vite@alpha
 :::
 
 `alpha` dist-tag를 명시하면 현재 공개 alpha를 설치할 수 있다. alpha 버전은
-호환성이 고정되지 않았으므로 lockfile을 함께 관리하는 편이 좋다.
+호환성이 고정되지 않았으므로 lockfile을 함께 관리하는 편이 좋다. 현재 `alpha`는
+plugin-vite `0.1.0-alpha.2`와 그 dependency인 core `0.1.0-alpha.1`을 설치한다.
+`latest`는 각각 이전 version인 plugin-vite `0.1.0-alpha.1`, core
+`0.1.0-alpha.0`을 유지하므로 version이나 dist-tag를 생략하지 않는다.
 
 ## Vite 설정
 

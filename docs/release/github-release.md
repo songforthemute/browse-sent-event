@@ -10,13 +10,13 @@ Git tag와 GitHub Release는 npm에 공개한 package의 source identity와 사�
 
 ## 현재 baseline
 
-`2026-07-26 KST` 기준 npm package는 공개됐지만 Git tag와 GitHub Release는 아직
+`2026-08-11 KST` 기준 npm package는 공개됐지만 Git tag와 GitHub Release는 아직
 없다.
 
 | package                          | npm version     | source commit | tag와 release |
 | -------------------------------- | --------------- | ------------- | ------------- |
-| `@browse-sent-event/core`        | `0.1.0-alpha.0` | `65bc938`     | 생성 필요     |
-| `@browse-sent-event/plugin-vite` | `0.1.0-alpha.1` | `7efb1b3`     | 생성 필요     |
+| `@browse-sent-event/core`        | `0.1.0-alpha.1` | `0e3f9dd`     | 생성 필요     |
+| `@browse-sent-event/plugin-vite` | `0.1.0-alpha.2` | `0e3f9dd`     | 생성 필요     |
 
 `@browse-sent-event/plugin-vite@0.1.0-alpha.0`은 잘못 배포된 deprecated
 version이므로 정상 tag와 release를 만들지 않는다.
@@ -32,12 +32,12 @@ version이므로 정상 tag와 release를 만들지 않는다.
 ## 1. npm identity 재확인
 
 ```bash
-npm view @browse-sent-event/core@0.1.0-alpha.0 version dist.integrity --json
-npm view @browse-sent-event/plugin-vite@0.1.0-alpha.1 version dependencies dist.integrity --json
+npm view @browse-sent-event/core@0.1.0-alpha.1 version dist.integrity --json
+npm view @browse-sent-event/plugin-vite@0.1.0-alpha.2 version dependencies dist.integrity --json
 ```
 
 plugin-vite의 공개 dependency가
-`"@browse-sent-event/core": "0.1.0-alpha.0"`인지 확인한다. `workspace:*`가
+`"@browse-sent-event/core": "0.1.0-alpha.1"`인지 확인한다. `workspace:*`가
 보이면 tag와 release 생성을 중단한다.
 
 ## 2. source commit 확인
@@ -46,23 +46,24 @@ tag를 만들기 전에 해당 commit의 package manifest가 npm version과 일�
 확인한다.
 
 ```bash
-git show 65bc938:packages/core/package.json
-git show 7efb1b3:packages/plugin-vite/package.json
+git show 0e3f9dd:packages/core/package.json
+git show 0e3f9dd:packages/plugin-vite/package.json
 ```
 
-후속 version에서는 release PR과 registry 기록으로 source commit을 새로
-확정한다. 현재 baseline commit을 관성적으로 재사용하지 않는다.
+두 package의 최종 후보와 package README가 함께 병합된 PR #20의 merge commit을
+source identity로 사용한다. 후속 version에서는 release PR과 registry 기록으로
+source commit을 새로 확정한다. 현재 baseline commit을 관성적으로 재사용하지 않는다.
 
 ## 3. annotated tag 생성과 push
 
 ```bash
-git tag -a "@browse-sent-event/core@0.1.0-alpha.0" 65bc938 \
-  -m "@browse-sent-event/core 0.1.0-alpha.0"
-git tag -a "@browse-sent-event/plugin-vite@0.1.0-alpha.1" 7efb1b3 \
-  -m "@browse-sent-event/plugin-vite 0.1.0-alpha.1"
+git tag -a "@browse-sent-event/core@0.1.0-alpha.1" 0e3f9dd \
+  -m "@browse-sent-event/core 0.1.0-alpha.1"
+git tag -a "@browse-sent-event/plugin-vite@0.1.0-alpha.2" 0e3f9dd \
+  -m "@browse-sent-event/plugin-vite 0.1.0-alpha.2"
 
-git push origin "@browse-sent-event/core@0.1.0-alpha.0"
-git push origin "@browse-sent-event/plugin-vite@0.1.0-alpha.1"
+git push origin "@browse-sent-event/core@0.1.0-alpha.1"
+git push origin "@browse-sent-event/plugin-vite@0.1.0-alpha.2"
 ```
 
 remote tag가 이미 있으면 새로 만들거나 강제로 덮어쓰지 않는다. commit과 version을
@@ -73,19 +74,19 @@ remote tag가 이미 있으면 새로 만들거나 강제로 덮어쓰지 않는
 release note를 검토할 수 있도록 먼저 draft로 만든다.
 
 ```bash
-gh release create "@browse-sent-event/core@0.1.0-alpha.0" \
+gh release create "@browse-sent-event/core@0.1.0-alpha.1" \
   --verify-tag \
   --draft \
   --prerelease \
   --latest=false \
-  --title "@browse-sent-event/core 0.1.0-alpha.0"
+  --title "@browse-sent-event/core 0.1.0-alpha.1"
 
-gh release create "@browse-sent-event/plugin-vite@0.1.0-alpha.1" \
+gh release create "@browse-sent-event/plugin-vite@0.1.0-alpha.2" \
   --verify-tag \
   --draft \
   --prerelease \
   --latest=false \
-  --title "@browse-sent-event/plugin-vite 0.1.0-alpha.1"
+  --title "@browse-sent-event/plugin-vite 0.1.0-alpha.2"
 ```
 
 각 release note에는 최소 다음 내용을 적는다.
@@ -103,15 +104,15 @@ gh release create "@browse-sent-event/plugin-vite@0.1.0-alpha.1" \
 GitHub UI 또는 다음 명령으로 draft를 확인한다.
 
 ```bash
-gh release view "@browse-sent-event/core@0.1.0-alpha.0"
-gh release view "@browse-sent-event/plugin-vite@0.1.0-alpha.1"
+gh release view "@browse-sent-event/core@0.1.0-alpha.1"
+gh release view "@browse-sent-event/plugin-vite@0.1.0-alpha.2"
 ```
 
 내용과 tag target이 맞으면 maintainer가 publish한다.
 
 ```bash
-gh release edit "@browse-sent-event/core@0.1.0-alpha.0" --draft=false
-gh release edit "@browse-sent-event/plugin-vite@0.1.0-alpha.1" --draft=false
+gh release edit "@browse-sent-event/core@0.1.0-alpha.1" --draft=false
+gh release edit "@browse-sent-event/plugin-vite@0.1.0-alpha.2" --draft=false
 ```
 
 publish 후 두 release가 prerelease이고 Latest가 아닌지 확인한다.

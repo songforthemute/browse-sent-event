@@ -479,7 +479,9 @@ Phase 1 착수 전 혼선을 줄이기 위해, ADR에서 이미 확정된 항목
 **D1. 공개 패키지 이름과 역할**
 - 결정: `@browse-sent-event/core`는 runtime과 panel API를 제공한다.
 - 결정: `@browse-sent-event/plugin-vite`는 Vite 개발 서버 entry에 core bootstrap을 주입한다.
-- 배포 상태: core `0.1.0-alpha.0`, plugin-vite `0.1.0-alpha.1`이 npm에 공개되어 있다.
+- 배포 상태: npm의 `alpha`는 core `0.1.0-alpha.1`, plugin-vite
+  `0.1.0-alpha.2`를 가리킨다. `latest`는 각각 `0.1.0-alpha.0`,
+  `0.1.0-alpha.1`을 유지한다.
 - 예외: plugin-vite `0.1.0-alpha.0`은 잘못된 `workspace:*` manifest 때문에 deprecated 처리했다.
 
 **D2. 라이선스**
