@@ -28,11 +28,18 @@ version을 유지하므로, version을 생략하지 않는다.
 - Vite plugin의 core runtime 옵션 전달
 - 사용자 정의 panel 단축키와 URL 기록 제외 filter
 
-## 후속 회수
+## 다음 제품 목표
 
-- UI polish와 위치 기억
-- Linux CI 시각 snapshot 비교 회수
-- 브라우저 검증 시나리오 확대
+다음 우선순위는 일반 UI polish가 아니라 Message-to-UI causality의 정확도를
+검증하는 것이다. 첫 수직 범위는 수신 WebSocket 메시지, 동기 handler, Zustand
+상태 변경과 React commit 후보를 하나의 evidence chain으로 연결한다.
+
+정확도를 증명하지 못한 연결은 causality로 단정하지 않는다. 먼저 truth spike에서
+precision, false definitive와 관찰 비용을 검증하고, 통과할 때만 사용자-facing
+diagnostic alpha로 확장한다. UI 위치 기억, Linux 시각 snapshot과 넓은 브라우저
+matrix는 이 검증을 막는 release gate가 아니라 병행 또는 후속 안정화 작업으로
+둔다. 자세한 실행 기준은 [Causality Truth Spike 제품 재계획과
+설계](./docs/plans/2026-08-12-causality-truth-spike-design.md)를 따른다.
 
 ## Phase 1 목표
 

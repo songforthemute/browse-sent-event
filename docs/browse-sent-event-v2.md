@@ -2,7 +2,10 @@
 
 **실시간 메시지가 도착한 뒤, 어느 상태를 거쳐 어떤 컴포넌트까지 소비됐는지 보여주는 개발 도구.**
 
-WebSocket, HTTP stream(fetch/SSE), XMLHttpRequest, window messaging을 한곳에서 보고, 도착했지만 화면에 소비되지 않은 메시지를 즉시 찾는다. 설정 한 줄로 개발 환경에만 주입되며, 프론트엔드가 아닌 문제를 5초 안에 잘라낸다.
+WebSocket, HTTP stream(fetch/SSE), XMLHttpRequest, window messaging을 한곳에서
+보고, 도착했지만 화면에 소비되지 않은 메시지의 마지막 관찰 경계를 찾는다.
+transport 문제는 5초 안에 잘라내고, handler/state/commit 경계는 60초 안에 근거와
+함께 좁히는 것을 목표로 한다.
 
 ---
 
@@ -14,7 +17,9 @@ WebSocket, HTTP stream(fetch/SSE), XMLHttpRequest, window messaging을 한곳에
 
 이 시간은 전부 **경계면의 불투명성** 때문에 발생하는 비용이다. 외부 세계 — 백엔드, 네이티브 앱, 서드파티 위젯, LLM 서비스, 무엇이든 — 와의 통신이 블랙박스이기 때문에, 프론트엔드 개발자가 그 블랙박스를 직접 열어봐야 한다.
 
-browse-sent-event는 그 경계면을 투명하게 만들어서, **"이건 내 문제인가 아닌가"를 5초 안에 판별**하게 한다. 내 문제가 아니면 증거를 붙여서 넘기고, 내 문제면 정확히 어디서 빠졌는지 보고 바로 고친다.
+browse-sent-event는 그 경계면을 투명하게 만들어서 transport 도착 여부를 **5초
+안에 판별**하게 한다. 내 문제라면 handler, state, commit 중 마지막으로 관찰된
+경계를 60초 안에 근거와 함께 좁히는 것을 목표로 한다.
 
 **프론트엔드 개발자는 프론트엔드의 문제를 풀어야 한다.** UI 성능 최적화, 접근성 개선, 인터랙션 설계, 컴포넌트 아키텍처 — 이것이 프론트엔드의 전문 직무 역량이다. browse-sent-event는 외부 통신의 복잡성에 시간을 빼앗기지 않고 **자기 직무의 깊이를 키울 수 있는 여유를 만들어주는 도구**다.
 
@@ -51,7 +56,9 @@ browse-sent-event는 그 경계면을 투명하게 만들어서, **"이건 내 �
 - **core(인터셉트, 타임라인, 검색)**는 프레임워크에 무관하게 동작한다
 - **causality 추적**은 지원 프레임워크 어댑터 또는 heuristic 폴백으로 제공된다
 - 프로토콜 — WebSocket, HTTP stream(fetch/SSE), XMLHttpRequest, window messaging — 을 하나의 타임라인으로 통합한다
-- 앱 코드 변경 없이, 번들러 설정 한 줄로 도입한다
+- transport 관찰은 앱 코드 변경 없이 번들러 설정 한 줄로 도입한다
+- definitive message→state 연결은 지원 상태 관리 middleware의 명시적 opt-in을
+  사용한다
 - 프로덕션 번들에는 한 바이트도 포함되지 않는다
 - 사람(DevTools UI)과 에이전트(JSON API) 모두 소비할 수 있다
 
@@ -77,6 +84,9 @@ arrived → parsed → handled → stored → selected → rendered
 | **stored** | 상태 관리에 저장 | Zustand store 업데이트 |
 | **selected** | 컴포넌트가 구독/선택 | useStore selector 호출 |
 | **rendered** | DOM에 반영 | 컴포넌트 리렌더 완료 |
+
+위 표는 장기 제품의 lifecycle vocabulary다. M1 Truth Spike는 DOM 반영을
+증명하지 않으므로 `rendered` 대신 `react.commit-observed` evidence를 사용한다.
 
 추가적으로 다음 상태가 존재한다:
 
@@ -153,8 +163,8 @@ export default defineConfig({
 
 | Confidence | 의미 | 조건 |
 |------------|------|------|
-| **definitive** | 확정적 인과 관계 | 프레임워크 어댑터 + 상태 관리 미들웨어 모두 활성화 |
-| **adapter-backed** | 어댑터 기반 추론 | 프레임워크 어댑터만 활성화, 상태 관리 미들웨어 없음 |
+| **definitive** | 같은 native event 또는 동기 handler context에서 직접 관찰한 edge | handler wrapper 또는 상태 관리 middleware evidence |
+| **adapter-backed** | 비공식 adapter가 관찰한 후보 | 상태 변경 뒤의 React root commit 후보 |
 | **heuristic** | 시간 상관관계 추정 | 어댑터 없음, MutationObserver 기반 |
 
 **React + Zustand 한정으로 먼저 구현한다.**
@@ -168,9 +178,8 @@ export default defineConfig({
 
 ```
 ↓ 14:02:01.120  trade  BTC  67,341.20
-  arrived → parsed → stored(store.trades) → rendered
-  → <TradeList>         12ms  [definitive]
-  → <PriceHeader>        8ms  [definitive]
+  transport.received → handler.returned → state.root-changed
+  → React root commit candidate  12ms  [adapter-backed]
 ```
 
 **해소하는 고통**: "데이터는 오는데 화면에 왜 안 나와?"를 추적하기 위해 각 단계마다 console.log를 심는 루프. 복잡한 경우 30분~1시간 소요.
@@ -386,6 +395,13 @@ ws.addEventListener('message', (e) => {
 
 **React + Zustand 한정으로 먼저 만든다.**
 
+Phase 2 전체를 한 번에 구현하지 않는다. 먼저 [Causality Truth Spike 제품
+재계획과 설계](./plans/2026-08-12-causality-truth-spike-design.md)의 M1에서
+WebSocket → 동기 handler → Zustand → React commit 후보 한 경로의 evidence
+precision과 runtime overhead를 검증한다. `definitive`로 증명할 수 없는 연결은
+`adapter-backed` 또는 `heuristic`으로 명시하고, gate를 통과할 때만 아래 범위를
+순차적으로 확장한다.
+
 - trace-react: React fiber 기반 어댑터 (confidence: adapter-backed)
 - middleware-zustand: 상태 관리 브릿지
 - Message Lifecycle Detection — 단계 모델 + ignore rule
@@ -462,7 +478,9 @@ browse-sent-event는 두 개의 레이어로 이 영역에 진입한다. **Phase
 
 ### 4. 도입 비용 제로라는 채택 우위
 
-번들러 플러그인 한 줄, 앱 코드 변경 없음, 프로덕션 자동 제거. 한번 팀에 도입되면 제거할 이유가 없다.
+transport 관찰은 번들러 플러그인 한 줄과 프로덕션 자동 제거를 유지한다.
+message→state의 definitive evidence는 typed virtual module로 제공하는 상태 관리
+middleware opt-in이 필요하며, production build에서는 tracing 구현을 제거한다.
 
 ### 5. 점진적 깊이라는 확장 우위
 

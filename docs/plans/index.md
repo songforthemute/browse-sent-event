@@ -25,6 +25,16 @@ outline: deep
 | 2026-07-24 | [첫 alpha 배포 후보](./2026-07-24-alpha-release-candidate.md) | 완료, 역사 기록 |
 | 2026-06-03 | [npm 배포 준비](./2026-06-03-npm-publish-readiness.md) | 완료, 역사 기록 |
 
+## 제품 재계획과 Causality
+
+| 날짜 | 계획 | 상태 |
+| --- | --- | --- |
+| 2026-08-12 | [Causality Truth Spike 제품 재계획과 설계](./2026-08-12-causality-truth-spike-design.md) | 실행 기준선 |
+
+이 계획은 Phase 1 polish를 순차적으로 모두 끝낸 뒤 Phase 2 전체를 구현하는 순서를
+대체한다. causality 정확도와 비용을 M1에서 먼저 검증하고, gate를 통과할 때만
+진단 alpha와 외부 beta로 확장한다.
+
 ## Runtime과 interceptor
 
 | 날짜 | 계획 | 상태 |
