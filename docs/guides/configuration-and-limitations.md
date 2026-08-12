@@ -37,9 +37,9 @@ export default defineConfig({
 `enabled: false`이면 bootstrap 코드를 주입하지 않는다. plugin은 `serve` 환경에만
 적용되므로 프로덕션 build에는 runtime을 포함하지 않는다.
 
-전체 runtime 옵션 전달은 저장소의 다음 alpha 후보 기준이다. 현재 npm의
-`@browse-sent-event/plugin-vite@0.1.0-alpha.1`은 `enabled`만 지원하므로 다음
-alpha가 배포되기 전에는 추가 옵션이 적용되지 않는다.
+전체 runtime 옵션 전달은 현재 npm에 공개된
+`@browse-sent-event/plugin-vite@0.1.0-alpha.2`부터 지원한다.
+`0.1.0-alpha.1`은 `enabled`만 지원하므로 추가 옵션이 적용되지 않는다.
 
 ## Core runtime 직접 설치
 

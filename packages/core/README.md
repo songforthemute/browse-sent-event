@@ -10,6 +10,9 @@ API는 정식 릴리스 전에 바뀔 수 있습니다.
 pnpm add -D @browse-sent-event/core@alpha
 ```
 
+현재 `alpha`는 `0.1.0-alpha.1`입니다. `latest`는 `0.1.0-alpha.0`을 유지하므로
+version이나 dist-tag를 생략하지 않습니다.
+
 Vite 프로젝트에는 core를 직접 설치하기보다
 `@browse-sent-event/plugin-vite@alpha` 사용을 권장합니다. plugin은 개발 서버에만
 runtime을 주입하므로 프로덕션 build에서 자동으로 제외됩니다.

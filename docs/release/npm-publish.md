@@ -6,16 +6,21 @@ publish하기 전의 gate, 첫 배포에서 얻은 교훈을 한곳에 모은다
 
 ## 현재 공개 상태
 
-검증 기준: `2026-07-26 KST`
+검증 기준: `2026-08-11 KST`
 
-| package                          | `alpha`         | `latest`        | 상태 |
-| -------------------------------- | --------------- | --------------- | ---- |
-| `@browse-sent-event/core`        | `0.1.0-alpha.0` | `0.1.0-alpha.0` | 정상 |
-| `@browse-sent-event/plugin-vite` | `0.1.0-alpha.1` | `0.1.0-alpha.1` | 정상 |
+| package                          | `alpha`         | `latest`        | 상태            |
+| -------------------------------- | --------------- | --------------- | --------------- |
+| `@browse-sent-event/core`        | `0.1.0-alpha.1` | `0.1.0-alpha.0` | alpha 공개 완료 |
+| `@browse-sent-event/plugin-vite` | `0.1.0-alpha.2` | `0.1.0-alpha.1` | alpha 공개 완료 |
 
 `@browse-sent-event/plugin-vite@0.1.0-alpha.0`은 공개 manifest에 `workspace:*`
 의존성이 남은 잘못된 배포이며 deprecated 상태다. 재사용하거나 정상 release로
 기록하지 않는다.
+
+이번 공개에서는 `alpha` dist-tag만 새 version으로 이동했고 `latest`는 기존
+version을 유지했다. 설치 문서는 version 생략 대신 `@alpha`를 사용한다. npm
+publish와 source commit `0e3f9dd`를 가리키는 원격 annotated tag push는 완료됐다.
+두 GitHub Release는 Pre-release draft로 저장했으며 최종 검토와 publish를 기다린다.
 
 ## 현재 원칙
 
@@ -51,6 +56,8 @@ publish하기 전의 gate, 첫 배포에서 얻은 교훈을 한곳에 모은다
 ```bash
 npm view @browse-sent-event/core name version description --json
 npm view @browse-sent-event/plugin-vite name version description --json
+npm view @browse-sent-event/core dist-tags --json
+npm view @browse-sent-event/plugin-vite dist-tags --json
 npm access list packages @browse-sent-event --json
 ```
 
@@ -225,7 +232,7 @@ npm deprecate @browse-sent-event/plugin-vite@0.1.0-alpha.0 "workspace:* 의존�
 npm dist-tag add @browse-sent-event/plugin-vite@0.1.0-alpha.1 latest
 ```
 
-첫 publish에서 생성된 `latest`를 제거하려 했지만 npm registry는 두 package 모두 `E400 Bad Request`로 거부했다. npm은 version을 생략한 설치에서 `latest`를 사용하며, registry metadata도 `latest`가 있는 dist-tag 구조를 전제로 한다. 따라서 현재 alpha 단계에서는 `latest`를 삭제하지 않고 설치 가능한 최신 alpha로 유지한다. 자세한 동작은 [npm dist-tag 문서](https://docs.npmjs.com/cli/dist-tag/)와 [npm registry API 문서](https://github.com/npm/registry/blob/main/docs/REGISTRY-API.md)를 참고한다.
+첫 publish에서 생성된 `latest`를 제거하려 했지만 npm registry는 두 package 모두 `E400 Bad Request`로 거부했다. npm은 version을 생략한 설치에서 `latest`를 사용하며, registry metadata도 `latest`가 있는 dist-tag 구조를 전제로 한다. 당시 복구에서는 `latest`를 삭제하지 않고 정상 package인 core alpha.0과 plugin-vite alpha.1을 가리키도록 유지했다. 이후 alpha publish도 `latest`를 자동으로 이동하는 근거로 삼지 않으며, 현재 설치 문서는 `@alpha`를 명시한다. 자세한 동작은 [npm dist-tag 문서](https://docs.npmjs.com/cli/dist-tag/)와 [npm registry API 문서](https://github.com/npm/registry/blob/main/docs/REGISTRY-API.md)를 참고한다.
 
 이 선택은 다음 조건을 가진 의식적인 기술 부채다.
 
@@ -233,7 +240,9 @@ npm dist-tag add @browse-sent-event/plugin-vite@0.1.0-alpha.1 latest
 - 지금 감당 가능한 이유: stable version이 아직 없고, `latest`가 deprecated된 깨진 package를 가리키는 위험이 더 크다.
 - 회수 시점: 첫 stable version을 배포하면서 `latest`를 stable로 이동하고, 설치 문서의 prerelease 안내를 갱신한다.
 
-정상적으로 공개된 `@browse-sent-event/core@0.1.0-alpha.0`의 `latest`와 `alpha`는 그대로 유지한다.
+복구 당시 정상적으로 공개된 `@browse-sent-event/core@0.1.0-alpha.0`의 `latest`와
+`alpha`는 그대로 유지했다. 현재 dist-tag는 이 문서의 [현재 공개 상태](#현재-공개-상태)를
+기준으로 확인한다.
 
 ### 0.1.0-alpha.1 복구 후보 검증
 

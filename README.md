@@ -6,14 +6,15 @@ WebSocket, HTTP stream, EventSource, XMLHttpRequest의 통신 흐름을 관찰�
 
 Phase 1 DevTools MVP를 공개 alpha로 배포했다. 현재 npm 공개 버전은 다음과 같다.
 
-| 패키지                           | alpha 버전      |
-| -------------------------------- | --------------- |
-| `@browse-sent-event/core`        | `0.1.0-alpha.0` |
-| `@browse-sent-event/plugin-vite` | `0.1.0-alpha.1` |
+| 패키지                           | `alpha`         | `latest`        |
+| -------------------------------- | --------------- | --------------- |
+| `@browse-sent-event/core`        | `0.1.0-alpha.1` | `0.1.0-alpha.0` |
+| `@browse-sent-event/plugin-vite` | `0.1.0-alpha.2` | `0.1.0-alpha.1` |
 
 `@browse-sent-event/plugin-vite@0.1.0-alpha.0`은 배포 manifest에 `workspace:*`
 의존성이 남아 있어 deprecated 처리했다. 새 설치에서는 `@alpha` dist-tag를
-사용한다.
+사용한다. 이번 공개에서는 `alpha`만 새 version으로 이동했고 `latest`는 기존
+version을 유지하므로, version을 생략하지 않는다.
 
 ## 현재 구현 상태
 
@@ -75,9 +76,9 @@ export default defineConfig({
 });
 ```
 
-전체 runtime 옵션 전달은 저장소의 다음 alpha 후보 기준이다. 현재 공개된
-`@browse-sent-event/plugin-vite@0.1.0-alpha.1`은 `enabled`만 지원하며, 새
-changeset을 반영한 다음 alpha가 배포되기 전에는 위 추가 옵션이 적용되지 않는다.
+전체 runtime 옵션 전달은 현재 공개된
+`@browse-sent-event/plugin-vite@0.1.0-alpha.2`부터 지원한다.
+`0.1.0-alpha.1`은 `enabled`만 지원하며 위 추가 옵션은 적용하지 않는다.
 
 문자열 URL filter는 기록될 URL 원문에 대한 대소문자 구분 부분 문자열
 일치이고, 정규식은 JavaScript `RegExp` 의미를 따른다. 일치한 요청도 native

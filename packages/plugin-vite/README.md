@@ -12,7 +12,8 @@ pnpm add -D @browse-sent-event/plugin-vite@alpha
 ```
 
 `0.1.0-alpha.0`은 잘못된 내부 의존성 manifest 때문에 deprecated 처리했습니다.
-새 설치에서는 `@alpha` dist-tag를 사용합니다.
+현재 `alpha`는 `0.1.0-alpha.2`입니다. `latest`는 `0.1.0-alpha.1`을 유지하므로 새
+설치에서는 version이나 dist-tag를 생략하지 않고 `@alpha`를 사용합니다.
 
 ## 사용
 

@@ -132,10 +132,12 @@ export default defineConfig({
 });
 ```
 
-현재 npm 공개 alpha는 `@browse-sent-event/core@0.1.0-alpha.0`과
-`@browse-sent-event/plugin-vite@0.1.0-alpha.1`이다. 두 package는 역할과 변경
+현재 npm 공개 alpha는 `@browse-sent-event/core@0.1.0-alpha.1`과
+`@browse-sent-event/plugin-vite@0.1.0-alpha.2`이다. 두 package는 역할과 변경
 속도가 다르므로 독립적으로 versioning한다. 설치 문서에서는 다음 alpha로
 자연스럽게 이동할 수 있도록 `@browse-sent-event/plugin-vite@alpha`를 사용한다.
+`latest`는 각각 이전 version인 core `0.1.0-alpha.0`, plugin-vite
+`0.1.0-alpha.1`을 유지한다.
 
 **해소하는 고통**: 디버깅 도구 도입을 위해 앱 코드에 import를 추가하고, 개발/프로덕션 분기를 만들고, 실행 순서를 확인하는 반복 작업.
 

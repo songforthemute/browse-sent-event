@@ -10,15 +10,16 @@ outline: deep
 
 Phase 1 DevTools MVP를 공개 alpha로 배포했다.
 
-| package | 공개 alpha |
-| --- | --- |
-| `@browse-sent-event/core` | `0.1.0-alpha.0` |
-| `@browse-sent-event/plugin-vite` | `0.1.0-alpha.1` |
+| package | `alpha` | `latest` |
+| --- | --- | --- |
+| `@browse-sent-event/core` | `0.1.0-alpha.1` | `0.1.0-alpha.0` |
+| `@browse-sent-event/plugin-vite` | `0.1.0-alpha.2` | `0.1.0-alpha.1` |
 
 ::: warning Alpha
 API와 화면 구성은 정식 릴리스 전에 바뀔 수 있다. 새 설치에서는
 `@browse-sent-event/plugin-vite@alpha`를 사용한다. plugin-vite
-`0.1.0-alpha.0`은 deprecated된 잘못된 배포다.
+`0.1.0-alpha.0`은 deprecated된 잘못된 배포다. `latest`는 이번 공개에서
+이동하지 않았으므로 version이나 dist-tag를 생략하지 않는다.
 :::
 
 ## 사용자 가이드

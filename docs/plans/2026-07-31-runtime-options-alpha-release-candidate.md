@@ -4,6 +4,14 @@ search: false
 
 # Runtime 옵션 alpha 릴리스 후보 구현 계획
 
+> **2026-08-11 후속 상태:** 이 문서에서 검증한 core `0.1.0-alpha.1`과
+> plugin-vite `0.1.0-alpha.2`는 npm에 수동 publish됐고 각 package의 `alpha`
+> dist-tag가 해당 version을 가리킨다. `latest`는 각각 `0.1.0-alpha.0`,
+> `0.1.0-alpha.1`을 유지한다. 두 원격 annotated tag는 source commit `0e3f9dd`를
+> 가리키며 push를 완료했다. GitHub Release는 각각 Pre-release draft로 저장했고
+> 아직 publish하지 않았다.
+> 아래의 인증 차단과 publish 제외 내용은 후보 검증 작업 당시의 기록이다.
+
 > **Codex용:** 구현 단계에서는 `executing-plans`,
 > `verification-before-completion`을 사용해 작업 단위로 진행한다.
 
@@ -28,7 +36,7 @@ Vite 8, Vitest 4, Playwright, VitePress 2, Node.js test runner.
 
 ---
 
-## 현재 상태와 목표
+## 후보 준비 당시 상태와 목표
 
 | package | 현재 공개 version | 후보 version |
 | --- | --- | --- |
@@ -244,8 +252,8 @@ dry-run 결과, 임시 소비자 결과를 기록한다. maintainer가 실행할
 함께 기록됐다. `pnpm install`과 `pnpm install --frozen-lockfile` 이후
 `pnpm-lock.yaml` 변경은 없었다.
 
-공개 registry의 `alpha`와 `latest`는 아직 기존 version을 가리킨다. 이 문서와 root
-README의 현재 공개 상태는 실제 publish 전까지 이 값을 유지한다. tarball의 package
+후보 검증 당시 공개 registry의 `alpha`와 `latest`는 기존 version을 가리켰다.
+root README의 공개 상태도 실제 publish 전까지 그 값을 유지했다. tarball의 package
 README는 core `alpha.1`, plugin-vite `alpha.2`부터 새 옵션 계약을 지원한다는
 version 기준으로 작성했다.
 
@@ -304,12 +312,12 @@ tarball에 연결했다. 이 override는 publish 이후 소비자에게 필요�
 - 설치된 plugin manifest의 core dependency `0.1.0-alpha.1`
 - 임시 소비자 audit moderate, 알려진 취약점 없음
 
-### Publish 차단 조건
+### 후보 검증 당시 Publish 차단 조건
 
 `npm whoami`와 `npm access list packages @browse-sent-event --json`은 `E401`을
-반환했다. 현재 npm 인증 token이 만료됐으므로 실제 publish는 차단된 상태다.
+반환했다. 후보 검증 당시 npm 인증 token이 만료돼 실제 publish가 차단됐다.
 maintainer가 `npm login`을 완료한 뒤 다음 두 명령이 성공해야 후보를 공개할 수
-있다.
+있었다.
 
 ```bash
 npm whoami
@@ -325,3 +333,18 @@ npm access list packages @browse-sent-event --json
 
 이 작업에서는 실제 `npm publish`, dist-tag 변경, Git tag와 GitHub Release 생성을
 실행하지 않았다.
+
+### 후속 publish 결과
+
+확인 일시: `2026-08-11 KST`
+
+| package | npm `alpha` | npm `latest` | 후속 상태 |
+| --- | --- | --- | --- |
+| `@browse-sent-event/core` | `0.1.0-alpha.1` | `0.1.0-alpha.0` | publish 완료 |
+| `@browse-sent-event/plugin-vite` | `0.1.0-alpha.2` | `0.1.0-alpha.1` | publish 완료 |
+
+후속 maintainer 인증과 수동 publish로 후보의 npm 공개를 완료했다. 이번 publish에서
+`latest`는 이동하지 않았으며 설치 문서는 계속 `@alpha`를 사용한다. 두 원격
+annotated tag는 source commit `0e3f9dd`를 가리키며 push를 완료했다. GitHub
+Release는 올바른 tag, 제목, 본문과 Pre-release 표시를 사용한 draft로 저장했으며
+maintainer의 최종 검토와 publish를 기다린다.
