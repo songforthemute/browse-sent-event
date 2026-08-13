@@ -10,17 +10,16 @@ Git tag와 GitHub Release는 npm에 공개한 package의 source identity와 사�
 
 ## 현재 baseline
 
-`2026-08-11 KST` 기준 npm package와 원격 annotated tag는 공개됐다. 두 GitHub
-Release는 올바른 tag, 제목, 본문과 Pre-release 표시를 사용한 draft로 저장했으며
-maintainer의 최종 검토와 publish를 기다린다.
+`2026-08-14 KST` 기준 npm package, 원격 annotated tag와 두 GitHub Release를
+공개했다. 두 Release는 Pre-release이며 Latest release가 아니다.
 
-| package                          | npm version     | source commit | 원격 tag  | GitHub Release      |
-| -------------------------------- | --------------- | ------------- | --------- | ------------------- |
-| `@browse-sent-event/core`        | `0.1.0-alpha.1` | `0e3f9dd`     | push 완료 | draft, publish 대기 |
-| `@browse-sent-event/plugin-vite` | `0.1.0-alpha.2` | `0e3f9dd`     | push 완료 | draft, publish 대기 |
+| package                          | npm version     | source commit | GitHub Release                                                                                                                             | 공개 시각                 |
+| -------------------------------- | --------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------- |
+| `@browse-sent-event/core`        | `0.1.0-alpha.1` | `0e3f9dd`     | [Pre-release 공개 완료](https://github.com/songforthemute/browse-sent-event/releases/tag/%40browse-sent-event/core%400.1.0-alpha.1)        | `2026-08-14 00:28:54 KST` |
+| `@browse-sent-event/plugin-vite` | `0.1.0-alpha.2` | `0e3f9dd`     | [Pre-release 공개 완료](https://github.com/songforthemute/browse-sent-event/releases/tag/%40browse-sent-event/plugin-vite%400.1.0-alpha.2) | `2026-08-14 00:28:56 KST` |
 
-두 원격 tag는 모두 source commit `0e3f9dd`를 가리킨다. Draft는 아직 publish하지
-않았으므로 공개 GitHub Release 완료 상태로 기록하지 않는다.
+두 원격 tag는 모두 source commit `0e3f9dd`를 가리킨다. GitHub의 `publishedAt`은
+각각 `2026-08-13T15:28:54Z`, `2026-08-13T15:28:56Z`다.
 
 `@browse-sent-event/plugin-vite@0.1.0-alpha.0`은 잘못 배포된 deprecated
 version이므로 정상 tag와 release를 만들지 않는다.

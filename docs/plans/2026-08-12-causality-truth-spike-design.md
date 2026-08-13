@@ -364,9 +364,9 @@ import만 사용하고 M2 진입 전에 통합 계약과 제품 범위를 다시
 
 ### M0. 기존 alpha 운영 마감
 
-기존 core `0.1.0-alpha.1`과 plugin-vite `0.1.0-alpha.2` Draft Release를
-prerelease로 공개하고 Latest가 아님을 확인한다. 다음 기능 milestone으로 확대하지
-않는 별도 운영 gate로 마감한다.
+완료 (`2026-08-14 KST`). 기존 core `0.1.0-alpha.1`과 plugin-vite
+`0.1.0-alpha.2` Release를 prerelease로 공개했고 둘 다 Latest가 아님을 확인했다.
+다음 기능 milestone으로 확대하지 않는 별도 운영 gate로 마감했다.
 
 ### M1. Causality Truth Spike
 
