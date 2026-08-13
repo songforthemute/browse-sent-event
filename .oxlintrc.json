@@ -22,6 +22,18 @@
       "env": {
         "browser": true
       }
+    },
+    {
+      "files": ["scripts/perf/**/*.mjs"],
+      "env": {
+        "node": true
+      }
+    },
+    {
+      "files": ["scripts/perf/**/fixture/**/*.js"],
+      "env": {
+        "browser": true
+      }
     }
   ],
   "rules": {

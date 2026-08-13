@@ -373,6 +373,12 @@ import만 사용하고 M2 진입 전에 통합 계약과 제품 범위를 다시
 **목표:** 공개 기능을 늘리기 전에 한 동기 경로의 증명 가능 범위와 비용을
 확인한다.
 
+**2026-08-14 baseline 결과:** semantics와 memory는 통과했지만 full-ring
+100 msg/s에서 현재 Phase 1의 절대 CPU 증분이 약 `1.4943 ms/message`
+(`149 ms/s`, 약 `14.9%`)로 10% 중단 기준을 넘었다. [Causality 성능
+기준선](../performance/causality-benchmark.md)에 따라 evidence 구현 전에 engine의
+전체 snapshot 동기 notify 비용을 회수하고 같은 protocol을 한 번 재측정한다.
+
 **Ground-truth fixture:**
 
 - transport 미도착
@@ -390,9 +396,9 @@ import만 사용하고 M2 진입 전에 통합 계약과 제품 범위를 다시
 - 10,000 message retention과 현재 memory 기준선
 - delta evidence 통지와 trace eviction 테스트
 
-첫 benchmark 커밋에서 primary React 19/Zustand 5와 secondary React 18 fixture의
-exact version을 lockfile과 결과표에 고정한다. 이후 version 확대는 M1 범위가
-아니다.
+첫 benchmark 커밋은 framework와 무관한 native/Phase 1 비용 기준선을 고정한다.
+primary React 19/Zustand 5와 secondary React 18 exact version은 실제 causality
+ground-truth fixture를 도입하는 구현 4~6에서 lockfile과 결과표에 고정한다.
 
 **측정 프로토콜:**
 
@@ -406,7 +412,8 @@ exact version을 lockfile과 결과표에 고정한다. 이후 version 확대는
 - 지원하지 않는 async 경로가 `coverage-incomplete`로 끝나면 오답으로 세지 않고,
   definitive 또는 commit 연결을 만들면 false positive로 센다.
 - Chromium CDP로 GC를 수행한 뒤 capacity 10,000 도달 시점과 추가 50,000건 처리
-  후 retained heap을 비교한다. 증가 허용값은 2 MiB 또는 plateau의 10% 중 큰 값이다.
+  후 post-GC used JS heap을 비교한다. 이는 dominator 기반 retained size가 아니다.
+  증가 허용값은 2 MiB 또는 plateau의 10% 중 큰 값이다.
 
 **성공 기준:**
 
@@ -414,7 +421,7 @@ exact version을 lockfile과 결과표에 고정한다. 이후 version 확대는
 - definitive로 잘못 표시한 edge 0건
 - 계측 없는 baseline 대비 100 msg/s, UI 닫힘의 추가 median CPU 5% 미만이며
   p95 long task가 새로 생기지 않음
-- capacity 이후 retained heap 증가가 측정 허용값 이내
+- capacity 이후 post-GC used JS heap 증가가 측정 허용값 이내
 - React DevTools 유무와 HMR fixture 통과
 - async와 batching의 지원/비지원 범위를 evidence로 설명 가능
 
@@ -503,11 +510,12 @@ crossover test를 수행한다. confident localization은 참가자의 선택이
 | 순서 | 구현 책임 | 핵심 완료 조건 | 커밋 예시 |
 | --- | --- | --- | --- |
 | 1 | benchmark와 delta 기반선 | 비용·memory 측정 재현 | `test(perf): causality 계측 기준선 추가` |
-| 2 | core evidence contract | context, trace, eviction, bridge | `feat(core): causality evidence 계약 추가` |
-| 3 | WebSocket handler 경계 | native listener 의미 보존 | `feat(core): WebSocket handler causality 연결` |
-| 4 | Zustand middleware | 동기 set과 root identity edge만 definitive | `feat(zustand): 상태 변경 evidence 연결` |
-| 5 | React adapter | 최소 hook과 root commit 후보 검증 | `feat(react): React commit evidence 연결` |
-| 6 | ground-truth fixture와 판정 | precision·overhead 보고서 | `test(e2e): causality truth fixture 검증` |
+| 2 | engine notify 비용 회수 | 같은 full protocol에서 추가 CPU <10% | `perf(core): snapshot 통지 비용 절감` |
+| 3 | core evidence contract | context, trace, eviction, bridge | `feat(core): causality evidence 계약 추가` |
+| 4 | WebSocket handler 경계 | native listener 의미 보존 | `feat(core): WebSocket handler causality 연결` |
+| 5 | Zustand middleware | 동기 set과 root identity edge만 definitive | `feat(zustand): 상태 변경 evidence 연결` |
+| 6 | React adapter | 최소 hook과 root commit 후보 검증 | `feat(react): React commit evidence 연결` |
+| 7 | ground-truth fixture와 판정 | precision·overhead 보고서 | `test(e2e): causality truth fixture 검증` |
 
 각 구현은 서브에이전트가 독립 작업하고, 메인 에이전트가 diff, 테스트, 공개 계약,
 거짓 양성 위험을 리뷰한 뒤 한 커밋으로 기록한다. M1 gate 결과를 브리프하고
