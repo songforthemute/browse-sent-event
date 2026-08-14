@@ -6,7 +6,7 @@
 |---|---|
 | **Status** | Phase 1 공개 alpha |
 | **Owner** | songforthemute (코코) |
-| **Last updated** | 2026-07-26 |
+| **Last updated** | 2026-08-12 |
 | **Scope of this PRD** | Phase 1 (핵심 가치 증명) 집중, Phase 2~6은 개요만 |
 
 ---
@@ -25,11 +25,14 @@ LLM 스트리밍, WebView 하이브리드 앱, MFE iframe 통신 등 실시간 �
 
 ### 1.3 Product Goal
 
-**프론트엔드 개발자가 "이건 내 문제인가 아닌가"를 5초 안에 판별할 수 있게 한다.**
+**프론트엔드 개발자가 transport 도착 여부는 5초 안에, handler/state/commit 중
+마지막으로 관찰된 경계는 60초 안에 판별할 수 있게 한다.**
 
 - Core(인터셉트, 타임라인, 검색)는 프레임워크 무관
 - Causality 추적은 프레임워크 어댑터 또는 heuristic 폴백으로 제공
-- 앱 코드 변경 없이, 번들러 설정 한 줄로 도입
+- Transport 관찰은 앱 코드 변경 없이 번들러 설정 한 줄로 도입
+- Definitive message→state 연결은 지원 상태 관리 middleware의 명시적 opt-in 필요
+- React 연결은 DOM 반영이 아니라 adapter가 관찰한 commit 후보로 표시
 - 프로덕션 번들에 한 바이트도 포함되지 않음
 - 사람(DevTools UI)과 에이전트(JSON API) 모두 소비 가능
 
@@ -466,7 +469,12 @@ Phase 1 이후 계획. 각 Phase는 독립적 가치가 있으며, Phase 1 출�
 | **Phase 5** | Schema Inference, TypeScript 타입 생성, Usage Analytics, AsyncAPI Export, Schema Drift Detection | Phase 4 + 3~4개월 |
 | **Phase 6** | Collector/Dashboard 서버 (Docker Compose), 팀 단위 세션 공유, 스테이징/프로덕션 지원 | Phase 5 + 3~4개월 |
 
-Phase 2는 **browse-sent-event를 대체 불가능한 도구로 만드는 분기점**이므로 Phase 1 출시 직후 즉시 착수한다.
+Phase 2는 **browse-sent-event를 대체 불가능한 도구로 만드는 분기점**이다. 다만
+React commit과 특정 메시지의 causality를 먼저부터 확정적으로 연결할 수 있다고
+가정하지 않는다. [Causality Truth Spike 제품 재계획과
+설계](./plans/2026-08-12-causality-truth-spike-design.md)에 따라 한 개의
+WebSocket → 동기 handler → Zustand → React commit 후보 경로에서 정확도와 비용을
+먼저 검증한다. 이 gate를 통과할 때만 lifecycle 진단, UI와 지원 범위를 확장한다.
 
 ---
 

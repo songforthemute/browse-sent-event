@@ -17,13 +17,23 @@ outline: deep
 
 | 날짜 | 계획 | 상태 |
 | --- | --- | --- |
-| 2026-07-31 | [Runtime 옵션 alpha 릴리스 후보](./2026-07-31-runtime-options-alpha-release-candidate.md) | npm·원격 tag 완료, GitHub Release draft 검토 대기 |
+| 2026-07-31 | [Runtime 옵션 alpha 릴리스 후보](./2026-07-31-runtime-options-alpha-release-candidate.md) | npm·원격 tag·GitHub Pre-release 공개 완료 |
 | 2026-07-27 | [Vite plugin runtime 옵션 설계](./2026-07-27-vite-plugin-runtime-options-design.md) | 완료 |
 | 2026-07-27 | [Vite plugin runtime 옵션 구현](./2026-07-27-vite-plugin-runtime-options.md) | 완료 |
 | 2026-07-26 | [공개 alpha 문서 기준선 설계](./2026-07-26-public-alpha-docs-baseline-design.md) | 완료 |
 | 2026-07-26 | [공개 alpha 문서 기준선 구현](./2026-07-26-public-alpha-docs-baseline.md) | 완료 |
 | 2026-07-24 | [첫 alpha 배포 후보](./2026-07-24-alpha-release-candidate.md) | 완료, 역사 기록 |
 | 2026-06-03 | [npm 배포 준비](./2026-06-03-npm-publish-readiness.md) | 완료, 역사 기록 |
+
+## 제품 재계획과 Causality
+
+| 날짜 | 계획 | 상태 |
+| --- | --- | --- |
+| 2026-08-12 | [Causality Truth Spike 제품 재계획과 설계](./2026-08-12-causality-truth-spike-design.md) | 실행 기준선 |
+
+이 계획은 Phase 1 polish를 순차적으로 모두 끝낸 뒤 Phase 2 전체를 구현하는 순서를
+대체한다. causality 정확도와 비용을 M1에서 먼저 검증하고, gate를 통과할 때만
+진단 alpha와 외부 beta로 확장한다.
 
 ## Runtime과 interceptor
 
