@@ -168,6 +168,169 @@ describe("mountDevtoolsPanel", () => {
     expect(Reflect.get(mounted.element, "snapshot")).toBe(snapshotBeforeUnmount);
   });
 
+  it("stays unsubscribed while closed and catches up when reopened", async () => {
+    const engine = createDevtoolsEngine({ capacity: 10 });
+    const mounted = mountDevtoolsPanel({
+      engine,
+      options: {
+        autoOpen: false,
+        hotkey: "cmd+shift+r",
+        position: "bottom-right",
+      },
+      target: globalThis.window,
+    });
+    const firstConnection = engine.recordConnection({
+      protocol: "websocket",
+      url: "wss://example.test/socket",
+    });
+    engine.updateConnection(firstConnection.id, {
+      state: "closed",
+      closeCode: 1000,
+      closedAt: 2_000,
+    });
+    const reconnect = engine.recordConnection({
+      protocol: "websocket",
+      url: "wss://example.test/socket",
+      state: "open",
+    });
+    engine.recordMessage({
+      connectionId: reconnect.id,
+      direction: "in",
+      protocol: "websocket",
+      payload: "while closed",
+    });
+
+    await Reflect.get(mounted.element, "updateComplete");
+    expect(Reflect.get(mounted.element, "snapshot")).toBeUndefined();
+
+    Reflect.get(mounted.element, "setOpen")?.call(mounted.element, true);
+    await Reflect.get(mounted.element, "updateComplete");
+
+    expect(Reflect.get(mounted.element, "snapshot")?.messages).toHaveLength(1);
+    expect(Reflect.get(mounted.element, "snapshot")?.connections).toEqual([
+      expect.objectContaining({ id: firstConnection.id, state: "closed" }),
+      expect.objectContaining({ id: reconnect.id, reconnectCount: 1, state: "open" }),
+    ]);
+
+    Reflect.get(mounted.element, "setOpen")?.call(mounted.element, false);
+    await Reflect.get(mounted.element, "updateComplete");
+    const snapshotWhileClosed = Reflect.get(mounted.element, "snapshot");
+    engine.recordMessage({
+      connectionId: reconnect.id,
+      direction: "in",
+      protocol: "websocket",
+      payload: "after close",
+    });
+    expect(Reflect.get(mounted.element, "snapshot")).toBe(snapshotWhileClosed);
+
+    Reflect.get(mounted.element, "setOpen")?.call(mounted.element, true);
+    await Reflect.get(mounted.element, "updateComplete");
+    expect(Reflect.get(mounted.element, "snapshot")?.messages).toHaveLength(2);
+
+    mounted.unmount();
+  });
+
+  it("moves its open subscription when the engine is replaced", async () => {
+    const firstEngine = createDevtoolsEngine({ capacity: 10 });
+    const secondEngine = createDevtoolsEngine({ capacity: 10 });
+    const mounted = mountDevtoolsPanel({
+      engine: firstEngine,
+      options: {
+        autoOpen: true,
+        hotkey: "cmd+shift+r",
+        position: "bottom-right",
+      },
+      target: globalThis.window,
+    });
+    const firstConnection = firstEngine.recordConnection({
+      protocol: "websocket",
+      url: "wss://first.example.test/socket",
+    });
+    firstEngine.recordMessage({
+      connectionId: firstConnection.id,
+      direction: "in",
+      protocol: "websocket",
+      payload: "first engine",
+    });
+    await Reflect.get(mounted.element, "updateComplete");
+
+    Reflect.set(mounted.element, "engine", secondEngine);
+    await Reflect.get(mounted.element, "updateComplete");
+    const secondConnection = secondEngine.recordConnection({
+      protocol: "websocket",
+      url: "wss://second.example.test/socket",
+    });
+    secondEngine.recordMessage({
+      connectionId: secondConnection.id,
+      direction: "in",
+      protocol: "websocket",
+      payload: "second engine",
+    });
+    firstEngine.recordMessage({
+      connectionId: firstConnection.id,
+      direction: "in",
+      protocol: "websocket",
+      payload: "stale first engine",
+    });
+    await Reflect.get(mounted.element, "updateComplete");
+
+    expect(Reflect.get(mounted.element, "snapshot")?.messages).toEqual([
+      expect.objectContaining({ payload: "second engine" }),
+    ]);
+
+    mounted.unmount();
+  });
+
+  it("tracks direct open attribute changes and reconnects after DOM reattachment", async () => {
+    const engine = createDevtoolsEngine({ capacity: 10 });
+    const mounted = mountDevtoolsPanel({
+      engine,
+      options: {
+        autoOpen: false,
+        hotkey: "cmd+shift+r",
+        position: "bottom-right",
+      },
+      target: globalThis.window,
+    });
+    const connection = engine.recordConnection({
+      protocol: "websocket",
+      url: "wss://example.test/socket",
+    });
+
+    mounted.element.setAttribute("open", "");
+    await Reflect.get(mounted.element, "updateComplete");
+    expect(Reflect.get(mounted.element, "snapshot")?.connections).toHaveLength(1);
+
+    mounted.element.removeAttribute("open");
+    await Reflect.get(mounted.element, "updateComplete");
+    const snapshotWhileExternallyClosed = Reflect.get(mounted.element, "snapshot");
+    engine.recordMessage({
+      connectionId: connection.id,
+      direction: "in",
+      protocol: "websocket",
+      payload: "while externally closed",
+    });
+    expect(Reflect.get(mounted.element, "snapshot")).toBe(snapshotWhileExternallyClosed);
+
+    Reflect.set(mounted.element, "open", true);
+    await Reflect.get(mounted.element, "updateComplete");
+    expect(Reflect.get(mounted.element, "snapshot")?.messages).toHaveLength(1);
+
+    mounted.element.remove();
+    engine.recordMessage({
+      connectionId: connection.id,
+      direction: "in",
+      protocol: "websocket",
+      payload: "while detached",
+    });
+    globalThis.document.body.append(mounted.element);
+    await Reflect.get(mounted.element, "updateComplete");
+
+    expect(Reflect.get(mounted.element, "snapshot")?.messages).toHaveLength(2);
+
+    mounted.unmount();
+  });
+
   it("dispatches an export event with JSONL content", () => {
     const engine = createDevtoolsEngine({ capacity: 10 });
     const mounted = mountDevtoolsPanel({

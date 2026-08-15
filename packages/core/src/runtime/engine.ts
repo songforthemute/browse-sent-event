@@ -104,6 +104,10 @@ export function createDevtoolsEngine(options: BrowseSentEventEngineOptions): Bro
   }
 
   function notify(): void {
+    if (subscribers.size === 0) {
+      return;
+    }
+
     const snapshot = getSnapshot();
 
     for (const subscriber of subscribers) {

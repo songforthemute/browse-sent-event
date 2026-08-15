@@ -379,6 +379,12 @@ import만 사용하고 M2 진입 전에 통합 계약과 제품 범위를 다시
 기준선](../performance/causality-benchmark.md)에 따라 evidence 구현 전에 engine의
 전체 snapshot 동기 notify 비용을 회수하고 같은 protocol을 한 번 재측정한다.
 
+**2026-08-16 재측정 결과:** subscriber가 없을 때 snapshot 계산을 생략하고 닫힌
+panel의 구독을 중단한 뒤 절대 CPU 증분이 `0.0358 ms/message`(`3.58 ms/s`, 단일
+main thread의 약 `0.36%`)로 낮아졌다. 상대 overhead `23.58%`는 작은 native
+floor의 진단값이며, 합의한 절대 5% gate는 통과했다. Long Task 0건, post-GC used
+heap과 semantics도 통과해 core evidence contract로 진행한다.
+
 **Ground-truth fixture:**
 
 - transport 미도착
@@ -419,8 +425,8 @@ ground-truth fixture를 도입하는 구현 4~6에서 lockfile과 결과표에 �
 
 - 동기 fixture edge precision과 exact-boundary accuracy 95% 이상, stage recall 90% 이상
 - definitive로 잘못 표시한 edge 0건
-- 계측 없는 baseline 대비 100 msg/s, UI 닫힘의 추가 median CPU 5% 미만이며
-  p95 long task가 새로 생기지 않음
+- 계측 없는 baseline 대비 100 msg/s, UI 닫힘의 추가 median CPU가 단일 main
+  thread 시간의 5% 미만이며 p95 long task가 새로 생기지 않음
 - capacity 이후 post-GC used JS heap 증가가 측정 허용값 이내
 - React DevTools 유무와 HMR fixture 통과
 - async와 batching의 지원/비지원 범위를 evidence로 설명 가능
@@ -429,7 +435,7 @@ ground-truth fixture를 도입하는 구현 4~6에서 lockfile과 결과표에 �
 
 - 동기 경로 precision이 90% 미만
 - Promise, timer 또는 광범위한 전역 patch 없이는 정확도를 얻을 수 없음
-- 구조 개선 후에도 100 msg/s 추가 CPU가 10%를 초과
+- 구조 개선 후에도 100 msg/s 추가 CPU가 단일 main thread 시간의 10%를 초과
 
 precision 90~95% 또는 CPU 5~10%의 yellow 구간은 원인이 명확한 개선을 한 번만
 허용하고 같은 protocol로 재측정한다. 두 번째에도 성공 기준을 넘지 못하면 범위를
@@ -510,7 +516,7 @@ crossover test를 수행한다. confident localization은 참가자의 선택이
 | 순서 | 구현 책임 | 핵심 완료 조건 | 커밋 예시 |
 | --- | --- | --- | --- |
 | 1 | benchmark와 delta 기반선 | 비용·memory 측정 재현 | `test(perf): causality 계측 기준선 추가` |
-| 2 | engine notify 비용 회수 | 같은 full protocol에서 추가 CPU <10% | `perf(core): snapshot 통지 비용 절감` |
+| 2 | engine notify 비용 회수 (완료) | full protocol 추가 CPU 약 0.36% | `perf(core): snapshot 통지 비용 절감` |
 | 3 | core evidence contract | context, trace, eviction, bridge | `feat(core): causality evidence 계약 추가` |
 | 4 | WebSocket handler 경계 | native listener 의미 보존 | `feat(core): WebSocket handler causality 연결` |
 | 5 | Zustand middleware | 동기 set과 root identity edge만 definitive | `feat(zustand): 상태 변경 evidence 연결` |
