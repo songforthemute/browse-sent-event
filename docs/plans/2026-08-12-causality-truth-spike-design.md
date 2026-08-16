@@ -244,6 +244,29 @@ snapshot을 복제하지 않는다. UI는 선택된 message의 trace만 읽고 f
 node는 reference가 남아 있는 동안 보존한다. `clear()`와 uninstall도 graph와
 active context를 정리한다.
 
+#### M1 core evidence contract 구현 기준선 (2026-08-16)
+
+core evidence contract는 다음 범위로 구현을 마쳤다.
+
+- engine이 실제 보존 중인 message만 transport root를 만들 수 있고, message/node/edge
+  역색인으로 퇴출된 trace 크기에 비례해 정리한다.
+- 아직 message trace에 연결되지 않은 node는 기본 1,000개 pending 한도로 제한하며
+  초과 제거를 delta로 알린다.
+- message trace의 path projection은 기본 256개로 제한하고 `truncated` 여부를
+  노출한다. 전체 confidence는 projection 제한과 무관하게 전체 reachable edge의
+  가장 약한 confidence를 따른다.
+- lifecycle은 `awaiting-handler`, `handler-observed`, `state-observed`,
+  `commit-candidate-observed`의 positive evidence만 projection한다. negative 또는
+  coverage 판정은 아직 제공하지 않는다.
+- `clear()`는 graph와 active context를 비우되 evidence subscription은 유지한다.
+  runtime `uninstall()`은 teardown을 한 번만 실행하고 `finally`에서 engine과 evidence
+  subscription을 dispose한다.
+
+이 기준선은 `Symbol.for(...)` global envelope, protocol version negotiation, availability
+listener와 HMR owner 수명 관리를 아직 포함하지 않는다. 외부 adapter가 bridge를 찾아야
+하는 M1 구현 5에 들어가기 직전에 별도 bootstrap 계약으로 구현해 위의 global 접근
+설계를 완성한다.
+
 ### 5.3 WebSocket handler 경계
 
 WebSocket instance마다 다음 순서로 계측한다.

@@ -8,6 +8,11 @@ import type {
   BrowseSentEventProtocol,
   BrowseSentEventSearchQuery,
 } from "./events.js";
+import {
+  createBrowseSentEventCausalityBridge,
+  createCausalityBridgeView,
+  type BrowseSentEventCausalityBridge,
+} from "../causality/bridge.js";
 import { exportMessagesAsJsonl, exportMessagesAsLog } from "./export.js";
 import { createPayloadSummary } from "./payload.js";
 import { RingBuffer } from "./ring-buffer.js";
@@ -54,6 +59,7 @@ export interface BrowseSentEventMessageInput {
 
 export interface BrowseSentEventEngine {
   readonly capacity: number;
+  readonly causality: BrowseSentEventCausalityBridge;
   recordConnection(input: BrowseSentEventConnectionInput): BrowseSentEventConnection;
   updateConnection(
     id: string,
@@ -72,6 +78,7 @@ export interface BrowseSentEventEngine {
 }
 
 let sequence = 0;
+const engineDisposers = new WeakMap<BrowseSentEventEngine, () => void>();
 
 function now(): number {
   return globalThis.performance?.now() ?? Date.now();
@@ -86,6 +93,15 @@ export function createDevtoolsEngine(options: BrowseSentEventEngineOptions): Bro
   const messages = new RingBuffer<BrowseSentEventMessage>(options.capacity);
   const connections = new Map<string, BrowseSentEventConnection>();
   const subscribers = new Set<BrowseSentEventEngineSubscriber>();
+  const causalityController = createBrowseSentEventCausalityBridge();
+  const causality: BrowseSentEventCausalityBridge = createCausalityBridgeView(causalityController);
+  let disposed = false;
+
+  function assertActive(): void {
+    if (disposed) {
+      throw new Error("BrowseSentEvent engine is disposed.");
+    }
+  }
 
   function getConnections(): BrowseSentEventConnection[] {
     return [...connections.values()];
@@ -116,6 +132,7 @@ export function createDevtoolsEngine(options: BrowseSentEventEngineOptions): Bro
   }
 
   function subscribe(subscriber: BrowseSentEventEngineSubscriber): BrowseSentEventUnsubscribe {
+    assertActive();
     subscribers.add(subscriber);
 
     return () => {
@@ -124,6 +141,7 @@ export function createDevtoolsEngine(options: BrowseSentEventEngineOptions): Bro
   }
 
   function recordConnection(input: BrowseSentEventConnectionInput): BrowseSentEventConnection {
+    assertActive();
     const previousReconnects = [...connections.values()].filter(
       (connection) =>
         connection.protocol === input.protocol &&
@@ -150,6 +168,7 @@ export function createDevtoolsEngine(options: BrowseSentEventEngineOptions): Bro
     id: string,
     patch: BrowseSentEventConnectionPatch,
   ): BrowseSentEventConnection | undefined {
+    assertActive();
     const current = connections.get(id);
 
     if (!current) {
@@ -172,6 +191,7 @@ export function createDevtoolsEngine(options: BrowseSentEventEngineOptions): Bro
   }
 
   function recordMessage(input: BrowseSentEventMessageInput): BrowseSentEventMessage {
+    assertActive();
     const summary = createPayloadSummary(input.payload);
     const message: BrowseSentEventMessage = {
       id: createId("msg"),
@@ -186,7 +206,13 @@ export function createDevtoolsEngine(options: BrowseSentEventEngineOptions): Bro
       metadata: input.metadata ?? {},
     };
 
-    messages.push(message);
+    causalityController.retainMessage(message.id);
+    const evictedMessage = messages.push(message);
+
+    if (evictedMessage) {
+      causalityController.evictMessage(evictedMessage.id);
+    }
+
     notify();
 
     return message;
@@ -218,13 +244,28 @@ export function createDevtoolsEngine(options: BrowseSentEventEngineOptions): Bro
   }
 
   function clear(): void {
+    assertActive();
     messages.clear();
     connections.clear();
+    causalityController.clear();
     notify();
   }
 
-  return {
+  function dispose(): void {
+    if (disposed) {
+      return;
+    }
+
+    disposed = true;
+    messages.clear();
+    connections.clear();
+    subscribers.clear();
+    causalityController.dispose();
+  }
+
+  const engine: BrowseSentEventEngine = {
     capacity: options.capacity,
+    causality,
     clear,
     exportJsonl,
     exportLog,
@@ -238,4 +279,12 @@ export function createDevtoolsEngine(options: BrowseSentEventEngineOptions): Bro
     subscribe,
     updateConnection,
   };
+
+  engineDisposers.set(engine, dispose);
+  return engine;
+}
+
+/** @internal Runtime ownership boundary; intentionally omitted from the package entry point. */
+export function disposeDevtoolsEngine(engine: BrowseSentEventEngine): void {
+  engineDisposers.get(engine)?.();
 }

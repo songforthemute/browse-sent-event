@@ -15,9 +15,9 @@ describe("RingBuffer", () => {
   it("drops the oldest item when capacity is exceeded", () => {
     const buffer = new RingBuffer<number>(2);
 
-    buffer.push(1);
-    buffer.push(2);
-    buffer.push(3);
+    expect(buffer.push(1)).toBeUndefined();
+    expect(buffer.push(2)).toBeUndefined();
+    expect(buffer.push(3)).toBe(1);
 
     expect(buffer.toArray()).toEqual([2, 3]);
     expect(buffer.droppedCount).toBe(1);

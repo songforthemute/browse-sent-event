@@ -20,16 +20,18 @@ export class RingBuffer<T> {
     return this.#droppedCount;
   }
 
-  push(item: T): void {
+  push(item: T): T | undefined {
     if (this.#length < this.capacity) {
       this.#items[(this.#start + this.#length) % this.capacity] = item;
       this.#length += 1;
-      return;
+      return undefined;
     }
 
+    const evicted = this.#items[this.#start];
     this.#items[this.#start] = item;
     this.#start = (this.#start + 1) % this.capacity;
     this.#droppedCount += 1;
+    return evicted;
   }
 
   toArray(): T[] {
