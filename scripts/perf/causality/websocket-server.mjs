@@ -2,6 +2,11 @@ import { createHash } from "node:crypto";
 import { createServer } from "node:http";
 
 import { checksumText } from "./benchmark-lib.mjs";
+import {
+  calculateDueBatchEnd,
+  calculateNextDelayMs,
+  DEFAULT_CATCH_UP_BATCH_LIMIT,
+} from "./rate-scheduler.mjs";
 
 const webSocketGuid = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
@@ -58,8 +63,7 @@ function streamMessages(socket, { count, ratePerSecond }) {
   const finish = () => {
     if (stopped) return;
     stopped = true;
-    socket.write(closeFrame());
-    setTimeout(() => socket.end(), 25).unref();
+    socket.end(closeFrame());
   };
 
   socket.once("close", () => {
@@ -76,21 +80,46 @@ function streamMessages(socket, { count, ratePerSecond }) {
 
   if (ratePerSecond > 0) {
     const intervalMs = 1_000 / ratePerSecond;
-    const startedAt = performance.now();
+    const initialDelayMs = 25;
+    const startedAt = performance.now() + initialDelayMs;
     const sendNext = () => {
       if (stopped) return;
-      const writable = writeMessage(socket, sequence);
-      sequence += 1;
-      if (sequence >= count) {
-        finish();
-        return;
+      const nowMs = performance.now();
+      const batchEnd = calculateDueBatchEnd({
+        batchLimit: DEFAULT_CATCH_UP_BATCH_LIMIT,
+        intervalMs,
+        nextSequence: sequence,
+        nowMs,
+        startedAtMs: startedAt,
+        totalCount: count,
+      });
+
+      while (sequence < batchEnd) {
+        const writable = writeMessage(socket, sequence);
+        sequence += 1;
+        if (sequence >= count) {
+          finish();
+          return;
+        }
+        if (!writable) {
+          socket.once("drain", sendNext);
+          return;
+        }
       }
-      const target = startedAt + sequence * intervalMs;
-      const schedule = () => setTimeout(sendNext, Math.max(0, target - performance.now()));
-      if (writable) schedule();
-      else socket.once("drain", schedule);
+
+      const nextDelayMs = calculateNextDelayMs({
+        intervalMs,
+        nextSequence: sequence,
+        nowMs: performance.now(),
+        startedAtMs: startedAt,
+      });
+      if (nextDelayMs === 0) {
+        setImmediate(sendNext);
+      } else {
+        setTimeout(sendNext, nextDelayMs);
+      }
     };
-    setTimeout(sendNext, 25);
+    setTimeout(sendNext, initialDelayMs);
     return;
   }
 

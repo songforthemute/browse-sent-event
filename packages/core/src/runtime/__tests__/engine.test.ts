@@ -1,5 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import * as selectors from "../selectors.js";
 import { createDevtoolsEngine } from "../engine.js";
+
+vi.mock("../selectors.js", { spy: true });
 
 describe("createDevtoolsEngine", () => {
   it("records connections and messages", () => {
@@ -122,5 +125,32 @@ describe("createDevtoolsEngine", () => {
         messages: [expect.objectContaining({ payloadPreview: "hello" })],
       }),
     );
+  });
+
+  it("skips snapshot calculation until a subscriber exists", () => {
+    const calculateMetrics = vi.mocked(selectors.calculateMetrics);
+    calculateMetrics.mockClear();
+    const engine = createDevtoolsEngine({ capacity: 10 });
+
+    const connection = engine.recordConnection({
+      protocol: "websocket",
+      url: "wss://example.test/socket",
+    });
+
+    expect(calculateMetrics).not.toHaveBeenCalled();
+
+    const snapshots: unknown[] = [];
+    engine.subscribe((snapshot) => {
+      snapshots.push(snapshot);
+    });
+    engine.recordMessage({
+      connectionId: connection.id,
+      direction: "in",
+      protocol: "websocket",
+      payload: "hello",
+    });
+
+    expect(calculateMetrics).toHaveBeenCalledOnce();
+    expect(snapshots).toHaveLength(1);
   });
 });

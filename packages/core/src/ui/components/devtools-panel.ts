@@ -3,6 +3,7 @@ import {
   LitElement,
   type CSSResult,
   type PropertyDeclarations,
+  type PropertyValues,
   type TemplateResult,
 } from "lit";
 import type { BrowseSentEventDirection, BrowseSentEventSearchQuery } from "../../runtime/events.js";
@@ -48,6 +49,7 @@ export class BrowseSentEventDevtoolsPanelElement extends LitElement {
   declare snapshot?: BrowseSentEventEngineSnapshot;
 
   #unsubscribe?: BrowseSentEventUnsubscribe;
+  #subscribedEngine?: BrowseSentEventEngine;
 
   constructor() {
     super();
@@ -61,21 +63,18 @@ export class BrowseSentEventDevtoolsPanelElement extends LitElement {
 
   override connectedCallback(): void {
     super.connectedCallback();
-
-    if (!this.engine || this.#unsubscribe) {
-      return;
-    }
-
-    this.snapshot = this.engine.getSnapshot();
-    this.#unsubscribe = this.engine.subscribe((snapshot) => {
-      this.snapshot = snapshot;
-    });
+    this.#syncSubscription();
   }
 
   override disconnectedCallback(): void {
-    this.#unsubscribe?.();
-    this.#unsubscribe = undefined;
+    this.#stopSubscription();
     super.disconnectedCallback();
+  }
+
+  protected override willUpdate(changedProperties: PropertyValues<this>): void {
+    if (changedProperties.has("engine") || changedProperties.has("open")) {
+      this.#syncSubscription();
+    }
   }
 
   override render(): TemplateResult {
@@ -266,6 +265,7 @@ export class BrowseSentEventDevtoolsPanelElement extends LitElement {
 
   setOpen(open: boolean): void {
     this.open = open;
+    this.#syncSubscription();
 
     if (open) {
       this.setAttribute("open", "");
@@ -315,5 +315,35 @@ export class BrowseSentEventDevtoolsPanelElement extends LitElement {
 
   #close(): void {
     this.setOpen(false);
+  }
+
+  #syncSubscription(): void {
+    const nextEngine = this.isConnected && this.open ? this.engine : undefined;
+
+    if (nextEngine === this.#subscribedEngine) {
+      return;
+    }
+
+    this.#stopSubscription();
+
+    if (!nextEngine) {
+      if (this.open && !this.engine) {
+        this.snapshot = undefined;
+      }
+
+      return;
+    }
+
+    this.snapshot = nextEngine.getSnapshot();
+    this.#subscribedEngine = nextEngine;
+    this.#unsubscribe = nextEngine.subscribe((snapshot) => {
+      this.snapshot = snapshot;
+    });
+  }
+
+  #stopSubscription(): void {
+    this.#unsubscribe?.();
+    this.#unsubscribe = undefined;
+    this.#subscribedEngine = undefined;
   }
 }
