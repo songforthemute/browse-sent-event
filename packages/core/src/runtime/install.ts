@@ -32,6 +32,27 @@ function isBrowseSentEventRuntime(value: unknown): value is BrowseSentEventRunti
   );
 }
 
+/** @internal Shared only with deterministic teardown tests; not exported by the package entry point. */
+export function runTeardownsBestEffort(teardowns: readonly (() => void)[]): void {
+  const errors: unknown[] = [];
+
+  for (const teardown of teardowns) {
+    try {
+      teardown();
+    } catch (error) {
+      errors.push(error);
+    }
+  }
+
+  if (errors.length === 1) {
+    throw errors[0];
+  }
+
+  if (errors.length > 1) {
+    throw new AggregateError(errors, "BrowseSentEvent teardown failed.");
+  }
+}
+
 export function installBrowseSentEvent(options?: BrowseSentEventOptions): BrowseSentEventRuntime {
   const target = getRuntimeWindow();
 
@@ -54,14 +75,19 @@ export function installBrowseSentEvent(options?: BrowseSentEventOptions): Browse
   const runtime = createBrowseSentEventRuntime(options, {
     installed: true,
     uninstall() {
-      mountedPanel?.unmount();
+      const panel = mountedPanel;
       mountedPanel = undefined;
 
-      for (const interceptor of installedInterceptors.toReversed()) {
-        interceptor.uninstall();
+      try {
+        runTeardownsBestEffort([
+          () => panel?.unmount(),
+          ...installedInterceptors.toReversed().map((interceptor) => () => interceptor.uninstall()),
+        ]);
+      } finally {
+        if (Reflect.get(target, runtimeKey) === runtime) {
+          Reflect.deleteProperty(target, runtimeKey);
+        }
       }
-
-      Reflect.deleteProperty(target, runtimeKey);
     },
   });
   const interceptorContext = {

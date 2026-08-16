@@ -1,6 +1,6 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, expectTypeOf, it, vi } from "vitest";
 import * as selectors from "../selectors.js";
-import { createDevtoolsEngine } from "../engine.js";
+import { createDevtoolsEngine, disposeDevtoolsEngine } from "../engine.js";
 
 vi.mock("../selectors.js", { spy: true });
 
@@ -152,5 +152,89 @@ describe("createDevtoolsEngine", () => {
 
     expect(calculateMetrics).toHaveBeenCalledOnce();
     expect(snapshots).toHaveLength(1);
+  });
+
+  it("evicts causality evidence with retained messages and clears it with the engine", () => {
+    const engine = createDevtoolsEngine({ capacity: 1 });
+    const connection = engine.recordConnection({
+      protocol: "websocket",
+      url: "wss://example.test/socket",
+    });
+    const firstMessage = engine.recordMessage({
+      connectionId: connection.id,
+      direction: "in",
+      protocol: "websocket",
+      payload: "first",
+    });
+    engine.causality.recordNode({
+      kind: "transport.received",
+      messageId: firstMessage.id,
+      source: { adapter: "websocket" },
+    });
+
+    engine.recordMessage({
+      connectionId: connection.id,
+      direction: "in",
+      protocol: "websocket",
+      payload: "second",
+    });
+    expect(engine.causality.getTrace(firstMessage.id)).toBeUndefined();
+
+    const retainedMessage = engine.getMessages()[0];
+
+    if (!retainedMessage) {
+      throw new Error("Expected one retained message.");
+    }
+
+    engine.causality.recordNode({
+      kind: "transport.received",
+      messageId: retainedMessage.id,
+      source: { adapter: "websocket" },
+    });
+    engine.clear();
+    expect(engine.causality.getTrace(retainedMessage.id)).toBeUndefined();
+  });
+
+  it("disposes evidence subscriptions with the engine", () => {
+    const engine = createDevtoolsEngine({ capacity: 1 });
+    const deltas: unknown[] = [];
+    const connection = engine.recordConnection({
+      protocol: "websocket",
+      url: "wss://example.test/socket",
+    });
+    engine.causality.subscribeEvidence((delta) => deltas.push(delta));
+    expectTypeOf(engine).not.toHaveProperty("dispose");
+    expect("dispose" in engine).toBe(false);
+    expect("dispose" in engine.causality).toBe(false);
+    expect("retainMessage" in engine.causality).toBe(false);
+    disposeDevtoolsEngine(engine);
+
+    expect(deltas).toEqual([{ type: "disposed" }]);
+    expect(() => disposeDevtoolsEngine(engine)).not.toThrow();
+    expect(() => engine.subscribe(() => undefined)).toThrow("BrowseSentEvent engine is disposed.");
+    expect(() =>
+      engine.recordConnection({ protocol: "websocket", url: "wss://next.example.test" }),
+    ).toThrow("BrowseSentEvent engine is disposed.");
+    expect(() => engine.updateConnection(connection.id, { state: "closed" })).toThrow(
+      "BrowseSentEvent engine is disposed.",
+    );
+    expect(() =>
+      engine.recordMessage({
+        connectionId: connection.id,
+        direction: "in",
+        protocol: "websocket",
+        payload: "after dispose",
+      }),
+    ).toThrow("BrowseSentEvent engine is disposed.");
+    expect(() => engine.clear()).toThrow("BrowseSentEvent engine is disposed.");
+    expect(engine.getConnections()).toEqual([]);
+    expect(engine.getMessages()).toEqual([]);
+    expect(() =>
+      engine.causality.recordNode({
+        kind: "transport.received",
+        messageId: "message-1",
+        source: { adapter: "websocket" },
+      }),
+    ).toThrow("Causality trace store is disposed.");
   });
 });

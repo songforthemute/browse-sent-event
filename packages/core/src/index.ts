@@ -1,4 +1,25 @@
 export { installBrowseSentEvent } from "./runtime/install.js";
+export type { BrowseSentEventCausalityBridge } from "./causality/bridge.js";
+export { deriveCausalityLifecycle, getWeakestCausalityConfidence } from "./causality/lifecycle.js";
+export type {
+  CausalityAdapter,
+  CausalityAttributeValue,
+  CausalityConfidence,
+  CausalityContext,
+  CausalityEdge,
+  CausalityEdgeInput,
+  CausalityEventKind,
+  CausalityGraphDelta,
+  CausalityGraphDeltaListener,
+  CausalityLifecycle,
+  CausalityLifecycleStatus,
+  CausalityNode,
+  CausalityNodeInput,
+  CausalitySource,
+  CausalityTrace,
+  CausalityTracePath,
+  CorrelationMethod,
+} from "./causality/model.js";
 export {
   createBrowseSentEventRuntime,
   type BrowseSentEventRuntime,
