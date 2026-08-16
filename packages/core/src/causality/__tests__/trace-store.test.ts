@@ -453,6 +453,42 @@ describe("createCausalityTraceStore", () => {
     );
   });
 
+  it("preserves retained traces when eviction compacts internal indexes", () => {
+    const store = createCausalityTraceStore({ compactAfterEvictions: 2 });
+    const firstRoot = recordTransport(store, "message-1");
+    const secondRoot = recordTransport(store, "message-2");
+    const retainedRoot = recordTransport(store, "message-3");
+    const retainedHandler = store.recordNode({
+      kind: "handler.started",
+      source: websocketSource,
+    });
+    const retainedEdge = store.recordEdge({
+      fromNodeId: retainedRoot.id,
+      toNodeId: retainedHandler.id,
+      confidence: "definitive",
+      correlationMethod: "same-native-event",
+      reason: "same MessageEvent",
+    });
+
+    store.evictMessage("message-1");
+    store.evictMessage("message-2");
+
+    expect(store.getTrace("message-1")).toBeUndefined();
+    expect(store.getTrace("message-2")).toBeUndefined();
+    expect(store.getTrace("message-3")).toMatchObject({
+      nodes: [retainedRoot, retainedHandler],
+      edges: [retainedEdge],
+    });
+    expect(firstRoot.messageId).toBe("message-1");
+    expect(secondRoot.messageId).toBe("message-2");
+  });
+
+  it("requires a positive eviction compaction interval", () => {
+    expect(() => createCausalityTraceStore({ compactAfterEvictions: 0 })).toThrow(
+      "compactAfterEvictions must be a positive integer.",
+    );
+  });
+
   it("rejects unavailable edges and edges targeting transport roots", () => {
     const store = createCausalityTraceStore();
     const firstRoot = recordTransport(store, "message-1");

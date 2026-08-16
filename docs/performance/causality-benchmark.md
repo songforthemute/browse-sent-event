@@ -125,3 +125,26 @@ thread 시간의 약 `0.67%`로 성공 기준 5%보다 낮다. 상대 overhead `
 memory workload의 post-GC used heap 증가는 native `2,832 bytes`, Phase 1
 `252,220 bytes`였고 Phase 1은 두 checkpoint 모두 capacity 10,000을 유지했다.
 최종 판정은 **CPU pass / memory pass / semantics pass / clean teardown pass**다.
+
+## 2026-08-16 WebSocket handler causality 재측정
+
+동일한 native `MessageEvent`에서 transport root와 동기 WebSocket handler의
+`started`/`returned` evidence를 연결한 뒤 full protocol을 다시 실행했다. 모든
+trial은 약 `99.97 msg/s`로 모드별 30,000건의 count, sequence, checksum, handler와
+socket lifecycle oracle을 통과했고 Long Task는 없었다.
+
+| mode    | median CPU ms/msg |   trial min–max | 1초 bucket p50/p95 |
+| ------- | ----------------: | --------------: | -----------------: |
+| native  |          `0.1439` | `0.1264–0.1514` |    `0.1392/0.1843` |
+| Phase 1 |          `0.3311` | `0.2562–0.3939` |    `0.3543/0.5137` |
+
+절대 증분은 약 `0.1872 ms/message`다. 100 msg/s에서 `18.72 ms/s`, 즉 단일 main
+thread 시간의 약 `1.87%`로 성공 기준 5%보다 낮다. 상대 overhead `130.17%`는 작은
+native floor와 함께 해석하는 진단값이다.
+
+첫 측정에서는 capacity 10,000 이후 추가 50,000건의 Phase 1 post-GC used heap이
+`4,883,444 bytes` 증가해 허용값을 넘었다. live trace 수는 고정되어 있었고,
+event context를 변경하지 않은 채 trace eviction index를 capacity 주기로 compact하자
+동일 memory workload의 증가는 `828,300 bytes`(`16.566 bytes/message`)로 줄었다.
+이는 plateau `22,828,256 bytes`의 10%인 약 `2.28 MB`와 2 MiB 중 큰 허용값보다
+작다. 최종 판정은 **CPU pass / memory pass / semantics pass / Long Task 0**이다.

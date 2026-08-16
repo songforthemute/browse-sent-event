@@ -93,7 +93,9 @@ export function createDevtoolsEngine(options: BrowseSentEventEngineOptions): Bro
   const messages = new RingBuffer<BrowseSentEventMessage>(options.capacity);
   const connections = new Map<string, BrowseSentEventConnection>();
   const subscribers = new Set<BrowseSentEventEngineSubscriber>();
-  const causalityController = createBrowseSentEventCausalityBridge();
+  const causalityController = createBrowseSentEventCausalityBridge({
+    compactAfterEvictions: options.capacity,
+  });
   const causality: BrowseSentEventCausalityBridge = createCausalityBridgeView(causalityController);
   let disposed = false;
 
