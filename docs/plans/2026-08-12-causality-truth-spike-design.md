@@ -283,11 +283,24 @@ WebSocket instance마다 다음 순서로 계측한다.
 `onmessage` getter는 원 listener를 반환하고 재할당 순서를 유지한다. HMR/reinstall,
 WebSocket subclass와 borrowed method도 회귀 fixture로 고정한다.
 
+#### M1 WebSocket handler 경계 구현 기준선 (2026-08-16)
+
+- inbound observer는 native capture listener로 먼저 실행되어 동일 `MessageEvent`와
+  retained message의 `transport.received` root를 연결한다.
+- instance `addEventListener("message", ...)`와 `onmessage`에서 관찰된 동기 handler만
+  `handler.started`/`handler.returned`와 definitive edge로 연결한다. 여러 handler는
+  같은 root에서 독립된 parallel branch를 만든다.
+- listener callback/capture, `once`, `AbortSignal`, object listener의 동적
+  `handleEvent`, `this`, event identity와 예외 보고는 native 경로에 위임한다.
+- clear, eviction 또는 uninstall로 root/context가 유효하지 않으면 handler를 그대로
+  실행하고 새 edge를 만들지 않는다. uninstall 뒤 기존 socket wrapper도 native-only로
+  동작한다.
+
 `EventTarget.prototype.addEventListener.call(socket, ...)`처럼 instance wrapper를
 우회한 listener는 M1 coverage 밖이다. 따라서 "handler 없음"은 지원 등록 경로
 안에서만 provisional로 표시하고 우회 가능성이 있으면 `coverage-incomplete`로
-퇴행한다. Promise를 반환한 async handler의 `handler.returned`는 async 작업 완료가
-아니며 thenable metadata만 diagnostic으로 남긴다. Promise, timer 또는 전역
+퇴행한다. Promise를 반환한 async handler의 `handler.returned`는 동기 호출 경계만
+뜻하며 return value나 thenable metadata를 읽지 않는다. Promise, timer 또는 전역
 `EventTarget`은 patch하지 않는다.
 
 ### 5.4 Zustand middleware와 production 제거

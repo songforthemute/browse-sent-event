@@ -15,6 +15,7 @@ const defaultMaxPendingNodes = 1_000;
 const defaultMaxTracePaths = 256;
 
 export interface CausalityTraceStoreOptions {
+  readonly compactAfterEvictions?: number;
   readonly maxPendingNodes?: number;
   readonly maxTracePaths?: number;
   readonly now?: () => number;
@@ -73,26 +74,46 @@ export function createCausalityTraceStore(
 ): CausalityTraceStore {
   const maxPendingNodes = options.maxPendingNodes ?? defaultMaxPendingNodes;
   const maxTracePaths = options.maxTracePaths ?? defaultMaxTracePaths;
+  const compactAfterEvictions = options.compactAfterEvictions;
   assertPositiveInteger(maxPendingNodes, "maxPendingNodes");
   assertPositiveInteger(maxTracePaths, "maxTracePaths");
+  if (compactAfterEvictions !== undefined) {
+    assertPositiveInteger(compactAfterEvictions, "compactAfterEvictions");
+  }
 
-  const nodes = new Map<string, CausalityNode>();
-  const edges = new Map<string, CausalityEdge>();
-  const outgoingEdgeIds = new Map<string, Set<string>>();
-  const incomingEdgeIds = new Map<string, Set<string>>();
-  const edgeIdsByEndpoints = new Map<string, string>();
-  const retainedMessageIds = new Set<string>();
-  const messageRootIds = new Map<string, string>();
-  const messageNodeIds = new Map<string, Set<string>>();
-  const messageEdgeIds = new Map<string, Set<string>>();
-  const nodeMessageIds = new Map<string, Set<string>>();
-  const edgeMessageIds = new Map<string, Set<string>>();
-  const pendingNodeIds = new Set<string>();
+  let nodes = new Map<string, CausalityNode>();
+  let edges = new Map<string, CausalityEdge>();
+  let outgoingEdgeIds = new Map<string, Set<string>>();
+  let incomingEdgeIds = new Map<string, Set<string>>();
+  let edgeIdsByEndpoints = new Map<string, string>();
+  let retainedMessageIds = new Set<string>();
+  let messageRootIds = new Map<string, string>();
+  let messageNodeIds = new Map<string, Set<string>>();
+  let messageEdgeIds = new Map<string, Set<string>>();
+  let nodeMessageIds = new Map<string, Set<string>>();
+  let edgeMessageIds = new Map<string, Set<string>>();
+  let pendingNodeIds = new Set<string>();
   const listeners = new Set<CausalityGraphDeltaListener>();
   const now = options.now ?? (() => globalThis.performance?.now() ?? Date.now());
   let nextNodeSequence = 0;
   let nextEdgeSequence = 0;
+  let evictionsSinceCompaction = 0;
   let disposed = false;
+
+  function compactIndexes(): void {
+    nodes = new Map(nodes);
+    edges = new Map(edges);
+    outgoingEdgeIds = new Map(outgoingEdgeIds);
+    incomingEdgeIds = new Map(incomingEdgeIds);
+    edgeIdsByEndpoints = new Map(edgeIdsByEndpoints);
+    retainedMessageIds = new Set(retainedMessageIds);
+    messageRootIds = new Map(messageRootIds);
+    messageNodeIds = new Map(messageNodeIds);
+    messageEdgeIds = new Map(messageEdgeIds);
+    nodeMessageIds = new Map(nodeMessageIds);
+    edgeMessageIds = new Map(edgeMessageIds);
+    pendingNodeIds = new Set(pendingNodeIds);
+  }
 
   function assertActive(): void {
     if (disposed) {
@@ -516,6 +537,15 @@ export function createCausalityTraceStore(
       }
     }
 
+    if (compactAfterEvictions !== undefined) {
+      evictionsSinceCompaction += 1;
+
+      if (evictionsSinceCompaction >= compactAfterEvictions) {
+        compactIndexes();
+        evictionsSinceCompaction = 0;
+      }
+    }
+
     const removedEdges = [...removedEdgesById.values()].toSorted((left, right) =>
       compareEvidenceIds(left.id, right.id),
     );
@@ -544,6 +574,7 @@ export function createCausalityTraceStore(
     nodeMessageIds.clear();
     edgeMessageIds.clear();
     pendingNodeIds.clear();
+    evictionsSinceCompaction = 0;
     notify({ type: "cleared" });
   }
 
@@ -565,6 +596,7 @@ export function createCausalityTraceStore(
     nodeMessageIds.clear();
     edgeMessageIds.clear();
     pendingNodeIds.clear();
+    evictionsSinceCompaction = 0;
     notify({ type: "disposed" });
     listeners.clear();
   }
