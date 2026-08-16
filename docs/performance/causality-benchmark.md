@@ -30,6 +30,8 @@ context와 page를 사용하고 capacity 10,000을 먼저 채운 뒤 10초 warm-
 100 msg/s 측정을 수행한다. memory workload는 capacity 10,000과 추가 50,000건 뒤
 각각 GC를 수행한다. server pacer는 timer가 지연되면 현재 deadline까지 밀린 메시지를
 bounded batch로 따라잡고 매 batch 뒤 event loop에 양보한다.
+서버 종료 시에는 active upgraded socket과 pending timer/drain listener를 정리하고,
+close acknowledgement를 drain한 뒤 제한된 grace period 이후 남은 socket만 강제 종료한다.
 
 ## 측정 항목
 
@@ -103,3 +105,23 @@ memory workload의 post-GC used heap 증가는 native `2,744 bytes`, Phase 1
 `53,300 bytes`였고 Phase 1은 두 checkpoint 모두 capacity 10,000을 유지했다.
 재측정 판정은 **CPU pass / memory pass / semantics pass**이며 M1 core evidence
 contract 구현으로 진행할 수 있다.
+
+## 2026-08-16 core evidence contract 재측정
+
+message retention과 evidence graph 계약을 추가하고 benchmark server teardown을
+고정한 뒤 같은 full protocol을 다시 실행했다. 모든 trial은 약 `99.97 msg/s`로
+모드별 30,000건의 semantics oracle을 통과했고 Long Task는 없었으며, 명령도
+summary와 JSON을 기록한 뒤 정상 종료했다.
+
+| mode    | median CPU ms/msg |   trial min–max | 1초 bucket p50/p95 |
+| ------- | ----------------: | --------------: | -----------------: |
+| native  |          `0.1437` | `0.1285–0.1639` |    `0.1452/0.1916` |
+| Phase 1 |          `0.2107` | `0.1875–0.2365` |    `0.2271/0.2695` |
+
+절대 증분은 약 `0.0670 ms/message`다. 100 msg/s에서 `6.70 ms/s`, 즉 단일 main
+thread 시간의 약 `0.67%`로 성공 기준 5%보다 낮다. 상대 overhead `46.65%`는
+작은 native floor와 함께 해석하는 진단값이다.
+
+memory workload의 post-GC used heap 증가는 native `2,832 bytes`, Phase 1
+`252,220 bytes`였고 Phase 1은 두 checkpoint 모두 capacity 10,000을 유지했다.
+최종 판정은 **CPU pass / memory pass / semantics pass / clean teardown pass**다.
