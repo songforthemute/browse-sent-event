@@ -347,6 +347,29 @@ top-level key 비교는 getter나 Proxy 실행으로 앱 의미를 바꿀 수 �
 runtime이 없거나 handler 밖에서 갱신되면 기존 Zustand 동작을 그대로 수행하고
 trace에 임의로 연결하지 않는다.
 
+#### M1 Zustand middleware 구현 기준선 (2026-08-24)
+
+- `@browse-sent-event/middleware-zustand`는 core와 Zustand를 peer dependency로 둔
+  직접 import opt-in package다. adapter-first availability subscription은 core보다 먼저
+  평가돼도 later bootstrap을 받고, `dispose()` 뒤 기존 store는 native setter만 실행한다.
+- initializer의 canonical `set`과 초기 `api.setState`를 감싼다. active context와 그
+  active node가 retained trace에 남아 있을 때만 `set-started`/`set-completed` node를
+  `same-call-stack` definitive edge로 연결한다. node는 `messageId`를 소유하지 않고
+  transport root에서 이어지는 edge로만 trace에 포함된다.
+- setter 호출 중에는 started node context를 다시 활성화하므로 nested set은 outer set의
+  child로 연결된다. root identity가 `Object.is`로 달라진 경우만 후속
+  `state.root-changed` evidence를 만든다. state value, top-level key와 object action은
+  읽지 않으며 third argument가 string인 경우만 action label로 남긴다.
+- stale/evicted context, unavailable/disposed bridge, bridge 오류와 setter 예외는 original
+  setter를 정확히 한 번 실행하고 app error/return semantics를 유지한다. initialization
+  뒤 다른 third-party middleware가 `api.setState`를 교체하는 조합은 M1 guarantee 밖이며,
+  이 middleware를 canonical setter에 가장 가깝게 둔다. 같은 native setter를 받은 nested
+  `traceZustand`는 한 wrapper를 공유해 duplicate evidence를 만들지 않으며, first wrapper가
+  store ID와 lifecycle을 소유한다.
+
+M1은 이 package의 직접 import fixture까지만 검증한다. 아래 M2 virtual module과
+production identity/removal 경로는 아직 구현하지 않는다.
+
 M2의 사용자 계약에서는 app source가 구현 package를 직접 import하지 않는다.
 Vite plugin이 제공하는 typed virtual module을 사용한다.
 
