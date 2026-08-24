@@ -268,6 +268,37 @@ describe("traceZustand", () => {
     published.uninstall();
   });
 
+  it("does not record completion evidence after a subscriber evicts the active message", () => {
+    const target = {};
+    const engine = createDevtoolsEngine({ capacity: 1 });
+    const published = installBrowseSentEventCausalityEnvelope(target, engine.causality);
+    const { middleware, store } = createCounterStore(target);
+    const context = createMessageContext(engine);
+    const recordedKinds: string[] = [];
+    engine.causality.subscribeEvidence((delta) => {
+      if (delta.type === "node-recorded") {
+        recordedKinds.push(delta.node.kind);
+      }
+    });
+    const unsubscribe = store.subscribe(() => {
+      engine.recordMessage({
+        connectionId: "connection-1",
+        direction: "in",
+        protocol: "websocket",
+        payload: "evicts during setter",
+      });
+    });
+
+    context.run(() => store.getState().increment());
+
+    expect(store.getState().count).toBe(1);
+    expect(recordedKinds).toEqual(["zustand.set-started"]);
+
+    unsubscribe();
+    middleware.dispose();
+    published.uninstall();
+  });
+
   it("recovers its existing store wrapper when core is uninstalled and later reinstalled", () => {
     const target = {};
     const firstEngine = createDevtoolsEngine({ capacity: 10 });

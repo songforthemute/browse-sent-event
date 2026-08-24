@@ -16,10 +16,10 @@ export const useTrades = create(
     append: (trade) => set((state) => ({ trades: [...state.trades, trade] })),
   })),
 );
-
-// Call on hot-module disposal when the middleware is no longer used.
-trace.dispose();
 ```
+
+HMR로 이 middleware instance를 더 이상 사용하지 않을 때만 해당 정리 훅에서
+`trace.dispose()`를 호출합니다. 일반적인 store 초기화 직후에는 호출하지 않습니다.
 
 ## Evidence contract
 

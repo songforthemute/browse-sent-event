@@ -130,6 +130,16 @@ function completeSetEvidence<T>(
     return;
   }
 
+  try {
+    const trace = evidence.bridge.getTrace(evidence.activeContext.messageId);
+
+    if (!trace?.nodes.some((node) => node.id === evidence.startedNodeId)) {
+      return;
+    }
+  } catch {
+    return;
+  }
+
   let rootIdentityChanged: boolean | null = null;
 
   try {
