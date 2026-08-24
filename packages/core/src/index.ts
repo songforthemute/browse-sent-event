@@ -1,5 +1,19 @@
 export { installBrowseSentEvent } from "./runtime/install.js";
 export type { BrowseSentEventCausalityBridge } from "./causality/bridge.js";
+export {
+  browseSentEventCausalityBridgeCapability,
+  browseSentEventCausalityGlobalKey,
+  browseSentEventCausalityProtocolVersion,
+  getBrowseSentEventCausalityAvailability,
+  subscribeBrowseSentEventCausalityAvailability,
+} from "./causality/global-envelope.js";
+export type {
+  BrowseSentEventCausalityAvailability,
+  BrowseSentEventCausalityAvailabilityListener,
+  BrowseSentEventCausalityAvailabilityOptions,
+  BrowseSentEventCausalityCapability,
+  BrowseSentEventCausalityEnvelope,
+} from "./causality/global-envelope.js";
 export { deriveCausalityLifecycle, getWeakestCausalityConfidence } from "./causality/lifecycle.js";
 export type {
   CausalityAdapter,

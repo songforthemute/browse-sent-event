@@ -1,4 +1,9 @@
 import { createBrowseSentEventRuntime, type BrowseSentEventRuntime } from "./create-engine.js";
+import {
+  getBrowseSentEventCausalityAvailability,
+  installBrowseSentEventCausalityEnvelope,
+  type InstalledBrowseSentEventCausalityEnvelope,
+} from "../causality/global-envelope.js";
 import type {
   BrowseSentEventInterceptorTarget,
   InstalledBrowseSentEventInterceptor,
@@ -63,15 +68,42 @@ export function installBrowseSentEvent(options?: BrowseSentEventOptions): Browse
     };
   }
 
+  return installBrowseSentEventOnTarget(target, options);
+}
+
+/** @internal Isolates the browser-global installation seam for hostile global regression tests. */
+export function installBrowseSentEventOnTarget(
+  target: BrowseSentEventInterceptorTarget,
+  options?: BrowseSentEventOptions,
+): BrowseSentEventRuntime {
+  const availability = getBrowseSentEventCausalityAvailability(target);
   const installedRuntime = Reflect.get(target, runtimeKey);
 
+  if (
+    availability.status === "available" &&
+    isBrowseSentEventRuntime(installedRuntime) &&
+    installedRuntime.engine.causality === availability.envelope.bridge
+  ) {
+    return installedRuntime;
+  }
+
+  // A pre-envelope runtime might belong to an older copy of core. Do not turn
+  // its private engine into the public bridge, or overwrite its ownership.
   if (isBrowseSentEventRuntime(installedRuntime)) {
     return installedRuntime;
+  }
+
+  if (availability.status === "available") {
+    return {
+      ...createBrowseSentEventRuntime(options),
+      installed: false,
+    };
   }
 
   const resolvedOptions = resolveOptions(options);
   const installedInterceptors: InstalledBrowseSentEventInterceptor[] = [];
   let mountedPanel: MountedDevtoolsPanel | undefined;
+  let causalityEnvelope: InstalledBrowseSentEventCausalityEnvelope | undefined;
   const runtime = createBrowseSentEventRuntime(options, {
     installed: true,
     uninstall() {
@@ -84,6 +116,8 @@ export function installBrowseSentEvent(options?: BrowseSentEventOptions): Browse
           ...installedInterceptors.toReversed().map((interceptor) => () => interceptor.uninstall()),
         ]);
       } finally {
+        causalityEnvelope?.uninstall();
+
         if (Reflect.get(target, runtimeKey) === runtime) {
           Reflect.deleteProperty(target, runtimeKey);
         }
@@ -126,7 +160,23 @@ export function installBrowseSentEvent(options?: BrowseSentEventOptions): Browse
     target,
   });
 
-  Reflect.set(target, runtimeKey, runtime);
+  if (!Reflect.set(target, runtimeKey, runtime) || Reflect.get(target, runtimeKey) !== runtime) {
+    runtime.uninstall();
+    return {
+      ...createBrowseSentEventRuntime(options),
+      installed: false,
+    };
+  }
+
+  // This is intentionally the final publish step: an adapter never sees a
+  // bridge while the runtime's interceptors and panel are only partly installed.
+  causalityEnvelope = installBrowseSentEventCausalityEnvelope(target, runtime.engine.causality);
+
+  if (!causalityEnvelope.installed) {
+    // A foreign or non-configurable envelope only disables adapter discovery.
+    // Transport interception and the existing Phase 1 panel remain useful.
+    return runtime;
+  }
 
   return runtime;
 }
