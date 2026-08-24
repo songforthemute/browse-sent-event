@@ -296,6 +296,20 @@ WebSocket subclass와 borrowed method도 회귀 fixture로 고정한다.
   실행하고 새 edge를 만들지 않는다. uninstall 뒤 기존 socket wrapper도 native-only로
   동작한다.
 
+#### M1 adapter bootstrap contract 기준선 (2026-08-24)
+
+- 외부 adapter는 `Symbol.for("@browse-sent-event/causality")` envelope만 통해 bridge를
+  찾으며, 기존 `__browseSentEventRuntime__` 문자열이나 engine 내부 구조를 읽지 않는다.
+- envelope의 protocol은 현재 `1`, 기본 capability는 `bridge-v1`이다. adapter는 필요한
+  protocol과 capability를 명시해 협상하고, 맞지 않으면 bridge를 받지 않는
+  `incompatible` availability diagnostic으로 no-op 처리한다.
+- adapter가 core보다 먼저 평가된 경우 availability listener가 즉시 `unavailable`을 받고,
+  full runtime 설치가 끝난 뒤 `available`을 받는다. listener 오류는 runtime이나 다른
+  adapter의 동작을 바꾸지 않는다.
+- compatible한 첫 owner는 HMR과 중복 package copy에서도 유지한다. owner token이 다른
+  stale uninstall, foreign/non-configurable global 또는 호환되지 않는 protocol은 기존
+  envelope를 덮어쓰거나 삭제하지 않는다.
+
 `EventTarget.prototype.addEventListener.call(socket, ...)`처럼 instance wrapper를
 우회한 listener는 M1 coverage 밖이다. 따라서 "handler 없음"은 지원 등록 경로
 안에서만 provisional로 표시하고 우회 가능성이 있으면 `coverage-incomplete`로

@@ -1,8 +1,42 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  browseSentEventCausalityGlobalKey,
+  getBrowseSentEventCausalityAvailability,
+  subscribeBrowseSentEventCausalityAvailability,
+} from "../../causality/global-envelope.js";
 import { createBrowseSentEventRuntime } from "../create-engine.js";
-import { installBrowseSentEvent, runTeardownsBestEffort } from "../install.js";
+import {
+  installBrowseSentEvent,
+  installBrowseSentEventOnTarget,
+  runTeardownsBestEffort,
+} from "../install.js";
 
 const originalXmlHttpRequest = globalThis.window.XMLHttpRequest;
+
+function isWindowTarget(value: object): value is Window & typeof globalThis {
+  return (
+    "document" in value &&
+    "EventSource" in value &&
+    "fetch" in value &&
+    "WebSocket" in value &&
+    "XMLHttpRequest" in value
+  );
+}
+
+function createIsolatedWindowTarget(): Window & typeof globalThis {
+  const target: object = Object.create(globalThis.window);
+  const globals = ["document", "EventSource", "fetch", "WebSocket", "XMLHttpRequest"] as const;
+
+  for (const key of globals) {
+    Reflect.set(target, key, Reflect.get(globalThis.window, key));
+  }
+
+  if (!isWindowTarget(target)) {
+    throw new Error("Expected a Window-compatible test target.");
+  }
+
+  return target;
+}
 
 function cleanupInstalledRuntime(): void {
   const installedRuntime = Reflect.get(globalThis.window, "__browseSentEventRuntime__");
@@ -17,6 +51,7 @@ function cleanupInstalledRuntime(): void {
 
   Reflect.set(globalThis.window, "XMLHttpRequest", originalXmlHttpRequest);
   Reflect.deleteProperty(globalThis.window, "__browseSentEventRuntime__");
+  Reflect.deleteProperty(globalThis.window, browseSentEventCausalityGlobalKey);
   globalThis.document.body.replaceChildren();
 }
 
@@ -37,6 +72,106 @@ describe("installBrowseSentEvent", () => {
     expect(first.capacity).toBe(123);
     expect(second).toBe(first);
     expect(globalThis.document.querySelectorAll("bse-devtools-panel")).toHaveLength(1);
+  });
+
+  it("publishes the adapter bridge only after installation and removes it with its owner", () => {
+    const states: string[] = [];
+    const beforeInstall = globalThis.window.XMLHttpRequest;
+    let publishedAfterRuntimeSetup = false;
+    const unsubscribe = subscribeBrowseSentEventCausalityAvailability((availability) => {
+      states.push(availability.status);
+
+      if (availability.status === "available") {
+        publishedAfterRuntimeSetup =
+          globalThis.window.XMLHttpRequest !== beforeInstall &&
+          globalThis.document.querySelector("bse-devtools-panel") !== null;
+      }
+    }, globalThis.window);
+
+    const runtime = installBrowseSentEvent();
+    const availability = getBrowseSentEventCausalityAvailability(globalThis.window);
+
+    expect(states).toEqual(["unavailable", "available"]);
+    expect(publishedAfterRuntimeSetup).toBe(true);
+    expect(availability).toMatchObject({ status: "available" });
+
+    if (availability.status !== "available") {
+      throw new Error("Expected the causality bridge to be available.");
+    }
+
+    expect(availability.envelope.bridge).toBe(runtime.engine.causality);
+
+    runtime.uninstall();
+
+    expect(states).toEqual(["unavailable", "available", "unavailable"]);
+    expect(Reflect.has(globalThis.window, browseSentEventCausalityGlobalKey)).toBe(false);
+    unsubscribe();
+  });
+
+  it("does not backfill a legacy runtime into the causality envelope", () => {
+    const legacyRuntime = createBrowseSentEventRuntime();
+    Reflect.set(globalThis.window, "__browseSentEventRuntime__", legacyRuntime);
+
+    const runtime = installBrowseSentEvent();
+
+    expect(runtime).toBe(legacyRuntime);
+    expect(Reflect.has(globalThis.window, browseSentEventCausalityGlobalKey)).toBe(false);
+  });
+
+  it("keeps Phase 1 transport and panel installation when a foreign envelope is incompatible", () => {
+    const target = createIsolatedWindowTarget();
+    const beforeInstall = target.XMLHttpRequest;
+    const foreignEnvelope = Object.freeze({
+      protocolVersion: 99,
+      capabilities: Object.freeze(["bridge-v1"]),
+      ownerToken: Symbol("foreign"),
+      bridge: createBrowseSentEventRuntime().engine.causality,
+    });
+    Reflect.set(target, browseSentEventCausalityGlobalKey, foreignEnvelope);
+
+    const runtime = installBrowseSentEventOnTarget(target);
+
+    expect(runtime.installed).toBe(true);
+    expect(target.XMLHttpRequest).not.toBe(beforeInstall);
+    expect(globalThis.document.querySelector("bse-devtools-panel")).not.toBeNull();
+    expect(Reflect.get(target, browseSentEventCausalityGlobalKey)).toBe(foreignEnvelope);
+    expect(getBrowseSentEventCausalityAvailability(target)).toMatchObject({
+      status: "incompatible",
+      reason: "protocol-version",
+    });
+
+    runtime.uninstall();
+
+    expect(target.XMLHttpRequest).toBe(beforeInstall);
+    expect(Reflect.get(target, browseSentEventCausalityGlobalKey)).toBe(foreignEnvelope);
+  });
+
+  it("keeps Phase 1 transport and panel installation when the envelope key is non-configurable", () => {
+    const target = createIsolatedWindowTarget();
+    const beforeInstall = target.XMLHttpRequest;
+    const states: string[] = [];
+    Object.defineProperty(target, browseSentEventCausalityGlobalKey, {
+      configurable: false,
+      value: undefined,
+      writable: true,
+    });
+    subscribeBrowseSentEventCausalityAvailability(
+      (availability) => states.push(availability.status),
+      target,
+    );
+
+    const runtime = installBrowseSentEventOnTarget(target);
+
+    expect(runtime.installed).toBe(true);
+    expect(target.XMLHttpRequest).not.toBe(beforeInstall);
+    expect(globalThis.document.querySelector("bse-devtools-panel")).not.toBeNull();
+    expect(states).toEqual(["unavailable", "incompatible"]);
+    expect(Reflect.get(target, browseSentEventCausalityGlobalKey)).toBeUndefined();
+
+    runtime.uninstall();
+
+    expect(target.XMLHttpRequest).toBe(beforeInstall);
+    expect(Reflect.get(target, browseSentEventCausalityGlobalKey)).toBeUndefined();
   });
 
   it("removes the installed runtime when uninstalled", () => {
