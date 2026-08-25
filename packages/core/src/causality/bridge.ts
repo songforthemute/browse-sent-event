@@ -4,6 +4,9 @@ import type {
   CausalityEdge,
   CausalityEdgeInput,
   CausalityGraphDeltaListener,
+  CausalityLinkedEvidenceGraphDeltaListener,
+  CausalityLinkedNode,
+  CausalityLinkedNodeInput,
   CausalityNode,
   CausalityNodeInput,
   CausalityTrace,
@@ -19,7 +22,26 @@ export interface BrowseSentEventCausalityBridge {
   subscribeEvidence(listener: CausalityGraphDeltaListener): () => void;
 }
 
-export interface BrowseSentEventCausalityController extends BrowseSentEventCausalityBridge {
+export interface BrowseSentEventCausalityLinkedEvidenceBridge extends BrowseSentEventCausalityBridge {
+  recordLinkedNode(input: CausalityLinkedNodeInput): CausalityLinkedNode;
+  /** Receives every bridge-v1 delta plus atomic linked-evidence deltas. */
+  subscribeLinkedEvidence(listener: CausalityLinkedEvidenceGraphDeltaListener): () => void;
+}
+
+export function hasBrowseSentEventCausalityLinkedEvidenceBridge(
+  bridge: BrowseSentEventCausalityBridge,
+): bridge is BrowseSentEventCausalityLinkedEvidenceBridge {
+  try {
+    return (
+      typeof Reflect.get(bridge, "recordLinkedNode") === "function" &&
+      typeof Reflect.get(bridge, "subscribeLinkedEvidence") === "function"
+    );
+  } catch {
+    return false;
+  }
+}
+
+export interface BrowseSentEventCausalityController extends BrowseSentEventCausalityLinkedEvidenceBridge {
   retainMessage(messageId: string): void;
   evictMessage(messageId: string): void;
   clear(): void;
@@ -55,6 +77,15 @@ export function createBrowseSentEventCausalityBridge(
     getActiveContext: () => contextStack.getActiveContext(),
     getTrace: (messageId) => traceStore.getTrace(messageId),
     recordEdge: (input) => traceStore.recordEdge(input),
+    recordLinkedNode: (input) => {
+      const context = contextStack.getActiveContext();
+
+      if (!context) {
+        throw new Error("Linked causality evidence requires an active context.");
+      }
+
+      return traceStore.recordLinkedNode(input, context);
+    },
     recordNode: (input) => traceStore.recordNode(input),
     retainMessage: (messageId) => traceStore.retainMessage(messageId),
     runWithContext: (context, callback) => {
@@ -69,21 +100,26 @@ export function createBrowseSentEventCausalityBridge(
       return contextStack.runWithContext(context, callback);
     },
     subscribeEvidence: (listener) => traceStore.subscribe(listener),
+    subscribeLinkedEvidence: (listener) => traceStore.subscribeLinkedEvidence(listener),
   };
 }
 
 export function createCausalityBridgeView(
   controller: BrowseSentEventCausalityController,
-): BrowseSentEventCausalityBridge {
+): BrowseSentEventCausalityLinkedEvidenceBridge {
   return Object.freeze({
     getActiveContext: (): CausalityContext | undefined => controller.getActiveContext(),
     getTrace: (messageId: string): CausalityTrace | undefined => controller.getTrace(messageId),
     recordEdge: (input: CausalityEdgeInput): CausalityEdge => controller.recordEdge(input),
+    recordLinkedNode: (input: CausalityLinkedNodeInput): CausalityLinkedNode =>
+      controller.recordLinkedNode(input),
     recordNode: (input: CausalityNodeInput): CausalityNode => controller.recordNode(input),
     runWithContext<T>(context: CausalityContext, callback: () => T): T {
       return controller.runWithContext(context, callback);
     },
     subscribeEvidence: (listener: CausalityGraphDeltaListener): (() => void) =>
       controller.subscribeEvidence(listener),
+    subscribeLinkedEvidence: (listener: CausalityLinkedEvidenceGraphDeltaListener): (() => void) =>
+      controller.subscribeLinkedEvidence(listener),
   });
 }

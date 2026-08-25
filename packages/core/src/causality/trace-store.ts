@@ -1,10 +1,17 @@
 import { getWeakestCausalityConfidence } from "./lifecycle.js";
 import type {
   CausalityConfidence,
+  CausalityContext,
   CausalityEdge,
   CausalityEdgeInput,
+  CausalityEventKind,
   CausalityGraphDelta,
   CausalityGraphDeltaListener,
+  CausalityLinkedEvidenceGraphDelta,
+  CausalityLinkedEvidenceGraphDeltaListener,
+  CausalityLinkedEvidenceRecordedDelta,
+  CausalityLinkedNode,
+  CausalityLinkedNodeInput,
   CausalityNode,
   CausalityNodeInput,
   CausalityTrace,
@@ -25,9 +32,11 @@ export interface CausalityTraceStore {
   retainMessage(messageId: string): void;
   recordNode(input: CausalityNodeInput): CausalityNode;
   recordEdge(input: CausalityEdgeInput): CausalityEdge;
+  recordLinkedNode(input: CausalityLinkedNodeInput, context: CausalityContext): CausalityLinkedNode;
   getTrace(messageId: string): CausalityTrace | undefined;
   hasReachableNode(messageId: string, nodeId: string): boolean;
   subscribe(listener: CausalityGraphDeltaListener): () => void;
+  subscribeLinkedEvidence(listener: CausalityLinkedEvidenceGraphDeltaListener): () => void;
   evictMessage(messageId: string): void;
   clear(): void;
   dispose(): void;
@@ -63,6 +72,17 @@ function freezeDelta(delta: CausalityGraphDelta): CausalityGraphDelta {
   return Object.freeze(delta);
 }
 
+function freezeLinkedDelta(
+  delta: CausalityLinkedEvidenceRecordedDelta,
+): CausalityLinkedEvidenceRecordedDelta {
+  return Object.freeze(delta);
+}
+
+interface EvidenceNotification {
+  readonly baseDeltas: readonly CausalityGraphDelta[];
+  readonly extensionDelta: CausalityLinkedEvidenceGraphDelta;
+}
+
 function compareEvidenceIds(left: string, right: string): number {
   const leftSequence = Number.parseInt(left.slice(left.lastIndexOf("-") + 1), 10);
   const rightSequence = Number.parseInt(right.slice(right.lastIndexOf("-") + 1), 10);
@@ -93,12 +113,16 @@ export function createCausalityTraceStore(
   let nodeMessageIds = new Map<string, Set<string>>();
   let edgeMessageIds = new Map<string, Set<string>>();
   let pendingNodeIds = new Set<string>();
-  const listeners = new Set<CausalityGraphDeltaListener>();
+  const baseListeners = new Set<CausalityGraphDeltaListener>();
+  const linkedListeners = new Set<CausalityLinkedEvidenceGraphDeltaListener>();
+  const pendingNotifications: EvidenceNotification[] = [];
   const now = options.now ?? (() => globalThis.performance?.now() ?? Date.now());
   let nextNodeSequence = 0;
   let nextEdgeSequence = 0;
   let evictionsSinceCompaction = 0;
   let disposed = false;
+  let notifying = false;
+  let clearListenersAfterNotification = false;
 
   function compactIndexes(): void {
     nodes = new Map(nodes);
@@ -121,16 +145,71 @@ export function createCausalityTraceStore(
     }
   }
 
-  function notify(delta: CausalityGraphDelta): void {
-    const frozenDelta = freezeDelta(delta);
+  function enqueue(nextNotification: EvidenceNotification): void {
+    pendingNotifications.push(nextNotification);
 
-    for (const listener of listeners) {
-      try {
-        listener(frozenDelta);
-      } catch {
-        // Evidence consumers must not change application or adapter behavior.
+    if (notifying) {
+      return;
+    }
+
+    notifying = true;
+
+    try {
+      while (pendingNotifications.length > 0) {
+        const notification = pendingNotifications.shift();
+
+        if (!notification) {
+          continue;
+        }
+
+        // Keep each notification's audience stable. A legacy linked-evidence
+        // projection contains two deltas, so changing subscriptions in the
+        // first callback must not leave an existing listener with only one.
+        const baseListenerSnapshot = Array.from(baseListeners);
+        const linkedListenerSnapshot = Array.from(linkedListeners);
+
+        for (const delta of notification.baseDeltas) {
+          for (const listener of baseListenerSnapshot) {
+            try {
+              listener(delta);
+            } catch {
+              // Evidence consumers must not change application or adapter behavior.
+            }
+          }
+        }
+
+        for (const listener of linkedListenerSnapshot) {
+          try {
+            listener(notification.extensionDelta);
+          } catch {
+            // Evidence consumers must not change application or adapter behavior.
+          }
+        }
+      }
+    } finally {
+      notifying = false;
+
+      if (clearListenersAfterNotification) {
+        clearListenersAfterNotification = false;
+        baseListeners.clear();
+        linkedListeners.clear();
       }
     }
+  }
+
+  function notify(delta: CausalityGraphDelta): void {
+    const frozenDelta = freezeDelta(delta);
+    enqueue({ baseDeltas: Object.freeze([frozenDelta]), extensionDelta: frozenDelta });
+  }
+
+  function notifyLinkedEvidence(delta: CausalityLinkedEvidenceRecordedDelta): void {
+    const extensionDelta = freezeLinkedDelta(delta);
+    const nodeDelta = freezeDelta({ type: "node-recorded", node: extensionDelta.node });
+    const edgeDelta = freezeDelta({ type: "edge-recorded", edge: extensionDelta.edge });
+    enqueue({
+      baseDeltas: Object.freeze([nodeDelta, edgeDelta]),
+      extensionDelta,
+    });
   }
 
   function collectReachableNodeIds(rootNodeId: string): Set<string> {
@@ -391,6 +470,110 @@ export function createCausalityTraceStore(
     return edge;
   }
 
+  function recordLinkedNode(
+    input: CausalityLinkedNodeInput,
+    context: CausalityContext,
+  ): CausalityLinkedNode {
+    assertActive();
+
+    // Materialize every caller-controlled value before reading graph indexes or
+    // reserving identifiers. Getters and the clock are allowed to reenter the
+    // store, so any context or map reference observed before this point may be
+    // stale when control returns.
+    const messageId = context.messageId;
+    const activeNodeId = context.activeNodeId;
+    const nodeInput = {
+      kind: input.node.kind as CausalityEventKind,
+      timestamp: input.node.timestamp ?? now(),
+      source: { ...input.node.source },
+      attributes: { ...input.node.attributes },
+    };
+    const edgeInput = {
+      confidence: input.edge.confidence,
+      correlationMethod: input.edge.correlationMethod,
+      reason: input.edge.reason,
+    };
+
+    assertActive();
+
+    if (nodeInput.kind === "transport.received") {
+      throw new Error("Linked causality evidence must not create a transport root.");
+    }
+
+    if (!retainedMessageIds.has(messageId)) {
+      throw new Error(`Message ${messageId} is not retained.`);
+    }
+
+    if (!hasReachableNode(messageId, activeNodeId)) {
+      throw new Error("Linked causality evidence requires a retained message trace node.");
+    }
+
+    const parentMessageIds = nodeMessageIds.get(activeNodeId);
+
+    if (!parentMessageIds) {
+      throw new Error("Linked causality evidence requires a retained message trace node.");
+    }
+
+    const linkedMessageNodeIds = [...parentMessageIds].map((associatedMessageId) => {
+      const referencedNodes = messageNodeIds.get(associatedMessageId);
+
+      if (!referencedNodes) {
+        throw new Error("Linked causality evidence requires a retained message trace.");
+      }
+
+      return { associatedMessageId, referencedNodes };
+    });
+
+    if (edgeInput.confidence === "unavailable") {
+      throw new Error("Causality edges require an observed confidence.");
+    }
+
+    const nodeId = `causality-node-${nextNodeSequence + 1}`;
+    const edgeId = `causality-edge-${nextEdgeSequence + 1}`;
+    const node = freezeNode({
+      id: nodeId,
+      ...nodeInput,
+    });
+    const endpointKey = `${activeNodeId}\0${node.id}`;
+
+    if (edgeIdsByEndpoints.has(endpointKey)) {
+      throw new Error("Causality edges must not duplicate endpoints.");
+    }
+
+    const edge = Object.freeze({
+      id: edgeId,
+      fromNodeId: activeNodeId,
+      toNodeId: node.id,
+      ...edgeInput,
+    });
+
+    // Nothing above mutates store state. Commit the node, edge, and message
+    // indexes together so observers never receive an unattached child node.
+    nextNodeSequence += 1;
+    nextEdgeSequence += 1;
+    nodes.set(node.id, node);
+    edges.set(edge.id, edge);
+    edgeIdsByEndpoints.set(endpointKey, edge.id);
+
+    const outgoing = outgoingEdgeIds.get(edge.fromNodeId) ?? new Set<string>();
+    outgoing.add(edge.id);
+    outgoingEdgeIds.set(edge.fromNodeId, outgoing);
+    const incoming = incomingEdgeIds.get(edge.toNodeId) ?? new Set<string>();
+    incoming.add(edge.id);
+    incomingEdgeIds.set(edge.toNodeId, incoming);
+
+    nodeMessageIds.set(node.id, new Set(parentMessageIds));
+
+    for (const { associatedMessageId, referencedNodes } of linkedMessageNodeIds) {
+      referencedNodes.add(node.id);
+      addEdgeReference(associatedMessageId, edge.id);
+    }
+
+    const result = Object.freeze({ node, edge });
+    notifyLinkedEvidence({ type: "linked-evidence-recorded", ...result });
+    return result;
+  }
+
   function materializePath(state: PathState): CausalityTracePath {
     const nodeIds: string[] = [];
     const edgeIds: string[] = [];
@@ -481,10 +664,21 @@ export function createCausalityTraceStore(
 
   function subscribe(listener: CausalityGraphDeltaListener): () => void {
     assertActive();
-    listeners.add(listener);
+    baseListeners.add(listener);
 
     return () => {
-      listeners.delete(listener);
+      baseListeners.delete(listener);
+    };
+  }
+
+  function subscribeLinkedEvidence(
+    listener: CausalityLinkedEvidenceGraphDeltaListener,
+  ): () => void {
+    assertActive();
+    linkedListeners.add(listener);
+
+    return () => {
+      linkedListeners.delete(listener);
     };
   }
 
@@ -598,7 +792,14 @@ export function createCausalityTraceStore(
     pendingNodeIds.clear();
     evictionsSinceCompaction = 0;
     notify({ type: "disposed" });
-    listeners.clear();
+
+    if (notifying) {
+      clearListenersAfterNotification = true;
+      return;
+    }
+
+    baseListeners.clear();
+    linkedListeners.clear();
   }
 
   return {
@@ -608,8 +809,10 @@ export function createCausalityTraceStore(
     getTrace,
     hasReachableNode,
     recordEdge,
+    recordLinkedNode,
     recordNode,
     retainMessage,
     subscribe,
+    subscribeLinkedEvidence,
   };
 }

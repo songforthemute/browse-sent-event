@@ -1,8 +1,13 @@
 export { installBrowseSentEvent } from "./runtime/install.js";
-export type { BrowseSentEventCausalityBridge } from "./causality/bridge.js";
+export {
+  hasBrowseSentEventCausalityLinkedEvidenceBridge,
+  type BrowseSentEventCausalityBridge,
+  type BrowseSentEventCausalityLinkedEvidenceBridge,
+} from "./causality/bridge.js";
 export {
   browseSentEventCausalityBridgeCapability,
   browseSentEventCausalityGlobalKey,
+  browseSentEventCausalityLinkedEvidenceCapability,
   browseSentEventCausalityProtocolVersion,
   getBrowseSentEventCausalityAvailability,
   subscribeBrowseSentEventCausalityAvailability,
@@ -25,6 +30,12 @@ export type {
   CausalityEventKind,
   CausalityGraphDelta,
   CausalityGraphDeltaListener,
+  CausalityLinkedEvidenceGraphDelta,
+  CausalityLinkedEvidenceGraphDeltaListener,
+  CausalityLinkedEvidenceRecordedDelta,
+  CausalityLinkedNode,
+  CausalityLinkedNodeInput,
+  CausalityLinkedNodeKind,
   CausalityLifecycle,
   CausalityLifecycleStatus,
   CausalityNode,

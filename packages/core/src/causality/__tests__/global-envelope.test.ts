@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { createDevtoolsEngine } from "../../runtime/engine.js";
 import {
+  hasBrowseSentEventCausalityLinkedEvidenceBridge,
+  type BrowseSentEventCausalityBridge,
+} from "../bridge.js";
+import {
   browseSentEventCausalityGlobalKey,
+  browseSentEventCausalityLinkedEvidenceCapability,
   browseSentEventCausalityProtocolVersion,
   getBrowseSentEventCausalityAvailability,
   installBrowseSentEventCausalityEnvelope,
@@ -10,6 +15,21 @@ import {
 
 function createBridge() {
   return createDevtoolsEngine({ capacity: 1 }).causality;
+}
+
+function createLegacyBridge(): BrowseSentEventCausalityBridge {
+  return {
+    getActiveContext: () => undefined,
+    getTrace: () => undefined,
+    recordEdge: () => {
+      throw new Error("Legacy test bridge does not record evidence.");
+    },
+    recordNode: () => {
+      throw new Error("Legacy test bridge does not record evidence.");
+    },
+    runWithContext: (_context, callback) => callback(),
+    subscribeEvidence: () => () => {},
+  };
 }
 
 describe("causality global envelope", () => {
@@ -134,6 +154,119 @@ describe("causality global envelope", () => {
         capabilities: ["future-adapter-capability"],
       }),
     ).toMatchObject({ status: "incompatible", reason: "capability" });
+
+    expect(
+      getBrowseSentEventCausalityAvailability(target, {
+        capabilities: [browseSentEventCausalityLinkedEvidenceCapability],
+      }),
+    ).toMatchObject({ status: "available" });
+
+    const availability = getBrowseSentEventCausalityAvailability(target, {
+      capabilities: [browseSentEventCausalityLinkedEvidenceCapability],
+    });
+
+    if (
+      availability.status !== "available" ||
+      !hasBrowseSentEventCausalityLinkedEvidenceBridge(availability.envelope.bridge)
+    ) {
+      throw new Error("Expected a linked-evidence bridge.");
+    }
+
+    expect(typeof availability.envelope.bridge.recordLinkedNode).toBe("function");
+    expect(typeof availability.envelope.bridge.subscribeLinkedEvidence).toBe("function");
+  });
+
+  it("keeps a legacy bridge-v1 envelope valid when linked evidence is not requested", () => {
+    const target = {};
+    const legacyBridge = createLegacyBridge();
+
+    Reflect.set(
+      target,
+      browseSentEventCausalityGlobalKey,
+      Object.freeze({
+        protocolVersion: browseSentEventCausalityProtocolVersion,
+        capabilities: Object.freeze(["bridge-v1"]),
+        ownerToken: Symbol("legacy"),
+        bridge: legacyBridge,
+      }),
+    );
+
+    expect(getBrowseSentEventCausalityAvailability(target)).toMatchObject({ status: "available" });
+    expect(
+      getBrowseSentEventCausalityAvailability(target, {
+        capabilities: [browseSentEventCausalityLinkedEvidenceCapability],
+      }),
+    ).toMatchObject({ status: "incompatible", reason: "capability" });
+  });
+
+  it("advertises only bridge-v1 when core installs a base-only bridge", () => {
+    const target = {};
+    const installed = installBrowseSentEventCausalityEnvelope(target, createLegacyBridge());
+
+    expect(installed).toMatchObject({
+      installed: true,
+      envelope: { capabilities: ["bridge-v1"] },
+    });
+    expect(
+      getBrowseSentEventCausalityAvailability(target, {
+        capabilities: [browseSentEventCausalityLinkedEvidenceCapability],
+      }),
+    ).toMatchObject({ status: "incompatible", reason: "capability" });
+  });
+
+  it("rejects a linked-evidence capability that lacks the linked bridge method", () => {
+    const target = {};
+    const legacyBridge = createLegacyBridge();
+    Reflect.set(
+      target,
+      browseSentEventCausalityGlobalKey,
+      Object.freeze({
+        protocolVersion: browseSentEventCausalityProtocolVersion,
+        capabilities: Object.freeze([
+          "bridge-v1",
+          browseSentEventCausalityLinkedEvidenceCapability,
+        ]),
+        ownerToken: Symbol("invalid-linked-evidence"),
+        bridge: legacyBridge,
+      }),
+    );
+
+    expect(hasBrowseSentEventCausalityLinkedEvidenceBridge(legacyBridge)).toBe(false);
+    expect(
+      getBrowseSentEventCausalityAvailability(target, {
+        capabilities: [browseSentEventCausalityLinkedEvidenceCapability],
+      }),
+    ).toMatchObject({ status: "incompatible", reason: "invalid-envelope" });
+  });
+
+  it("rejects a linked-evidence capability that lacks the linked subscription", () => {
+    const target = {};
+    const incompleteBridge = {
+      ...createLegacyBridge(),
+      recordLinkedNode: () => {
+        throw new Error("Incomplete bridge does not record linked evidence.");
+      },
+    };
+    Reflect.set(
+      target,
+      browseSentEventCausalityGlobalKey,
+      Object.freeze({
+        protocolVersion: browseSentEventCausalityProtocolVersion,
+        capabilities: Object.freeze([
+          "bridge-v1",
+          browseSentEventCausalityLinkedEvidenceCapability,
+        ]),
+        ownerToken: Symbol("invalid-linked-subscription"),
+        bridge: incompleteBridge,
+      }),
+    );
+
+    expect(hasBrowseSentEventCausalityLinkedEvidenceBridge(incompleteBridge)).toBe(false);
+    expect(
+      getBrowseSentEventCausalityAvailability(target, {
+        capabilities: [browseSentEventCausalityLinkedEvidenceCapability],
+      }),
+    ).toMatchObject({ status: "incompatible", reason: "invalid-envelope" });
   });
 
   it("keeps a later owner intact when a stale owner uninstalls", () => {
