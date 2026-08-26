@@ -61,6 +61,25 @@ export interface CausalityEdgeInput {
   readonly reason: string;
 }
 
+export type CausalityLinkedNodeKind = Exclude<CausalityEventKind, "transport.received">;
+
+/**
+ * Records one non-root node as a child of the active causality context.
+ * The bridge owns the parent and message identity so adapters cannot create
+ * a cross-trace link accidentally.
+ */
+export interface CausalityLinkedNodeInput {
+  readonly node: Omit<CausalityNodeInput, "kind" | "messageId"> & {
+    readonly kind: CausalityLinkedNodeKind;
+  };
+  readonly edge: Omit<CausalityEdgeInput, "fromNodeId" | "toNodeId">;
+}
+
+export interface CausalityLinkedNode {
+  readonly node: CausalityNode;
+  readonly edge: CausalityEdge;
+}
+
 export interface CausalityContext {
   readonly messageId: string;
   readonly activeNodeId: string;
@@ -105,6 +124,21 @@ export type CausalityGraphDelta =
   | { readonly type: "disposed" };
 
 export type CausalityGraphDeltaListener = (delta: CausalityGraphDelta) => void;
+
+export interface CausalityLinkedEvidenceRecordedDelta {
+  readonly type: "linked-evidence-recorded";
+  readonly node: CausalityNode;
+  readonly edge: CausalityEdge;
+}
+
+/** Includes every bridge-v1 delta and the atomic linked-evidence delta. */
+export type CausalityLinkedEvidenceGraphDelta =
+  | CausalityGraphDelta
+  | CausalityLinkedEvidenceRecordedDelta;
+
+export type CausalityLinkedEvidenceGraphDeltaListener = (
+  delta: CausalityLinkedEvidenceGraphDelta,
+) => void;
 
 export type CausalityLifecycleStatus =
   | "awaiting-handler"

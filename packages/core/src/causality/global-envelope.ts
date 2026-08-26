@@ -1,4 +1,7 @@
-import type { BrowseSentEventCausalityBridge } from "./bridge.js";
+import {
+  hasBrowseSentEventCausalityLinkedEvidenceBridge,
+  type BrowseSentEventCausalityBridge,
+} from "./bridge.js";
 
 /**
  * The stable discovery key for framework adapters. The value is deliberately an
@@ -12,7 +15,11 @@ export const browseSentEventCausalityProtocolVersion = 1;
 
 export const browseSentEventCausalityBridgeCapability = "bridge-v1";
 
-export type BrowseSentEventCausalityCapability = typeof browseSentEventCausalityBridgeCapability;
+export const browseSentEventCausalityLinkedEvidenceCapability = "linked-evidence-v1";
+
+export type BrowseSentEventCausalityCapability =
+  | typeof browseSentEventCausalityBridgeCapability
+  | typeof browseSentEventCausalityLinkedEvidenceCapability;
 
 export interface BrowseSentEventCausalityEnvelope {
   readonly protocolVersion: number;
@@ -197,6 +204,13 @@ function readAvailability(
       };
     }
 
+    if (
+      requestedCapabilities(options).includes(browseSentEventCausalityLinkedEvidenceCapability) &&
+      !hasBrowseSentEventCausalityLinkedEvidenceBridge(value.bridge)
+    ) {
+      return { status: "incompatible", reason: "invalid-envelope" };
+    }
+
     return { status: "available", envelope: value };
   } catch {
     return { status: "incompatible", reason: "invalid-envelope" };
@@ -303,9 +317,15 @@ export function installBrowseSentEventCausalityEnvelope(
     };
   }
 
+  const capabilities = [browseSentEventCausalityBridgeCapability];
+
+  if (hasBrowseSentEventCausalityLinkedEvidenceBridge(bridge)) {
+    capabilities.push(browseSentEventCausalityLinkedEvidenceCapability);
+  }
+
   const envelope: BrowseSentEventCausalityEnvelope = Object.freeze({
     protocolVersion: browseSentEventCausalityProtocolVersion,
-    capabilities: Object.freeze([browseSentEventCausalityBridgeCapability]),
+    capabilities: Object.freeze(capabilities),
     ownerToken: Symbol("browse-sent-event-causality-owner"),
     bridge,
   });

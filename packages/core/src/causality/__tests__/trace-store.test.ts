@@ -1,13 +1,19 @@
 import { describe, expect, it } from "vitest";
 import { createBrowseSentEventCausalityBridge } from "../bridge.js";
 import { deriveCausalityLifecycle, getWeakestCausalityConfidence } from "../lifecycle.js";
-import type { CausalityGraphDelta, CausalityNodeInput } from "../model.js";
+import type {
+  CausalityGraphDelta,
+  CausalityLinkedEvidenceGraphDelta,
+  CausalityLinkedNodeInput,
+  CausalityNodeInput,
+} from "../model.js";
 import { createCausalityTraceStore } from "../trace-store.js";
 import type { CausalityTraceStore } from "../trace-store.js";
 
 const coreSource = { adapter: "core" as const };
 const websocketSource = { adapter: "websocket" as const };
 const reactSource = { adapter: "react" as const };
+const noop = () => {};
 
 function transportNode(messageId: string): CausalityNodeInput {
   return {
@@ -127,6 +133,332 @@ describe("createCausalityTraceStore", () => {
     unsubscribe();
     store.recordNode({ kind: "adapter.diagnostic", source: coreSource });
     expect(deltas).toHaveLength(3);
+  });
+
+  it("projects linked evidence for base subscribers and preserves it atomically for extensions", () => {
+    const store = createCausalityTraceStore({ maxPendingNodes: 1 });
+    const baseDeltas: CausalityGraphDelta[] = [];
+    const linkedDeltas: CausalityLinkedEvidenceGraphDelta[] = [];
+    store.subscribe((delta) => baseDeltas.push(delta));
+    store.subscribeLinkedEvidence((delta) => linkedDeltas.push(delta));
+    const root = recordTransport(store, "message-1");
+
+    const linked = store.recordLinkedNode(
+      {
+        node: { kind: "handler.started", source: websocketSource },
+        edge: {
+          confidence: "definitive",
+          correlationMethod: "same-native-event",
+          reason: "same MessageEvent",
+        },
+      },
+      { messageId: "message-1", activeNodeId: root.id },
+    );
+
+    expect(baseDeltas).toEqual([
+      { type: "node-recorded", node: root },
+      { type: "node-recorded", node: linked.node },
+      { type: "edge-recorded", edge: linked.edge },
+    ]);
+    expect(linkedDeltas).toEqual([
+      { type: "node-recorded", node: root },
+      { type: "linked-evidence-recorded", node: linked.node, edge: linked.edge },
+    ]);
+    expect(store.getTrace("message-1")?.nodes).toEqual([root, linked.node]);
+    expect(store.getTrace("message-1")?.edges).toEqual([linked.edge]);
+
+    store.recordNode({ kind: "adapter.diagnostic", source: coreSource });
+    store.recordNode({ kind: "adapter.diagnostic", source: coreSource });
+
+    expect(baseDeltas.filter((delta) => delta.type === "evidence-removed")).toHaveLength(1);
+    expect(store.getTrace("message-1")?.nodes).toEqual([root, linked.node]);
+  });
+
+  it("attributes a linked child to every trace that already owns its parent", () => {
+    const store = createCausalityTraceStore();
+    const firstRoot = recordTransport(store, "message-1");
+    const secondRoot = recordTransport(store, "message-2");
+    const sharedCommit = store.recordNode({
+      kind: "react.commit-observed",
+      source: reactSource,
+    });
+    store.recordEdge({
+      fromNodeId: firstRoot.id,
+      toNodeId: sharedCommit.id,
+      confidence: "adapter-backed",
+      correlationMethod: "pending-react-commit",
+      reason: "shared commit",
+    });
+    store.recordEdge({
+      fromNodeId: secondRoot.id,
+      toNodeId: sharedCommit.id,
+      confidence: "adapter-backed",
+      correlationMethod: "pending-react-commit",
+      reason: "shared commit",
+    });
+
+    const linked = store.recordLinkedNode(
+      {
+        node: { kind: "state.root-changed", source: coreSource },
+        edge: {
+          confidence: "adapter-backed",
+          correlationMethod: "same-call-stack",
+          reason: "same state transition",
+        },
+      },
+      { messageId: "message-1", activeNodeId: sharedCommit.id },
+    );
+
+    for (const messageId of ["message-1", "message-2"]) {
+      const trace = store.getTrace(messageId);
+      expect(trace?.nodes).toContain(linked.node);
+      expect(trace?.edges).toContain(linked.edge);
+    }
+  });
+
+  it("does not consume evidence ids or publish a delta when linked evidence is invalid", () => {
+    const store = createCausalityTraceStore();
+    const deltas: CausalityGraphDelta[] = [];
+    store.subscribe((delta) => deltas.push(delta));
+    const root = recordTransport(store, "message-1");
+    const invalidInput: CausalityLinkedNodeInput = {
+      node: { kind: "handler.started", source: websocketSource },
+      edge: {
+        confidence: "definitive",
+        correlationMethod: "same-native-event",
+        reason: "invalid root",
+      },
+    };
+    Reflect.set(invalidInput.node, "kind", "transport.received");
+
+    expect(() =>
+      store.recordLinkedNode(invalidInput, { messageId: "message-1", activeNodeId: root.id }),
+    ).toThrow("Linked causality evidence must not create a transport root.");
+
+    const pending = store.recordNode({ kind: "handler.started", source: websocketSource });
+    expect(pending.id).toBe("causality-node-2");
+    expect(deltas).toEqual([
+      { type: "node-recorded", node: root },
+      { type: "node-recorded", node: pending },
+    ]);
+  });
+
+  it("keeps legacy projections adjacent and extension evidence atomic during reentrant eviction", () => {
+    const store = createCausalityTraceStore();
+    const root = recordTransport(store, "message-1");
+    const observedBySecondBaseListener: string[] = [];
+    const observedBySecondLinkedListener: string[] = [];
+    let secondLinkedListenerSawCompleteEvidence = false;
+
+    store.subscribe((delta) => {
+      if (delta.type === "node-recorded" && delta.node.kind === "handler.started") {
+        store.evictMessage("message-1");
+      }
+    });
+    store.subscribe((delta) => {
+      observedBySecondBaseListener.push(delta.type);
+    });
+    store.subscribeLinkedEvidence((delta) => {
+      observedBySecondLinkedListener.push(delta.type);
+
+      if (delta.type === "linked-evidence-recorded") {
+        secondLinkedListenerSawCompleteEvidence =
+          delta.edge.fromNodeId === root.id && delta.edge.toNodeId === delta.node.id;
+      }
+    });
+
+    store.recordLinkedNode(
+      {
+        node: { kind: "handler.started", source: websocketSource },
+        edge: {
+          confidence: "definitive",
+          correlationMethod: "same-native-event",
+          reason: "same MessageEvent",
+        },
+      },
+      { messageId: "message-1", activeNodeId: root.id },
+    );
+
+    expect(secondLinkedListenerSawCompleteEvidence).toBe(true);
+    expect(observedBySecondBaseListener).toEqual([
+      "node-recorded",
+      "edge-recorded",
+      "message-evicted",
+    ]);
+    expect(observedBySecondLinkedListener).toEqual(["linked-evidence-recorded", "message-evicted"]);
+  });
+
+  it("keeps base and extension listener snapshots stable for a full notification", () => {
+    const store = createCausalityTraceStore();
+    const root = recordTransport(store, "message-1");
+    const secondBaseListener: string[] = [];
+    const secondLinkedListener: string[] = [];
+    let unsubscribeSecondBase = noop;
+    let unsubscribeSecondLinked = noop;
+
+    store.subscribe((delta) => {
+      if (delta.type === "node-recorded" && delta.node.kind === "handler.started") {
+        unsubscribeSecondBase();
+      }
+    });
+    unsubscribeSecondBase = store.subscribe((delta) => {
+      secondBaseListener.push(delta.type);
+    });
+    store.subscribeLinkedEvidence((delta) => {
+      if (delta.type === "linked-evidence-recorded") {
+        unsubscribeSecondLinked();
+      }
+    });
+    unsubscribeSecondLinked = store.subscribeLinkedEvidence((delta) => {
+      secondLinkedListener.push(delta.type);
+    });
+
+    store.recordLinkedNode(
+      {
+        node: { kind: "handler.started", source: websocketSource },
+        edge: {
+          confidence: "definitive",
+          correlationMethod: "same-native-event",
+          reason: "same MessageEvent",
+        },
+      },
+      { messageId: "message-1", activeNodeId: root.id },
+    );
+    store.recordNode({ kind: "adapter.diagnostic", source: coreSource });
+
+    expect(secondBaseListener).toEqual(["node-recorded", "edge-recorded"]);
+    expect(secondLinkedListener).toEqual(["linked-evidence-recorded"]);
+  });
+
+  it("allocates linked evidence identifiers after a reentrant clock callback", () => {
+    let reenterClock = false;
+    let store: CausalityTraceStore;
+    const deltas: CausalityGraphDelta[] = [];
+    store = createCausalityTraceStore({
+      maxPendingNodes: 1,
+      now: () => {
+        if (reenterClock) {
+          reenterClock = false;
+          store.recordNode({ kind: "adapter.diagnostic", source: coreSource });
+        }
+
+        return 1;
+      },
+    });
+    store.subscribe((delta) => deltas.push(delta));
+    const root = recordTransport(store, "message-1");
+    reenterClock = true;
+
+    const linked = store.recordLinkedNode(
+      {
+        node: { kind: "handler.started", source: websocketSource },
+        edge: {
+          confidence: "definitive",
+          correlationMethod: "same-native-event",
+          reason: "same MessageEvent",
+        },
+      },
+      { messageId: "message-1", activeNodeId: root.id },
+    );
+    const laterPending = store.recordNode({ kind: "adapter.diagnostic", source: coreSource });
+
+    expect(linked.node.id).toBe("causality-node-3");
+    expect(linked.edge.id).toBe("causality-edge-1");
+    expect(laterPending.id).toBe("causality-node-4");
+    expect(store.getTrace("message-1")?.nodes.map((node) => node.id)).toEqual([
+      root.id,
+      linked.node.id,
+    ]);
+    expect(deltas).toContainEqual(
+      expect.objectContaining({
+        type: "evidence-removed",
+        removedNodeIds: ["causality-node-2"],
+      }),
+    );
+  });
+
+  it("revalidates the active message after a reentrant clock evicts it", () => {
+    let evictDuringClock = false;
+    let store: CausalityTraceStore;
+    const deltas: CausalityGraphDelta[] = [];
+    store = createCausalityTraceStore({
+      now: () => {
+        if (evictDuringClock) {
+          evictDuringClock = false;
+          store.evictMessage("message-1");
+        }
+
+        return 1;
+      },
+    });
+    store.subscribe((delta) => deltas.push(delta));
+    const root = recordTransport(store, "message-1");
+    evictDuringClock = true;
+
+    expect(() =>
+      store.recordLinkedNode(
+        {
+          node: { kind: "handler.started", source: websocketSource },
+          edge: {
+            confidence: "definitive",
+            correlationMethod: "same-native-event",
+            reason: "same MessageEvent",
+          },
+        },
+        { messageId: "message-1", activeNodeId: root.id },
+      ),
+    ).toThrow("Message message-1 is not retained.");
+
+    const pending = store.recordNode({ kind: "adapter.diagnostic", source: coreSource });
+    expect(pending.id).toBe("causality-node-2");
+    expect(deltas.map((delta) => delta.type)).toEqual([
+      "node-recorded",
+      "message-evicted",
+      "node-recorded",
+    ]);
+  });
+
+  it("delivers reentrant recordNode deltas in FIFO order to every listener", () => {
+    const store = createCausalityTraceStore();
+    const observedBySecondListener: string[] = [];
+
+    store.subscribe((delta) => {
+      if (delta.type === "node-recorded" && delta.node.kind === "transport.received") {
+        store.recordNode({ kind: "adapter.diagnostic", source: coreSource });
+      }
+    });
+    store.subscribe((delta) => {
+      if (delta.type === "node-recorded") {
+        observedBySecondListener.push(delta.node.kind);
+      }
+    });
+
+    recordTransport(store, "message-1");
+
+    expect(observedBySecondListener).toEqual(["transport.received", "adapter.diagnostic"]);
+  });
+
+  it("delivers the current and queued disposed deltas after a listener disposes the store", () => {
+    const store = createCausalityTraceStore();
+    const observedBySecondBaseListener: string[] = [];
+    const observedBySecondLinkedListener: string[] = [];
+
+    store.subscribe((delta) => {
+      if (delta.type === "node-recorded") {
+        store.dispose();
+      }
+    });
+    store.subscribe((delta) => {
+      observedBySecondBaseListener.push(delta.type);
+    });
+    store.subscribeLinkedEvidence((delta) => {
+      observedBySecondLinkedListener.push(delta.type);
+    });
+
+    recordTransport(store, "message-1");
+
+    expect(observedBySecondBaseListener).toEqual(["node-recorded", "disposed"]);
+    expect(observedBySecondLinkedListener).toEqual(["node-recorded", "disposed"]);
   });
 
   it("isolates listener failures and preserves later subscribers", () => {
@@ -298,7 +630,9 @@ describe("createCausalityTraceStore", () => {
   it("clears reusable state and disposes terminal state", () => {
     const bridge = createBrowseSentEventCausalityBridge();
     const deltas: CausalityGraphDelta[] = [];
+    const linkedDeltas: CausalityLinkedEvidenceGraphDelta[] = [];
     bridge.subscribeEvidence((delta) => deltas.push(delta));
+    bridge.subscribeLinkedEvidence((delta) => linkedDeltas.push(delta));
     bridge.retainMessage("message-1");
     const root = bridge.recordNode(transportNode("message-1"));
 
@@ -309,12 +643,14 @@ describe("createCausalityTraceStore", () => {
     });
     expect(bridge.getTrace("message-1")).toBeUndefined();
     expect(deltas.at(-1)).toEqual({ type: "cleared" });
+    expect(linkedDeltas.at(-1)).toEqual({ type: "cleared" });
 
     bridge.retainMessage("message-2");
     bridge.recordNode(transportNode("message-2"));
     bridge.dispose();
     expect(bridge.getTrace("message-2")).toBeUndefined();
     expect(deltas.at(-1)).toEqual({ type: "disposed" });
+    expect(linkedDeltas.at(-1)).toEqual({ type: "disposed" });
     expect(() => bridge.recordNode(transportNode("message-3"))).toThrow(
       "Causality trace store is disposed.",
     );
@@ -343,6 +679,36 @@ describe("createCausalityTraceStore", () => {
       bridge.runWithContext({ messageId: "message-1", activeNodeId: pending.id }, callback),
     ).toThrow("Causality context must reference a retained message trace node.");
     expect(called).toBe(false);
+  });
+
+  it("uses the active context as the only parent for linked evidence", () => {
+    const bridge = createBrowseSentEventCausalityBridge();
+    bridge.retainMessage("message-1");
+    const root = bridge.recordNode(transportNode("message-1"));
+
+    expect(() =>
+      bridge.recordLinkedNode({
+        node: { kind: "handler.started", source: websocketSource },
+        edge: {
+          confidence: "definitive",
+          correlationMethod: "same-native-event",
+          reason: "same MessageEvent",
+        },
+      }),
+    ).toThrow("Linked causality evidence requires an active context.");
+
+    const linked = bridge.runWithContext({ messageId: "message-1", activeNodeId: root.id }, () =>
+      bridge.recordLinkedNode({
+        node: { kind: "handler.started", source: websocketSource },
+        edge: {
+          confidence: "definitive",
+          correlationMethod: "same-native-event",
+          reason: "same MessageEvent",
+        },
+      }),
+    );
+
+    expect(linked.edge).toMatchObject({ fromNodeId: root.id, toNodeId: linked.node.id });
   });
 
   it("uses unavailable as the empty or weakest confidence", () => {

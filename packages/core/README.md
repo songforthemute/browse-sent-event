@@ -55,6 +55,27 @@ custom hotkey와 URL filter는 `0.1.0-alpha.1`부터 지원합니다.
 `0.1.0-alpha.0`은 이 설정을 실제 interceptor에 연결하지 않으므로 기본 단축키와
 제한된 개발 환경을 사용합니다.
 
+## 인과 근거 어댑터
+
+프레임워크 어댑터는 전역 envelope에서 `linked-evidence-v1` capability를 요구한 뒤
+bridge의 `recordLinkedNode()`와 `subscribeLinkedEvidence()`를 사용해야 합니다.
+이 API는 현재 활성 메시지와 부모 노드를 고정하고, 자식 노드와 연결선을 원자적으로
+반영합니다. 확장 구독은 이를 하나의 `linked-evidence-recorded` delta로 받고, 기존
+`subscribeEvidence()` 구독은 호환성을 위해 `node-recorded`와 `edge-recorded`를
+연속으로 받습니다. `subscribeLinkedEvidence()`는 이 원자 delta뿐 아니라 기존 모든
+bridge-v1 delta도 함께 받습니다. 이 capability가 없는 이전 core에서는 추적을 생략하고
+애플리케이션 상태 변경을 그대로 수행해야 합니다.
+
+### 마이그레이션
+
+`bridge-v1`은 기존 API 표면을 유지합니다. `linked-evidence-v1`를 요구한 뒤
+`hasBrowseSentEventCausalityLinkedEvidenceBridge()`로 bridge를 좁혀야
+`recordLinkedNode()`와 `subscribeLinkedEvidence()`를 호출할 수 있습니다. 기본
+`subscribeEvidence()`는 새 atomic delta를 받지 않으므로 기존 exhaustive switch를
+변경할 필요가 없습니다. 또한 구독 콜백에서 다시 근거를 기록하면 모든 등록 구독자가
+현재 delta를 받은 뒤 다음 delta를 받습니다. linked 근거의 기본 구독 투영 두 건도
+재진입 이벤트보다 먼저 연속 전달됩니다.
+
 ## 관찰 범위
 
 - 브라우저 main thread에 runtime을 설치합니다.
