@@ -171,6 +171,34 @@ describe("createDevtoolsEngine", () => {
     expect(observedSnapshots).toHaveLength(3);
   });
 
+  it("continues recording after an async subscriber rejects", async () => {
+    const engine = createDevtoolsEngine({ capacity: 10 });
+    const observedSnapshots: unknown[] = [];
+
+    engine.subscribe(async () => {
+      throw new Error("async observer failed");
+    });
+    engine.subscribe((snapshot) => {
+      observedSnapshots.push(snapshot);
+    });
+
+    const connection = engine.recordConnection({
+      protocol: "websocket",
+      url: "wss://example.test/socket",
+    });
+    engine.recordMessage({
+      connectionId: connection.id,
+      direction: "in",
+      protocol: "websocket",
+      payload: "hello",
+    });
+
+    await Promise.resolve();
+
+    expect(engine.getMessages()).toEqual([expect.objectContaining({ payloadPreview: "hello" })]);
+    expect(observedSnapshots).toHaveLength(2);
+  });
+
   it("skips snapshot calculation until a subscriber exists", () => {
     const calculateMetrics = vi.mocked(selectors.calculateMetrics);
     calculateMetrics.mockClear();

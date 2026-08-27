@@ -104,6 +104,25 @@ describe("causality global envelope", () => {
     expect(states).toEqual(["unavailable", "available"]);
   });
 
+  it("continues availability delivery after an async adapter listener rejects", async () => {
+    const target = {};
+    const states: string[] = [];
+
+    subscribeBrowseSentEventCausalityAvailability(async () => {
+      throw new Error("async adapter failed");
+    }, target);
+    subscribeBrowseSentEventCausalityAvailability(
+      (availability) => states.push(availability.status),
+      target,
+    );
+
+    expect(() => installBrowseSentEventCausalityEnvelope(target, createBridge())).not.toThrow();
+
+    await Promise.resolve();
+
+    expect(states).toEqual(["unavailable", "available"]);
+  });
+
   it("reuses the compatible first owner and only lets the publishing owner remove it", () => {
     const target = {};
     const first = installBrowseSentEventCausalityEnvelope(target, createBridge());

@@ -473,6 +473,40 @@ describe("createCausalityTraceStore", () => {
     expect(deltas).toEqual([{ type: "node-recorded", node }]);
   });
 
+  it("continues base and linked notifications after async listener rejections", async () => {
+    const store = createCausalityTraceStore();
+    const baseDeltas: CausalityGraphDelta[] = [];
+    const linkedDeltas: CausalityLinkedEvidenceGraphDelta[] = [];
+    const root = recordTransport(store, "message-1");
+
+    store.subscribe(async () => {
+      throw new Error("async base listener failed");
+    });
+    store.subscribe((delta) => baseDeltas.push(delta));
+    store.subscribeLinkedEvidence(async () => {
+      throw new Error("async linked listener failed");
+    });
+    store.subscribeLinkedEvidence((delta) => linkedDeltas.push(delta));
+
+    store.recordLinkedNode(
+      {
+        node: { kind: "handler.started", source: websocketSource },
+        edge: {
+          confidence: "definitive",
+          correlationMethod: "same-native-event",
+          reason: "message handler began",
+        },
+      },
+      { messageId: "message-1", activeNodeId: root.id },
+    );
+
+    await Promise.resolve();
+
+    expect(baseDeltas.map((delta) => delta.type)).toEqual(["node-recorded", "edge-recorded"]);
+    expect(linkedDeltas).toHaveLength(1);
+    expect(linkedDeltas[0]).toMatchObject({ type: "linked-evidence-recorded" });
+  });
+
   it("evicts exclusive evidence while retaining a shared batched node", () => {
     const store = createCausalityTraceStore();
     const deltas: CausalityGraphDelta[] = [];
