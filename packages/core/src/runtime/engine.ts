@@ -129,7 +129,11 @@ export function createDevtoolsEngine(options: BrowseSentEventEngineOptions): Bro
     const snapshot = getSnapshot();
 
     for (const subscriber of subscribers) {
-      subscriber(snapshot);
+      try {
+        subscriber(snapshot);
+      } catch {
+        // Observers must never change the application's original network behavior.
+      }
     }
   }
 

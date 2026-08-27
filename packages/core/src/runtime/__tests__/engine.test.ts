@@ -127,6 +127,50 @@ describe("createDevtoolsEngine", () => {
     );
   });
 
+  it("continues recording when a subscriber throws", () => {
+    const engine = createDevtoolsEngine({ capacity: 10 });
+    const observedSnapshots: unknown[] = [];
+
+    engine.subscribe(() => {
+      throw new Error("observer failed");
+    });
+    engine.subscribe((snapshot) => {
+      observedSnapshots.push(snapshot);
+    });
+
+    expect(() =>
+      engine.recordConnection({
+        protocol: "websocket",
+        url: "wss://example.test/socket",
+      }),
+    ).not.toThrow();
+    const recordedConnection = engine.getConnections()[0];
+
+    if (!recordedConnection) {
+      throw new Error("Expected the connection to be recorded.");
+    }
+
+    expect(() =>
+      engine.updateConnection(recordedConnection.id, {
+        state: "open",
+      }),
+    ).not.toThrow();
+    expect(() =>
+      engine.recordMessage({
+        connectionId: recordedConnection.id,
+        direction: "in",
+        protocol: "websocket",
+        payload: "hello",
+      }),
+    ).not.toThrow();
+
+    expect(engine.getConnections()).toEqual([
+      expect.objectContaining({ id: recordedConnection.id, state: "open" }),
+    ]);
+    expect(engine.getMessages()).toEqual([expect.objectContaining({ payloadPreview: "hello" })]);
+    expect(observedSnapshots).toHaveLength(3);
+  });
+
   it("skips snapshot calculation until a subscriber exists", () => {
     const calculateMetrics = vi.mocked(selectors.calculateMetrics);
     calculateMetrics.mockClear();
