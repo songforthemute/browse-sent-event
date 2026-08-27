@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { notifyObserver } from "../observer.js";
 
+function defineOwnThen(promise: Promise<never>, descriptor: PropertyDescriptor): void {
+  // oxlint-disable-next-line unicorn/no-thenable -- This test verifies promises with an own then property.
+  void Object.defineProperty(promise, "then", descriptor);
+}
+
 describe("notifyObserver", () => {
   it("preserves a bound callback receiver without awaiting its result", () => {
     const receiver = { values: [] as string[] };
@@ -65,6 +70,42 @@ describe("notifyObserver", () => {
 
     await Promise.resolve();
   });
+
+  it.each([
+    [
+      "is missing",
+      (promise: Promise<never>) => {
+        defineOwnThen(promise, { value: undefined });
+      },
+    ],
+    [
+      "is not callable",
+      (promise: Promise<never>) => {
+        defineOwnThen(promise, { value: 1 });
+      },
+    ],
+    [
+      "throws when read",
+      (promise: Promise<never>) => {
+        defineOwnThen(promise, {
+          get() {
+            throw new Error("observer-controlled then getter");
+          },
+        });
+      },
+    ],
+  ])(
+    "consumes a rejected native promise whose own then %s",
+    async (_description, applyThenShadow) => {
+      const rejection = new Error("observer failed");
+      const rejectedPromise = Promise.reject(rejection);
+      applyThenShadow(rejectedPromise);
+
+      expect(() => notifyObserver(() => rejectedPromise, "recorded")).not.toThrow();
+
+      await Promise.resolve();
+    },
+  );
 
   it("isolates a hostile then getter without changing producer control flow", () => {
     const rejection = new Error("hostile then getter");

@@ -1,5 +1,7 @@
 type Observer<Value> = (value: Value) => unknown;
 
+const nativePromiseThen = Object.getOwnPropertyDescriptor(Promise.prototype, "then")?.value;
+
 function isThenable(value: unknown): value is PromiseLike<unknown> {
   return (
     ((typeof value === "object" && value !== null) || typeof value === "function") &&
@@ -8,6 +10,19 @@ function isThenable(value: unknown): value is PromiseLike<unknown> {
 }
 
 function ignoreObserverFailure(): void {}
+
+function consumeNativePromiseRejection(value: unknown): boolean {
+  if (typeof nativePromiseThen !== "function") {
+    return false;
+  }
+
+  try {
+    void Reflect.apply(nativePromiseThen, value, [undefined, ignoreObserverFailure]);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Attaches rejection handling to a promise owned by this module, rather than
@@ -31,6 +46,10 @@ function consumeThenableRejection(thenable: PromiseLike<unknown>): void {
 export function notifyObserver<Value>(observer: Observer<Value>, value: Value): void {
   try {
     const result = observer(value);
+
+    if (consumeNativePromiseRejection(result)) {
+      return;
+    }
 
     if (isThenable(result)) {
       consumeThenableRejection(result);
