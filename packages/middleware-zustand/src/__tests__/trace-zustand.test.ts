@@ -1,4 +1,10 @@
-import { createDevtoolsEngine } from "@browse-sent-event/core";
+import {
+  browseSentEventCausalityBridgeCapability,
+  browseSentEventCausalityGlobalKey,
+  browseSentEventCausalityProtocolVersion,
+  createDevtoolsEngine,
+  hasBrowseSentEventCausalityLinkedEvidenceBridge,
+} from "@browse-sent-event/core";
 import { createStore, type StateCreator, type StoreApi } from "zustand/vanilla";
 import { describe, expect, it, vi } from "vitest";
 import { installBrowseSentEventCausalityEnvelope } from "../../../core/src/causality/global-envelope.js";
@@ -49,6 +55,16 @@ function evidenceKinds(engine: ReturnType<typeof createDevtoolsEngine>, messageI
   return engine.causality.getTrace(messageId)?.nodes.map((node) => node.kind) ?? [];
 }
 
+function getLinkedCausalityBridge(engine: ReturnType<typeof createDevtoolsEngine>) {
+  const bridge = engine.causality;
+
+  if (!hasBrowseSentEventCausalityLinkedEvidenceBridge(bridge)) {
+    throw new Error("Expected the core test engine to expose linked evidence.");
+  }
+
+  return bridge;
+}
+
 describe("traceZustand", () => {
   it("subscribes before core bootstrap and connects a synchronous initializer set by definitive edges", () => {
     const target = {};
@@ -56,6 +72,21 @@ describe("traceZustand", () => {
     const { middleware, store } = createCounterStore(target);
     const published = installBrowseSentEventCausalityEnvelope(target, engine.causality);
     const context = createMessageContext(engine);
+    const linkedEvidence: Array<{
+      readonly childNodeId: string;
+      readonly nodeId: string;
+      readonly parentNodeId: string;
+    }> = [];
+
+    getLinkedCausalityBridge(engine).subscribeLinkedEvidence((delta) => {
+      if (delta.type === "linked-evidence-recorded") {
+        linkedEvidence.push({
+          childNodeId: delta.edge.toNodeId,
+          nodeId: delta.node.id,
+          parentNodeId: delta.edge.fromNodeId,
+        });
+      }
+    });
 
     context.run(() => store.getState().increment());
 
@@ -73,6 +104,12 @@ describe("traceZustand", () => {
       source: { adapter: "zustand", instanceId: "trades" },
       attributes: { storeId: "trades", rootIdentityChanged: true },
     });
+    expect(linkedEvidence).toHaveLength(3);
+    expect(linkedEvidence.map((evidence) => evidence.childNodeId)).toEqual(
+      linkedEvidence.map((evidence) => evidence.nodeId),
+    );
+    expect(linkedEvidence[1]?.parentNodeId).toBe(linkedEvidence[0]?.nodeId);
+    expect(linkedEvidence[2]?.parentNodeId).toBe(linkedEvidence[1]?.nodeId);
 
     middleware.dispose();
     published.uninstall();
@@ -297,6 +334,73 @@ describe("traceZustand", () => {
     unsubscribe();
     middleware.dispose();
     published.uninstall();
+  });
+
+  it("keeps the started node and parent edge atomic when a legacy subscriber evicts the message", () => {
+    const target = {};
+    const engine = createDevtoolsEngine({ capacity: 1 });
+    const published = installBrowseSentEventCausalityEnvelope(target, engine.causality);
+    const { middleware, store } = createCounterStore(target);
+    const context = createMessageContext(engine);
+    const linkedEvidence: Array<{
+      readonly childNodeId: string;
+      readonly nodeId: string;
+      readonly parentNodeId: string;
+    }> = [];
+
+    engine.causality.subscribeEvidence((delta) => {
+      if (delta.type === "node-recorded" && delta.node.kind === "zustand.set-started") {
+        engine.recordMessage({
+          connectionId: "connection-1",
+          direction: "in",
+          protocol: "websocket",
+          payload: "evicts during evidence notification",
+        });
+      }
+    });
+    getLinkedCausalityBridge(engine).subscribeLinkedEvidence((delta) => {
+      if (delta.type === "linked-evidence-recorded" && delta.node.kind === "zustand.set-started") {
+        linkedEvidence.push({
+          childNodeId: delta.edge.toNodeId,
+          nodeId: delta.node.id,
+          parentNodeId: delta.edge.fromNodeId,
+        });
+      }
+    });
+
+    context.run(() => store.getState().increment());
+
+    expect(store.getState().count).toBe(1);
+    expect(linkedEvidence).toHaveLength(1);
+    expect(linkedEvidence[0]?.childNodeId).toBe(linkedEvidence[0]?.nodeId);
+    expect(linkedEvidence[0]?.nodeId).not.toBe(linkedEvidence[0]?.parentNodeId);
+
+    middleware.dispose();
+    published.uninstall();
+  });
+
+  it("leaves native Zustand updates uninstrumented when only bridge-v1 is available", () => {
+    const target = {};
+    const engine = createDevtoolsEngine({ capacity: 10 });
+    const ownerToken = Symbol("legacy-bridge");
+    Object.defineProperty(target, browseSentEventCausalityGlobalKey, {
+      configurable: true,
+      value: Object.freeze({
+        protocolVersion: browseSentEventCausalityProtocolVersion,
+        capabilities: Object.freeze([browseSentEventCausalityBridgeCapability]),
+        ownerToken,
+        bridge: engine.causality,
+      }),
+    });
+    const { middleware, store } = createCounterStore(target);
+    const context = createMessageContext(engine);
+
+    context.run(() => store.getState().increment());
+
+    expect(store.getState().count).toBe(1);
+    expect(evidenceKinds(engine, context.messageId)).toEqual(["transport.received"]);
+
+    middleware.dispose();
   });
 
   it("recovers its existing store wrapper when core is uninstalled and later reinstalled", () => {

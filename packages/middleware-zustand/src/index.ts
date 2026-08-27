@@ -1,6 +1,8 @@
 import {
+  browseSentEventCausalityLinkedEvidenceCapability,
+  hasBrowseSentEventCausalityLinkedEvidenceBridge,
   subscribeBrowseSentEventCausalityAvailability,
-  type BrowseSentEventCausalityBridge,
+  type BrowseSentEventCausalityLinkedEvidenceBridge,
   type CausalityContext,
 } from "@browse-sent-event/core";
 import type { StateCreator, StoreApi } from "zustand/vanilla";
@@ -22,7 +24,7 @@ interface SetEvidence<T> {
   readonly activeContext: CausalityContext;
   readonly actionLabel?: string;
   readonly beforeState: T;
-  readonly bridge: BrowseSentEventCausalityBridge;
+  readonly bridge: BrowseSentEventCausalityLinkedEvidenceBridge;
   readonly startedNodeId: string;
   readonly replace: boolean;
 }
@@ -42,7 +44,7 @@ function isTracedSetState(value: unknown): boolean {
 }
 
 function getActiveContext(
-  bridge: BrowseSentEventCausalityBridge | undefined,
+  bridge: BrowseSentEventCausalityLinkedEvidenceBridge | undefined,
 ): CausalityContext | undefined {
   if (!bridge) {
     return undefined;
@@ -56,7 +58,7 @@ function getActiveContext(
 }
 
 function beginSetEvidence<T>(
-  bridge: BrowseSentEventCausalityBridge | undefined,
+  bridge: BrowseSentEventCausalityLinkedEvidenceBridge | undefined,
   getState: () => T,
   storeId: string,
   replace: boolean,
@@ -87,30 +89,31 @@ function beginSetEvidence<T>(
   }
 
   try {
-    const started = bridge.recordNode({
-      kind: "zustand.set-started",
-      source: { adapter: "zustand", instanceId: storeId },
-      attributes: {
-        storeId,
-        replace,
-        ...(actionLabel === undefined ? {} : { actionLabel }),
-      },
-    });
-
-    bridge.recordEdge({
-      fromNodeId: activeContext.activeNodeId,
-      toNodeId: started.id,
-      confidence: "definitive",
-      correlationMethod: "same-call-stack",
-      reason: "Zustand set executed in the active synchronous handler context.",
-    });
+    const started = bridge.runWithContext(activeContext, () =>
+      bridge.recordLinkedNode({
+        node: {
+          kind: "zustand.set-started",
+          source: { adapter: "zustand", instanceId: storeId },
+          attributes: {
+            storeId,
+            replace,
+            ...(actionLabel === undefined ? {} : { actionLabel }),
+          },
+        },
+        edge: {
+          confidence: "definitive",
+          correlationMethod: "same-call-stack",
+          reason: "Zustand set executed in the active synchronous handler context.",
+        },
+      }),
+    );
 
     return {
       activeContext,
       actionLabel,
       beforeState,
       bridge,
-      startedNodeId: started.id,
+      startedNodeId: started.node.id,
       replace,
     };
   } catch {
@@ -149,49 +152,62 @@ function completeSetEvidence<T>(
   }
 
   try {
-    const completed = evidence.bridge.recordNode({
-      kind: "zustand.set-completed",
-      source: { adapter: "zustand", instanceId: storeId },
-      attributes: {
-        storeId,
-        replace: evidence.replace,
-        rootIdentityChanged,
-        ...(evidence.actionLabel === undefined ? {} : { actionLabel: evidence.actionLabel }),
+    const completed = evidence.bridge.runWithContext(
+      {
+        messageId: evidence.activeContext.messageId,
+        activeNodeId: evidence.startedNodeId,
       },
-    });
-
-    evidence.bridge.recordEdge({
-      fromNodeId: evidence.startedNodeId,
-      toNodeId: completed.id,
-      confidence: "definitive",
-      correlationMethod: "same-call-stack",
-      reason: didThrow
-        ? "Zustand set threw in the active synchronous handler context."
-        : "Zustand set returned in the active synchronous handler context.",
-    });
+      () =>
+        evidence.bridge.recordLinkedNode({
+          node: {
+            kind: "zustand.set-completed",
+            source: { adapter: "zustand", instanceId: storeId },
+            attributes: {
+              storeId,
+              replace: evidence.replace,
+              rootIdentityChanged,
+              ...(evidence.actionLabel === undefined ? {} : { actionLabel: evidence.actionLabel }),
+            },
+          },
+          edge: {
+            confidence: "definitive",
+            correlationMethod: "same-call-stack",
+            reason: didThrow
+              ? "Zustand set threw in the active synchronous handler context."
+              : "Zustand set returned in the active synchronous handler context.",
+          },
+        }),
+    );
 
     if (!rootIdentityChanged) {
       return;
     }
 
-    const rootChanged = evidence.bridge.recordNode({
-      kind: "state.root-changed",
-      source: { adapter: "zustand", instanceId: storeId },
-      attributes: {
-        storeId,
-        replace: evidence.replace,
-        rootIdentityChanged: true,
-        ...(evidence.actionLabel === undefined ? {} : { actionLabel: evidence.actionLabel }),
+    evidence.bridge.runWithContext(
+      {
+        messageId: evidence.activeContext.messageId,
+        activeNodeId: completed.node.id,
       },
-    });
-
-    evidence.bridge.recordEdge({
-      fromNodeId: completed.id,
-      toNodeId: rootChanged.id,
-      confidence: "definitive",
-      correlationMethod: "same-call-stack",
-      reason: "Zustand state root identity changed during the active synchronous handler context.",
-    });
+      () =>
+        evidence.bridge.recordLinkedNode({
+          node: {
+            kind: "state.root-changed",
+            source: { adapter: "zustand", instanceId: storeId },
+            attributes: {
+              storeId,
+              replace: evidence.replace,
+              rootIdentityChanged: true,
+              ...(evidence.actionLabel === undefined ? {} : { actionLabel: evidence.actionLabel }),
+            },
+          },
+          edge: {
+            confidence: "definitive",
+            correlationMethod: "same-call-stack",
+            reason:
+              "Zustand state root identity changed during the active synchronous handler context.",
+          },
+        }),
+    );
   } catch {
     // A runtime can be disposed between set start and completion. Do not let
     // that turn a successful Zustand update into an application error.
@@ -202,7 +218,7 @@ function createTracedSetState<T>(
   setState: StoreApi<T>["setState"],
   getState: () => T,
   storeId: string,
-  getBridge: () => BrowseSentEventCausalityBridge | undefined,
+  getBridge: () => BrowseSentEventCausalityLinkedEvidenceBridge | undefined,
 ): StoreApi<T>["setState"] {
   if (isTracedSetState(setState)) {
     return setState;
@@ -275,15 +291,25 @@ function createTracedSetState<T>(
  */
 export function traceZustand(options: TraceZustandOptions): TraceZustandMiddleware {
   const target = options.target ?? globalThis;
-  let bridge: BrowseSentEventCausalityBridge | undefined;
+  let bridge: BrowseSentEventCausalityLinkedEvidenceBridge | undefined;
   let disposed = false;
   let unsubscribe: (() => void) | undefined;
 
   try {
-    unsubscribe = subscribeBrowseSentEventCausalityAvailability((availability) => {
-      bridge =
-        !disposed && availability.status === "available" ? availability.envelope.bridge : undefined;
-    }, target);
+    unsubscribe = subscribeBrowseSentEventCausalityAvailability(
+      (availability) => {
+        bridge =
+          !disposed &&
+          availability.status === "available" &&
+          hasBrowseSentEventCausalityLinkedEvidenceBridge(availability.envelope.bridge)
+            ? availability.envelope.bridge
+            : undefined;
+      },
+      target,
+      {
+        capabilities: [browseSentEventCausalityLinkedEvidenceCapability],
+      },
+    );
   } catch {
     // Discovery is best-effort. Middleware construction remains usable before
     // core bootstrap or in a foreign realm that rejects global access.
