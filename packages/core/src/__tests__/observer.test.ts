@@ -33,6 +33,39 @@ describe("notifyObserver", () => {
     await Promise.resolve();
   });
 
+  it.each([
+    [
+      "is missing",
+      (promise: Promise<never>) => {
+        void Object.defineProperty(promise, "catch", { value: undefined });
+      },
+    ],
+    [
+      "is not callable",
+      (promise: Promise<never>) => {
+        void Object.defineProperty(promise, "catch", { value: 1 });
+      },
+    ],
+    [
+      "throws when read",
+      (promise: Promise<never>) => {
+        void Object.defineProperty(promise, "catch", {
+          get() {
+            throw new Error("observer-controlled catch getter");
+          },
+        });
+      },
+    ],
+  ])("consumes a rejected native promise whose own catch %s", async (_description, shadowCatch) => {
+    const rejection = new Error("observer failed");
+    const rejectedPromise = Promise.reject(rejection);
+    shadowCatch(rejectedPromise);
+
+    expect(() => notifyObserver(() => rejectedPromise, "recorded")).not.toThrow();
+
+    await Promise.resolve();
+  });
+
   it("isolates a hostile then getter without changing producer control flow", () => {
     const rejection = new Error("hostile then getter");
     let attempted = false;
