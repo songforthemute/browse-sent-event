@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { notifyObserver } from "../observer.js";
 
 function defineOwnThen(promise: Promise<never>, descriptor: PropertyDescriptor): void {
@@ -7,6 +7,15 @@ function defineOwnThen(promise: Promise<never>, descriptor: PropertyDescriptor):
 }
 
 describe("notifyObserver", () => {
+  it("skips promise handling for an observer without a return value", () => {
+    const reflectApply = vi.spyOn(Reflect, "apply");
+
+    notifyObserver(() => undefined, "recorded");
+
+    expect(reflectApply).not.toHaveBeenCalled();
+    reflectApply.mockRestore();
+  });
+
   it("preserves a bound callback receiver without awaiting its result", () => {
     const receiver = { values: [] as string[] };
     let settle!: () => void;

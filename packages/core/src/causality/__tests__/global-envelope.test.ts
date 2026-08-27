@@ -108,6 +108,7 @@ describe("causality global envelope", () => {
     const target = {};
     const states: string[] = [];
 
+    // @ts-expect-error 구독 함수는 동기 호출만 지원한다.
     subscribeBrowseSentEventCausalityAvailability(async () => {
       throw new Error("async adapter failed");
     }, target);

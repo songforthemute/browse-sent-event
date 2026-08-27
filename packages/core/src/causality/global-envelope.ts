@@ -2,7 +2,11 @@ import {
   hasBrowseSentEventCausalityLinkedEvidenceBridge,
   type BrowseSentEventCausalityBridge,
 } from "./bridge.js";
-import { notifyObserver } from "../observer.js";
+import {
+  notifyObserver,
+  type SynchronousObserver,
+  type SynchronousObserverInput,
+} from "../observer.js";
 
 /**
  * The stable discovery key for framework adapters. The value is deliberately an
@@ -55,9 +59,8 @@ export interface BrowseSentEventCausalityAvailabilityOptions {
   readonly capabilities?: readonly string[];
 }
 
-export type BrowseSentEventCausalityAvailabilityListener = (
-  availability: BrowseSentEventCausalityAvailability,
-) => void;
+export type BrowseSentEventCausalityAvailabilityListener =
+  SynchronousObserver<BrowseSentEventCausalityAvailability>;
 
 export interface InstalledBrowseSentEventCausalityEnvelope {
   readonly availability: BrowseSentEventCausalityAvailability;
@@ -251,8 +254,10 @@ export function getBrowseSentEventCausalityAvailability(
  * Registers before or after core bootstrap. The current availability state is
  * delivered synchronously, then every envelope install/removal is delivered.
  */
-export function subscribeBrowseSentEventCausalityAvailability(
-  listener: BrowseSentEventCausalityAvailabilityListener,
+export function subscribeBrowseSentEventCausalityAvailability<
+  Listener extends BrowseSentEventCausalityAvailabilityListener,
+>(
+  listener: SynchronousObserverInput<BrowseSentEventCausalityAvailability, Listener>,
   target: object = globalThis,
   options: BrowseSentEventCausalityAvailabilityOptions = {},
 ): () => void {

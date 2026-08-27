@@ -479,10 +479,12 @@ describe("createCausalityTraceStore", () => {
     const linkedDeltas: CausalityLinkedEvidenceGraphDelta[] = [];
     const root = recordTransport(store, "message-1");
 
+    // @ts-expect-error 구독 함수는 동기 호출만 지원한다.
     store.subscribe(async () => {
       throw new Error("async base listener failed");
     });
     store.subscribe((delta) => baseDeltas.push(delta));
+    // @ts-expect-error 구독 함수는 동기 호출만 지원한다.
     store.subscribeLinkedEvidence(async () => {
       throw new Error("async linked listener failed");
     });

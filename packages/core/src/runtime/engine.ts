@@ -13,7 +13,11 @@ import {
   createCausalityBridgeView,
   type BrowseSentEventCausalityBridge,
 } from "../causality/bridge.js";
-import { notifyObserver } from "../observer.js";
+import {
+  notifyObserver,
+  type SynchronousObserver,
+  type SynchronousObserverInput,
+} from "../observer.js";
 import { exportMessagesAsJsonl, exportMessagesAsLog } from "./export.js";
 import { createPayloadSummary } from "./payload.js";
 import { RingBuffer } from "./ring-buffer.js";
@@ -29,7 +33,7 @@ export interface BrowseSentEventEngineSnapshot {
   readonly metrics: BrowseSentEventMetrics;
 }
 
-export type BrowseSentEventEngineSubscriber = (snapshot: BrowseSentEventEngineSnapshot) => void;
+export type BrowseSentEventEngineSubscriber = SynchronousObserver<BrowseSentEventEngineSnapshot>;
 
 export type BrowseSentEventUnsubscribe = () => void;
 
@@ -68,7 +72,9 @@ export interface BrowseSentEventEngine {
   ): BrowseSentEventConnection | undefined;
   recordMessage(input: BrowseSentEventMessageInput): BrowseSentEventMessage;
   getSnapshot(): BrowseSentEventEngineSnapshot;
-  subscribe(subscriber: BrowseSentEventEngineSubscriber): BrowseSentEventUnsubscribe;
+  subscribe<Subscriber extends BrowseSentEventEngineSubscriber>(
+    subscriber: SynchronousObserverInput<BrowseSentEventEngineSnapshot, Subscriber>,
+  ): BrowseSentEventUnsubscribe;
   getConnections(): BrowseSentEventConnection[];
   getMessages(filter?: BrowseSentEventMessageFilter): BrowseSentEventMessage[];
   getMetrics(connectionId?: string): BrowseSentEventMetrics;
@@ -134,7 +140,9 @@ export function createDevtoolsEngine(options: BrowseSentEventEngineOptions): Bro
     }
   }
 
-  function subscribe(subscriber: BrowseSentEventEngineSubscriber): BrowseSentEventUnsubscribe {
+  function subscribe<Subscriber extends BrowseSentEventEngineSubscriber>(
+    subscriber: SynchronousObserverInput<BrowseSentEventEngineSnapshot, Subscriber>,
+  ): BrowseSentEventUnsubscribe {
     assertActive();
     subscribers.add(subscriber);
 

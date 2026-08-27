@@ -1,9 +1,12 @@
 import { createCausalityContextStack } from "./context.js";
+import type { SynchronousObserverInput } from "../observer.js";
 import type {
   CausalityContext,
   CausalityEdge,
   CausalityEdgeInput,
+  CausalityGraphDelta,
   CausalityGraphDeltaListener,
+  CausalityLinkedEvidenceGraphDelta,
   CausalityLinkedEvidenceGraphDeltaListener,
   CausalityLinkedNode,
   CausalityLinkedNodeInput,
@@ -19,13 +22,17 @@ export interface BrowseSentEventCausalityBridge {
   recordNode(input: CausalityNodeInput): CausalityNode;
   recordEdge(input: CausalityEdgeInput): CausalityEdge;
   getTrace(messageId: string): CausalityTrace | undefined;
-  subscribeEvidence(listener: CausalityGraphDeltaListener): () => void;
+  subscribeEvidence<Listener extends CausalityGraphDeltaListener>(
+    listener: SynchronousObserverInput<CausalityGraphDelta, Listener>,
+  ): () => void;
 }
 
 export interface BrowseSentEventCausalityLinkedEvidenceBridge extends BrowseSentEventCausalityBridge {
   recordLinkedNode(input: CausalityLinkedNodeInput): CausalityLinkedNode;
   /** Receives every bridge-v1 delta plus atomic linked-evidence deltas. */
-  subscribeLinkedEvidence(listener: CausalityLinkedEvidenceGraphDeltaListener): () => void;
+  subscribeLinkedEvidence<Listener extends CausalityLinkedEvidenceGraphDeltaListener>(
+    listener: SynchronousObserverInput<CausalityLinkedEvidenceGraphDelta, Listener>,
+  ): () => void;
 }
 
 export function hasBrowseSentEventCausalityLinkedEvidenceBridge(
@@ -117,9 +124,15 @@ export function createCausalityBridgeView(
     runWithContext<T>(context: CausalityContext, callback: () => T): T {
       return controller.runWithContext(context, callback);
     },
-    subscribeEvidence: (listener: CausalityGraphDeltaListener): (() => void) =>
-      controller.subscribeEvidence(listener),
-    subscribeLinkedEvidence: (listener: CausalityLinkedEvidenceGraphDeltaListener): (() => void) =>
-      controller.subscribeLinkedEvidence(listener),
+    subscribeEvidence<Listener extends CausalityGraphDeltaListener>(
+      listener: SynchronousObserverInput<CausalityGraphDelta, Listener>,
+    ): () => void {
+      return controller.subscribeEvidence(listener);
+    },
+    subscribeLinkedEvidence<Listener extends CausalityLinkedEvidenceGraphDeltaListener>(
+      listener: SynchronousObserverInput<CausalityLinkedEvidenceGraphDelta, Listener>,
+    ): () => void {
+      return controller.subscribeLinkedEvidence(listener);
+    },
   });
 }

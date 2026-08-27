@@ -4,6 +4,10 @@ import { createDevtoolsEngine, disposeDevtoolsEngine } from "../engine.js";
 
 vi.mock("../selectors.js", { spy: true });
 
+function sometimesAsyncSubscriber(): void | Promise<void> {
+  return undefined;
+}
+
 describe("createDevtoolsEngine", () => {
   it("records connections and messages", () => {
     const engine = createDevtoolsEngine({ capacity: 2 });
@@ -175,6 +179,7 @@ describe("createDevtoolsEngine", () => {
     const engine = createDevtoolsEngine({ capacity: 10 });
     const observedSnapshots: unknown[] = [];
 
+    // @ts-expect-error 구독 함수는 동기 호출만 지원한다.
     engine.subscribe(async () => {
       throw new Error("async observer failed");
     });
@@ -197,6 +202,13 @@ describe("createDevtoolsEngine", () => {
 
     expect(engine.getMessages()).toEqual([expect.objectContaining({ payloadPreview: "hello" })]);
     expect(observedSnapshots).toHaveLength(2);
+  });
+
+  it("rejects a subscriber that can return a promise", () => {
+    const engine = createDevtoolsEngine({ capacity: 10 });
+
+    // @ts-expect-error 구독 함수는 Promise를 반환할 가능성이 있으면 안 된다.
+    engine.subscribe(sometimesAsyncSubscriber);
   });
 
   it("skips snapshot calculation until a subscriber exists", () => {

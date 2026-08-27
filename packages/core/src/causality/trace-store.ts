@@ -1,5 +1,5 @@
 import { getWeakestCausalityConfidence } from "./lifecycle.js";
-import { notifyObserver } from "../observer.js";
+import { notifyObserver, type SynchronousObserverInput } from "../observer.js";
 import type {
   CausalityConfidence,
   CausalityContext,
@@ -36,8 +36,12 @@ export interface CausalityTraceStore {
   recordLinkedNode(input: CausalityLinkedNodeInput, context: CausalityContext): CausalityLinkedNode;
   getTrace(messageId: string): CausalityTrace | undefined;
   hasReachableNode(messageId: string, nodeId: string): boolean;
-  subscribe(listener: CausalityGraphDeltaListener): () => void;
-  subscribeLinkedEvidence(listener: CausalityLinkedEvidenceGraphDeltaListener): () => void;
+  subscribe<Listener extends CausalityGraphDeltaListener>(
+    listener: SynchronousObserverInput<CausalityGraphDelta, Listener>,
+  ): () => void;
+  subscribeLinkedEvidence<Listener extends CausalityLinkedEvidenceGraphDeltaListener>(
+    listener: SynchronousObserverInput<CausalityLinkedEvidenceGraphDelta, Listener>,
+  ): () => void;
   evictMessage(messageId: string): void;
   clear(): void;
   dispose(): void;
@@ -655,7 +659,9 @@ export function createCausalityTraceStore(
     return messageRootIds.has(messageId) && (nodeMessageIds.get(nodeId)?.has(messageId) ?? false);
   }
 
-  function subscribe(listener: CausalityGraphDeltaListener): () => void {
+  function subscribe<Listener extends CausalityGraphDeltaListener>(
+    listener: SynchronousObserverInput<CausalityGraphDelta, Listener>,
+  ): () => void {
     assertActive();
     baseListeners.add(listener);
 
@@ -664,8 +670,8 @@ export function createCausalityTraceStore(
     };
   }
 
-  function subscribeLinkedEvidence(
-    listener: CausalityLinkedEvidenceGraphDeltaListener,
+  function subscribeLinkedEvidence<Listener extends CausalityLinkedEvidenceGraphDeltaListener>(
+    listener: SynchronousObserverInput<CausalityLinkedEvidenceGraphDelta, Listener>,
   ): () => void {
     assertActive();
     linkedListeners.add(listener);
