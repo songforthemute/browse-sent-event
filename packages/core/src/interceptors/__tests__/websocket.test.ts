@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { hasBrowseSentEventCausalityLinkedEvidenceBridge } from "../../causality/bridge.js";
 import { createDevtoolsEngine, disposeDevtoolsEngine } from "../../runtime/engine.js";
 import { installWebSocketInterceptor } from "../websocket.js";
 
@@ -194,6 +195,59 @@ describe("installWebSocketInterceptor", () => {
     expect(trace?.edges.every((edge) => edge.confidence === "definitive")).toBe(true);
   });
 
+  it("emits each WebSocket handler link atomically while preserving bridge-v1 evidence order", () => {
+    const engine = createDevtoolsEngine({ capacity: 10 });
+    const causality = engine.causality;
+
+    if (!hasBrowseSentEventCausalityLinkedEvidenceBridge(causality)) {
+      throw new Error("Expected the engine causality bridge to support linked evidence.");
+    }
+
+    const legacyDeltaTypes: string[] = [];
+    const linkedEvidence: Array<{ edgeId: string; kind: string; nodeId: string }> = [];
+    causality.subscribeEvidence((delta) => legacyDeltaTypes.push(delta.type));
+    causality.subscribeLinkedEvidence((delta) => {
+      if (delta.type === "linked-evidence-recorded") {
+        linkedEvidence.push({
+          edgeId: delta.edge.id,
+          kind: delta.node.kind,
+          nodeId: delta.node.id,
+        });
+      }
+    });
+
+    installWebSocketInterceptor({ engine, target: globalThis.window });
+    const socket = new globalThis.window.WebSocket("wss://example.test/atomic-handler");
+    socket.addEventListener("message", () => undefined);
+    dispatchMessage(socket, "atomic-handler");
+
+    expect(legacyDeltaTypes).toEqual([
+      "node-recorded",
+      "node-recorded",
+      "edge-recorded",
+      "node-recorded",
+      "edge-recorded",
+    ]);
+    expect(linkedEvidence.map((evidence) => evidence.kind)).toEqual([
+      "handler.started",
+      "handler.returned",
+    ]);
+
+    const trace = getInboundTrace(engine, "atomic-handler");
+    expect(linkedEvidence).toEqual([
+      {
+        edgeId: trace?.edges[0]?.id,
+        kind: "handler.started",
+        nodeId: trace?.nodes[1]?.id,
+      },
+      {
+        edgeId: trace?.edges[1]?.id,
+        kind: "handler.returned",
+        nodeId: trace?.nodes[2]?.id,
+      },
+    ]);
+  });
+
   it("preserves object listener lookup, capture removal, duplicate, once, and signal semantics", () => {
     const runScenario = (socket: EventTarget): string[] => {
       const calls: string[] = [];
@@ -324,6 +378,18 @@ describe("installWebSocketInterceptor", () => {
     };
     const nativeError = observeException(new FakeWebSocket("wss://example.test/native"));
     const engine = createDevtoolsEngine({ capacity: 10 });
+    const causality = engine.causality;
+
+    if (!hasBrowseSentEventCausalityLinkedEvidenceBridge(causality)) {
+      throw new Error("Expected the engine causality bridge to support linked evidence.");
+    }
+
+    const linkedEvidenceKinds: string[] = [];
+    causality.subscribeLinkedEvidence((delta) => {
+      if (delta.type === "linked-evidence-recorded") {
+        linkedEvidenceKinds.push(delta.node.kind);
+      }
+    });
     installWebSocketInterceptor({ engine, target: globalThis.window });
     const socket = new globalThis.window.WebSocket("wss://example.test/socket");
     const instrumentedError = observeException(socket);
@@ -334,6 +400,7 @@ describe("installWebSocketInterceptor", () => {
       "handler.started",
       "handler.returned",
     ]);
+    expect(linkedEvidenceKinds).toEqual(["handler.started", "handler.returned"]);
   });
 
   it("does not attach later outer handlers after a nested capacity eviction", () => {
