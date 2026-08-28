@@ -16,6 +16,7 @@ export type SynchronousObserverInput<
   ([Extract<ReturnType<Observer>, PromiseLike<unknown>>] extends [never] ? unknown : never);
 
 const nativePromiseThen = Object.getOwnPropertyDescriptor(Promise.prototype, "then")?.value;
+const nativePromiseConstructor = Promise;
 
 function isThenable(value: unknown): value is PromiseLike<unknown> {
   return (
@@ -32,9 +33,7 @@ function isObjectOrFunction(
   return (typeof value === "object" && value !== null) || typeof value === "function";
 }
 
-function consumeNativePromiseRejection(
-  value: object | ((...arguments_: never[]) => unknown),
-): boolean {
+function consumeNativePromiseRejection(value: Promise<unknown>): boolean {
   // 생성자나 결과 형식을 바꾼 비동기 결과는 안전한 표준 처리 방법이 없어 지원하지 않는다.
   // 반환값이나 전역 오류 처리는 바꾸지 않는다.
   if (typeof nativePromiseThen !== "function") {
@@ -47,6 +46,12 @@ function consumeNativePromiseRejection(
   } catch {
     return false;
   }
+}
+
+function isNativePromise(
+  value: object | ((...arguments_: never[]) => unknown),
+): value is Promise<unknown> {
+  return value instanceof nativePromiseConstructor;
 }
 
 /**
@@ -76,7 +81,7 @@ export function notifyObserver<Value>(observer: SynchronousObserver<Value>, valu
       return;
     }
 
-    if (consumeNativePromiseRejection(result)) {
+    if (isNativePromise(result) && consumeNativePromiseRejection(result)) {
       return;
     }
 

@@ -16,6 +16,24 @@ describe("notifyObserver", () => {
     reflectApply.mockRestore();
   });
 
+  it("skips native promise handling for an observer that returns an object", () => {
+    const reflectApply = vi.spyOn(Reflect, "apply");
+
+    notifyObserver(() => ({}), "recorded");
+
+    expect(reflectApply).not.toHaveBeenCalled();
+    reflectApply.mockRestore();
+  });
+
+  it("skips native promise handling for an observer that returns a function", () => {
+    const reflectApply = vi.spyOn(Reflect, "apply");
+
+    notifyObserver(() => () => undefined, "recorded");
+
+    expect(reflectApply).not.toHaveBeenCalled();
+    reflectApply.mockRestore();
+  });
+
   it("preserves a bound callback receiver without awaiting its result", () => {
     const receiver = { values: [] as string[] };
     let settle!: () => void;
