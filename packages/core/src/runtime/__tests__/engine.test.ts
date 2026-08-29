@@ -1,6 +1,10 @@
 import { describe, expect, expectTypeOf, it, vi } from "vitest";
 import * as selectors from "../selectors.js";
-import { createDevtoolsEngine, disposeDevtoolsEngine } from "../engine.js";
+import {
+  createDevtoolsEngine,
+  disposeDevtoolsEngine,
+  type BrowseSentEventEngineSubscriber,
+} from "../engine.js";
 
 vi.mock("../selectors.js", { spy: true });
 
@@ -8,7 +12,22 @@ function sometimesAsyncSubscriber(): void | Promise<void> {
   return undefined;
 }
 
+// @ts-expect-error 구독 함수 별칭에는 비동기 함수를 지정할 수 없다.
+const asyncEngineSubscriber: BrowseSentEventEngineSubscriber = async () => undefined;
+
+// @ts-expect-error 구독 함수 별칭에는 값을 반환하는 함수를 지정할 수 없다.
+const valueReturningEngineSubscriber: BrowseSentEventEngineSubscriber = () => "value";
+
+const normalEngineSubscriber: BrowseSentEventEngineSubscriber = () => {};
+
+void asyncEngineSubscriber;
+void valueReturningEngineSubscriber;
+
 describe("createDevtoolsEngine", () => {
+  it("accepts a normal synchronous subscriber alias", () => {
+    expectTypeOf(normalEngineSubscriber).toMatchTypeOf<BrowseSentEventEngineSubscriber>();
+  });
+
   it("records connections and messages", () => {
     const engine = createDevtoolsEngine({ capacity: 2 });
     const connection = engine.recordConnection({
@@ -286,7 +305,9 @@ describe("createDevtoolsEngine", () => {
       protocol: "websocket",
       url: "wss://example.test/socket",
     });
-    engine.causality.subscribeEvidence((delta) => deltas.push(delta));
+    engine.causality.subscribeEvidence((delta) => {
+      deltas.push(delta);
+    });
     expectTypeOf(engine).not.toHaveProperty("dispose");
     expect("dispose" in engine).toBe(false);
     expect("dispose" in engine.causality).toBe(false);

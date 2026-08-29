@@ -113,7 +113,9 @@ describe("createCausalityTraceStore", () => {
   it("emits append deltas without producing a full graph snapshot", () => {
     const store = createCausalityTraceStore();
     const deltas: CausalityGraphDelta[] = [];
-    const unsubscribe = store.subscribe((delta) => deltas.push(delta));
+    const unsubscribe = store.subscribe((delta) => {
+      deltas.push(delta);
+    });
     const root = recordTransport(store, "message-1");
     const handler = store.recordNode({ kind: "handler.started", source: websocketSource });
     const edge = store.recordEdge({
@@ -139,8 +141,12 @@ describe("createCausalityTraceStore", () => {
     const store = createCausalityTraceStore({ maxPendingNodes: 1 });
     const baseDeltas: CausalityGraphDelta[] = [];
     const linkedDeltas: CausalityLinkedEvidenceGraphDelta[] = [];
-    store.subscribe((delta) => baseDeltas.push(delta));
-    store.subscribeLinkedEvidence((delta) => linkedDeltas.push(delta));
+    store.subscribe((delta) => {
+      baseDeltas.push(delta);
+    });
+    store.subscribeLinkedEvidence((delta) => {
+      linkedDeltas.push(delta);
+    });
     const root = recordTransport(store, "message-1");
 
     const linked = store.recordLinkedNode(
@@ -219,7 +225,9 @@ describe("createCausalityTraceStore", () => {
   it("does not consume evidence ids or publish a delta when linked evidence is invalid", () => {
     const store = createCausalityTraceStore();
     const deltas: CausalityGraphDelta[] = [];
-    store.subscribe((delta) => deltas.push(delta));
+    store.subscribe((delta) => {
+      deltas.push(delta);
+    });
     const root = recordTransport(store, "message-1");
     const invalidInput: CausalityLinkedNodeInput = {
       node: { kind: "handler.started", source: websocketSource },
@@ -345,7 +353,9 @@ describe("createCausalityTraceStore", () => {
         return 1;
       },
     });
-    store.subscribe((delta) => deltas.push(delta));
+    store.subscribe((delta) => {
+      deltas.push(delta);
+    });
     const root = recordTransport(store, "message-1");
     reenterClock = true;
 
@@ -391,7 +401,9 @@ describe("createCausalityTraceStore", () => {
         return 1;
       },
     });
-    store.subscribe((delta) => deltas.push(delta));
+    store.subscribe((delta) => {
+      deltas.push(delta);
+    });
     const root = recordTransport(store, "message-1");
     evictDuringClock = true;
 
@@ -467,7 +479,9 @@ describe("createCausalityTraceStore", () => {
     store.subscribe(() => {
       throw new Error("consumer failed");
     });
-    store.subscribe((delta) => deltas.push(delta));
+    store.subscribe((delta) => {
+      deltas.push(delta);
+    });
 
     const node = recordTransport(store, "message-1");
     expect(deltas).toEqual([{ type: "node-recorded", node }]);
@@ -483,12 +497,16 @@ describe("createCausalityTraceStore", () => {
     store.subscribe(async () => {
       throw new Error("async base listener failed");
     });
-    store.subscribe((delta) => baseDeltas.push(delta));
+    store.subscribe((delta) => {
+      baseDeltas.push(delta);
+    });
     // @ts-expect-error 구독 함수는 동기 호출만 지원한다.
     store.subscribeLinkedEvidence(async () => {
       throw new Error("async linked listener failed");
     });
-    store.subscribeLinkedEvidence((delta) => linkedDeltas.push(delta));
+    store.subscribeLinkedEvidence((delta) => {
+      linkedDeltas.push(delta);
+    });
 
     store.recordLinkedNode(
       {
@@ -512,7 +530,9 @@ describe("createCausalityTraceStore", () => {
   it("evicts exclusive evidence while retaining a shared batched node", () => {
     const store = createCausalityTraceStore();
     const deltas: CausalityGraphDelta[] = [];
-    store.subscribe((delta) => deltas.push(delta));
+    store.subscribe((delta) => {
+      deltas.push(delta);
+    });
     const firstRoot = recordTransport(store, "message-1");
     const secondRoot = recordTransport(store, "message-2");
     const firstHandler = store.recordNode({ kind: "handler.started", source: websocketSource });
@@ -579,7 +599,9 @@ describe("createCausalityTraceStore", () => {
   it("evicts only the target reference set among many unrelated retained traces", () => {
     const store = createCausalityTraceStore();
     const deltas: CausalityGraphDelta[] = [];
-    store.subscribe((delta) => deltas.push(delta));
+    store.subscribe((delta) => {
+      deltas.push(delta);
+    });
     const targetRoot = recordTransport(store, "target-message");
     const targetHandler = store.recordNode({
       kind: "handler.started",
@@ -632,7 +654,9 @@ describe("createCausalityTraceStore", () => {
   it("includes incident pending edges removed as part of message eviction", () => {
     const store = createCausalityTraceStore();
     const deltas: CausalityGraphDelta[] = [];
-    store.subscribe((delta) => deltas.push(delta));
+    store.subscribe((delta) => {
+      deltas.push(delta);
+    });
     const root = recordTransport(store, "message-1");
     const handler = store.recordNode({ kind: "handler.started", source: websocketSource });
     const pending = store.recordNode({ kind: "adapter.diagnostic", source: coreSource });
@@ -667,8 +691,12 @@ describe("createCausalityTraceStore", () => {
     const bridge = createBrowseSentEventCausalityBridge();
     const deltas: CausalityGraphDelta[] = [];
     const linkedDeltas: CausalityLinkedEvidenceGraphDelta[] = [];
-    bridge.subscribeEvidence((delta) => deltas.push(delta));
-    bridge.subscribeLinkedEvidence((delta) => linkedDeltas.push(delta));
+    bridge.subscribeEvidence((delta) => {
+      deltas.push(delta);
+    });
+    bridge.subscribeLinkedEvidence((delta) => {
+      linkedDeltas.push(delta);
+    });
     bridge.retainMessage("message-1");
     const root = bridge.recordNode(transportNode("message-1"));
 
@@ -920,7 +948,9 @@ describe("createCausalityTraceStore", () => {
   it("bounds unattached evidence and emits a removal delta", () => {
     const store = createCausalityTraceStore({ maxPendingNodes: 2 });
     const deltas: CausalityGraphDelta[] = [];
-    store.subscribe((delta) => deltas.push(delta));
+    store.subscribe((delta) => {
+      deltas.push(delta);
+    });
     const first = store.recordNode({ kind: "adapter.diagnostic", source: coreSource });
     store.recordNode({ kind: "adapter.diagnostic", source: coreSource });
     store.recordNode({ kind: "adapter.diagnostic", source: coreSource });

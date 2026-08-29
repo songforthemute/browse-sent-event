@@ -29,7 +29,9 @@ describe("createBrowseSentEventRuntime", () => {
     });
     const runtime = createBrowseSentEventRuntime(undefined, { uninstall: teardown });
     const deltas: unknown[] = [];
-    runtime.engine.causality.subscribeEvidence((delta) => deltas.push(delta));
+    runtime.engine.causality.subscribeEvidence((delta) => {
+      deltas.push(delta);
+    });
 
     expect(() => runtime.uninstall()).toThrow(failure);
     expect(() => runtime.uninstall()).not.toThrow();

@@ -36,10 +36,9 @@ describe("causality global envelope", () => {
   it("notifies an adapter that subscribed before core bootstrap", () => {
     const target = {};
     const states: string[] = [];
-    const unsubscribe = subscribeBrowseSentEventCausalityAvailability(
-      (availability) => states.push(availability.status),
-      target,
-    );
+    const unsubscribe = subscribeBrowseSentEventCausalityAvailability((availability) => {
+      states.push(availability.status);
+    }, target);
 
     const installed = installBrowseSentEventCausalityEnvelope(target, createBridge());
 
@@ -76,10 +75,9 @@ describe("causality global envelope", () => {
       states.push(`first:${availability.status}`);
 
       if (availability.status === "available") {
-        subscribeBrowseSentEventCausalityAvailability(
-          (next) => states.push(`second:${next.status}`),
-          target,
-        );
+        subscribeBrowseSentEventCausalityAvailability((next) => {
+          states.push(`second:${next.status}`);
+        }, target);
       }
     }, target);
 
@@ -95,10 +93,9 @@ describe("causality global envelope", () => {
     subscribeBrowseSentEventCausalityAvailability(() => {
       throw new Error("adapter failed");
     }, target);
-    subscribeBrowseSentEventCausalityAvailability(
-      (availability) => states.push(availability.status),
-      target,
-    );
+    subscribeBrowseSentEventCausalityAvailability((availability) => {
+      states.push(availability.status);
+    }, target);
 
     expect(() => installBrowseSentEventCausalityEnvelope(target, createBridge())).not.toThrow();
     expect(states).toEqual(["unavailable", "available"]);
@@ -112,10 +109,9 @@ describe("causality global envelope", () => {
     subscribeBrowseSentEventCausalityAvailability(async () => {
       throw new Error("async adapter failed");
     }, target);
-    subscribeBrowseSentEventCausalityAvailability(
-      (availability) => states.push(availability.status),
-      target,
-    );
+    subscribeBrowseSentEventCausalityAvailability((availability) => {
+      states.push(availability.status);
+    }, target);
 
     expect(() => installBrowseSentEventCausalityEnvelope(target, createBridge())).not.toThrow();
 
@@ -308,10 +304,9 @@ describe("causality global envelope", () => {
   it("leaves foreign non-configurable globals untouched and does not publish a false update", () => {
     const target = {};
     const states: string[] = [];
-    subscribeBrowseSentEventCausalityAvailability(
-      (availability) => states.push(availability.status),
-      target,
-    );
+    subscribeBrowseSentEventCausalityAvailability((availability) => {
+      states.push(availability.status);
+    }, target);
     Object.defineProperty(target, browseSentEventCausalityGlobalKey, {
       configurable: false,
       value: undefined,
@@ -331,10 +326,9 @@ describe("causality global envelope", () => {
   it("falls back without mutating a frozen foreign global", () => {
     const target = Object.freeze({});
     const states: string[] = [];
-    subscribeBrowseSentEventCausalityAvailability(
-      (availability) => states.push(availability.status),
-      target,
-    );
+    subscribeBrowseSentEventCausalityAvailability((availability) => {
+      states.push(availability.status);
+    }, target);
 
     const result = installBrowseSentEventCausalityEnvelope(target, createBridge());
 

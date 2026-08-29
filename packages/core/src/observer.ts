@@ -1,19 +1,7 @@
-export type SynchronousObserver<Value> = (value: Value) => unknown;
+/** 공개 구독 함수는 값을 반환하지 않고 현재 호출 안에서 끝나야 한다. */
+export type SynchronousObserver<Value> = (value: Value) => undefined;
 
-/**
- * 구독 함수가 비동기 함수를 받지 않도록 하는 입력 타입입니다.
- *
- * `void` 반환 함수는 Promise를 반환하는 함수도 받을 수 있으므로, 구독 등록
- * 시점에는 실제 반환 타입을 검사해야 합니다. 자바스크립트 호출자는 이 검사를
- * 우회할 수 있으므로 `notifyObserver`는 기존처럼 오류를 격리합니다.
- *
- * @internal
- */
-export type SynchronousObserverInput<
-  Value,
-  Observer extends SynchronousObserver<Value>,
-> = Observer &
-  ([Extract<ReturnType<Observer>, PromiseLike<unknown>>] extends [never] ? unknown : never);
+type Observer<Value> = (value: Value) => unknown;
 
 const nativePromiseThen = Object.getOwnPropertyDescriptor(Promise.prototype, "then")?.value;
 const nativePromiseConstructor = Promise;
@@ -55,9 +43,8 @@ function isNativePromise(
 }
 
 /**
- * Attaches rejection handling to a promise owned by this module, rather than
- * to the observer's returned value. A native promise can shadow `catch`, so
- * calling `result.catch(...)` would allow an observer to bypass isolation.
+ * 구독 함수가 돌려준 객체 대신 이 모듈이 만든 Promise에서 오류를 처리한다.
+ * 반환 객체가 `catch`를 덮어써도 오류 격리가 우회되지 않는다.
  */
 function consumeThenableRejection(thenable: PromiseLike<unknown>): void {
   void new Promise<unknown>((resolve) => {
@@ -66,14 +53,12 @@ function consumeThenableRejection(thenable: PromiseLike<unknown>): void {
 }
 
 /**
- * Delivers a value to an external observer without allowing observer failures
- * to alter the producer's control flow. The observer is invoked synchronously
- * with the same receiver semantics as a direct function call, but any returned
- * promise is deliberately not awaited.
+ * 구독 함수 오류가 생산자의 흐름을 바꾸지 않도록 값을 전달한다. 구독 함수는
+ * 현재 호출 안에서 실행하며, 자바스크립트 호출자가 비동기 결과를 돌려줘도 기다리지 않는다.
  *
  * @internal Shared boundary for engine, causality, and adapter notifications.
  */
-export function notifyObserver<Value>(observer: SynchronousObserver<Value>, value: Value): void {
+export function notifyObserver<Value>(observer: Observer<Value>, value: Value): void {
   try {
     const result = observer(value);
 
