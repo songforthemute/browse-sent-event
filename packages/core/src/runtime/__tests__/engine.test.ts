@@ -1,10 +1,33 @@
 import { describe, expect, expectTypeOf, it, vi } from "vitest";
 import * as selectors from "../selectors.js";
-import { createDevtoolsEngine, disposeDevtoolsEngine } from "../engine.js";
+import {
+  createDevtoolsEngine,
+  disposeDevtoolsEngine,
+  type BrowseSentEventEngineSubscriber,
+} from "../engine.js";
 
 vi.mock("../selectors.js", { spy: true });
 
+function sometimesAsyncSubscriber(): void | Promise<void> {
+  return undefined;
+}
+
+// @ts-expect-error 구독 함수 별칭에는 비동기 함수를 지정할 수 없다.
+const asyncEngineSubscriber: BrowseSentEventEngineSubscriber = async () => undefined;
+
+// @ts-expect-error 구독 함수 별칭에는 값을 반환하는 함수를 지정할 수 없다.
+const valueReturningEngineSubscriber: BrowseSentEventEngineSubscriber = () => "value";
+
+const normalEngineSubscriber: BrowseSentEventEngineSubscriber = () => {};
+
+void asyncEngineSubscriber;
+void valueReturningEngineSubscriber;
+
 describe("createDevtoolsEngine", () => {
+  it("accepts a normal synchronous subscriber alias", () => {
+    expectTypeOf(normalEngineSubscriber).toMatchTypeOf<BrowseSentEventEngineSubscriber>();
+  });
+
   it("records connections and messages", () => {
     const engine = createDevtoolsEngine({ capacity: 2 });
     const connection = engine.recordConnection({
@@ -127,6 +150,86 @@ describe("createDevtoolsEngine", () => {
     );
   });
 
+  it("continues recording when a subscriber throws", () => {
+    const engine = createDevtoolsEngine({ capacity: 10 });
+    const observedSnapshots: unknown[] = [];
+
+    engine.subscribe(() => {
+      throw new Error("observer failed");
+    });
+    engine.subscribe((snapshot) => {
+      observedSnapshots.push(snapshot);
+    });
+
+    expect(() =>
+      engine.recordConnection({
+        protocol: "websocket",
+        url: "wss://example.test/socket",
+      }),
+    ).not.toThrow();
+    const recordedConnection = engine.getConnections()[0];
+
+    if (!recordedConnection) {
+      throw new Error("Expected the connection to be recorded.");
+    }
+
+    expect(() =>
+      engine.updateConnection(recordedConnection.id, {
+        state: "open",
+      }),
+    ).not.toThrow();
+    expect(() =>
+      engine.recordMessage({
+        connectionId: recordedConnection.id,
+        direction: "in",
+        protocol: "websocket",
+        payload: "hello",
+      }),
+    ).not.toThrow();
+
+    expect(engine.getConnections()).toEqual([
+      expect.objectContaining({ id: recordedConnection.id, state: "open" }),
+    ]);
+    expect(engine.getMessages()).toEqual([expect.objectContaining({ payloadPreview: "hello" })]);
+    expect(observedSnapshots).toHaveLength(3);
+  });
+
+  it("continues recording after an async subscriber rejects", async () => {
+    const engine = createDevtoolsEngine({ capacity: 10 });
+    const observedSnapshots: unknown[] = [];
+
+    // @ts-expect-error 구독 함수는 동기 호출만 지원한다.
+    engine.subscribe(async () => {
+      throw new Error("async observer failed");
+    });
+    engine.subscribe((snapshot) => {
+      observedSnapshots.push(snapshot);
+    });
+
+    const connection = engine.recordConnection({
+      protocol: "websocket",
+      url: "wss://example.test/socket",
+    });
+    engine.recordMessage({
+      connectionId: connection.id,
+      direction: "in",
+      protocol: "websocket",
+      payload: "hello",
+    });
+
+    await Promise.resolve();
+
+    expect(engine.getMessages()).toEqual([expect.objectContaining({ payloadPreview: "hello" })]);
+    expect(observedSnapshots).toHaveLength(2);
+  });
+
+  it("rejects a subscriber that can return a promise", () => {
+    const engine = createDevtoolsEngine({ capacity: 10 });
+
+    // @ts-expect-error 구독 함수는 Promise를 반환할 가능성이 있으면 안 된다.
+    engine.subscribe(sometimesAsyncSubscriber);
+  });
+
   it("skips snapshot calculation until a subscriber exists", () => {
     const calculateMetrics = vi.mocked(selectors.calculateMetrics);
     calculateMetrics.mockClear();
@@ -202,7 +305,9 @@ describe("createDevtoolsEngine", () => {
       protocol: "websocket",
       url: "wss://example.test/socket",
     });
-    engine.causality.subscribeEvidence((delta) => deltas.push(delta));
+    engine.causality.subscribeEvidence((delta) => {
+      deltas.push(delta);
+    });
     expectTypeOf(engine).not.toHaveProperty("dispose");
     expect("dispose" in engine).toBe(false);
     expect("dispose" in engine.causality).toBe(false);
