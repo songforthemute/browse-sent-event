@@ -1,5 +1,9 @@
-/** 공개 구독 함수는 값을 반환하지 않고 현재 호출 안에서 끝나야 한다. */
-export type SynchronousObserver<Value> = (value: Value) => undefined;
+/**
+ * 구독 함수는 현재 호출 안에서 끝나야 한다. 일반적인 void 반환 함수도 받되,
+ * 반환형에 드러난 비동기 결과와 값은 거부하기 위해 undefined를 함께 선언한다.
+ * 이미 void로 선언되어 사라진 반환형 정보는 타입 검사로 복원할 수 없다.
+ */
+export type SynchronousObserver<Value> = (value: Value) => void | undefined;
 
 type Observer<Value> = (value: Value) => unknown;
 
