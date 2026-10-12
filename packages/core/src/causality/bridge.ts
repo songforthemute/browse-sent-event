@@ -117,9 +117,11 @@ export function createCausalityBridgeView(
     runWithContext<T>(context: CausalityContext, callback: () => T): T {
       return controller.runWithContext(context, callback);
     },
-    subscribeEvidence: (listener: CausalityGraphDeltaListener): (() => void) =>
-      controller.subscribeEvidence(listener),
-    subscribeLinkedEvidence: (listener: CausalityLinkedEvidenceGraphDeltaListener): (() => void) =>
-      controller.subscribeLinkedEvidence(listener),
+    subscribeEvidence(listener: CausalityGraphDeltaListener): () => void {
+      return controller.subscribeEvidence(listener);
+    },
+    subscribeLinkedEvidence(listener: CausalityLinkedEvidenceGraphDeltaListener): () => void {
+      return controller.subscribeLinkedEvidence(listener);
+    },
   });
 }

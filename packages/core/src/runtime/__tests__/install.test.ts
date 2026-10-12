@@ -155,10 +155,9 @@ describe("installBrowseSentEvent", () => {
       value: undefined,
       writable: true,
     });
-    subscribeBrowseSentEventCausalityAvailability(
-      (availability) => states.push(availability.status),
-      target,
-    );
+    subscribeBrowseSentEventCausalityAvailability((availability) => {
+      states.push(availability.status);
+    }, target);
 
     const runtime = installBrowseSentEventOnTarget(target);
 
@@ -187,7 +186,9 @@ describe("installBrowseSentEvent", () => {
   it("disposes causality evidence subscriptions when uninstalled", () => {
     const runtime = installBrowseSentEvent();
     const deltas: unknown[] = [];
-    runtime.engine.causality.subscribeEvidence((delta) => deltas.push(delta));
+    runtime.engine.causality.subscribeEvidence((delta) => {
+      deltas.push(delta);
+    });
 
     runtime.uninstall();
 
