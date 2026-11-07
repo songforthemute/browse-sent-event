@@ -11,6 +11,10 @@ const packages = [
     dir: "packages/core",
   },
   {
+    name: "@browse-sent-event/middleware-zustand",
+    dir: "packages/middleware-zustand",
+  },
+  {
     name: "@browse-sent-event/plugin-vite",
     dir: "packages/plugin-vite",
   },

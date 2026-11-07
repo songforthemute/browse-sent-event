@@ -1,0 +1,50 @@
+{
+  "name": "@browse-sent-event/middleware-zustand",
+  "version": "0.1.0-alpha.0",
+  "description": "Opt-in Zustand causality middleware for browse-sent-event development traces.",
+  "keywords": [
+    "browse-sent-event",
+    "devtools",
+    "middleware",
+    "zustand"
+  ],
+  "homepage": "https://songforthemute.github.io/browse-sent-event/",
+  "bugs": {
+    "url": "https://github.com/songforthemute/browse-sent-event/issues"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/songforthemute/browse-sent-event.git",
+    "directory": "packages/middleware-zustand"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@browse-sent-event/core": "workspace:*",
+    "zustand": "^5.0.8"
+  },
+  "peerDependencies": {
+    "@browse-sent-event/core": ">=0.1.0-alpha.2 <0.2.0",
+    "zustand": "^5.0.0"
+  }
+}
