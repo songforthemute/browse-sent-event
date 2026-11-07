@@ -12,6 +12,7 @@ import {
   createBrowseSentEventCausalityBridge,
   createCausalityBridgeView,
   type BrowseSentEventCausalityBridge,
+  type BrowseSentEventCausalityController,
 } from "../causality/bridge.js";
 import { exportMessagesAsJsonl, exportMessagesAsLog } from "./export.js";
 import { createPayloadSummary } from "./payload.js";
@@ -78,7 +79,10 @@ export interface BrowseSentEventEngine {
 }
 
 let sequence = 0;
-const engineDisposers = new WeakMap<BrowseSentEventEngine, () => void>();
+const engineInternals = new WeakMap<
+  BrowseSentEventEngine,
+  { causality: BrowseSentEventCausalityController; dispose: () => void }
+>();
 
 function now(): number {
   return globalThis.performance?.now() ?? Date.now();
@@ -282,11 +286,18 @@ export function createDevtoolsEngine(options: BrowseSentEventEngineOptions): Bro
     updateConnection,
   };
 
-  engineDisposers.set(engine, dispose);
+  engineInternals.set(engine, { causality: causalityController, dispose });
   return engine;
+}
+
+/** @internal Gives runtime instrumentation access to the engine's causality controller. */
+export function getDevtoolsEngineCausalityController(
+  engine: BrowseSentEventEngine,
+): BrowseSentEventCausalityController | undefined {
+  return engineInternals.get(engine)?.causality;
 }
 
 /** @internal Runtime ownership boundary; intentionally omitted from the package entry point. */
 export function disposeDevtoolsEngine(engine: BrowseSentEventEngine): void {
-  engineDisposers.get(engine)?.();
+  engineInternals.get(engine)?.dispose();
 }

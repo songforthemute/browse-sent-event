@@ -42,6 +42,10 @@ export function hasBrowseSentEventCausalityLinkedEvidenceBridge(
 }
 
 export interface BrowseSentEventCausalityController extends BrowseSentEventCausalityLinkedEvidenceBridge {
+  recordLinkedNodeAtContext(
+    input: CausalityLinkedNodeInput,
+    context: CausalityContext,
+  ): CausalityLinkedNode;
   retainMessage(messageId: string): void;
   evictMessage(messageId: string): void;
   clear(): void;
@@ -86,6 +90,7 @@ export function createBrowseSentEventCausalityBridge(
 
       return traceStore.recordLinkedNode(input, context);
     },
+    recordLinkedNodeAtContext: (input, context) => traceStore.recordLinkedNode(input, context),
     recordNode: (input) => traceStore.recordNode(input),
     retainMessage: (messageId) => traceStore.retainMessage(messageId),
     runWithContext: (context, callback) => {

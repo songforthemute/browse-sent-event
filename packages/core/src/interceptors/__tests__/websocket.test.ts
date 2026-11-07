@@ -205,7 +205,15 @@ describe("installWebSocketInterceptor", () => {
 
     const legacyDeltaTypes: string[] = [];
     const linkedEvidence: Array<{ edgeId: string; kind: string; nodeId: string }> = [];
-    causality.subscribeEvidence((delta) => legacyDeltaTypes.push(delta.type));
+    const startNotificationContexts: Array<ReturnType<typeof causality.getActiveContext>> = [];
+    const handlerContexts: Array<ReturnType<typeof causality.getActiveContext>> = [];
+    causality.subscribeEvidence((delta) => {
+      legacyDeltaTypes.push(delta.type);
+
+      if (delta.type === "node-recorded" && delta.node.kind === "handler.started") {
+        startNotificationContexts.push(causality.getActiveContext());
+      }
+    });
     causality.subscribeLinkedEvidence((delta) => {
       if (delta.type === "linked-evidence-recorded") {
         linkedEvidence.push({
@@ -213,12 +221,18 @@ describe("installWebSocketInterceptor", () => {
           kind: delta.node.kind,
           nodeId: delta.node.id,
         });
+
+        if (delta.node.kind === "handler.started") {
+          startNotificationContexts.push(causality.getActiveContext());
+        }
       }
     });
 
     installWebSocketInterceptor({ engine, target: globalThis.window });
     const socket = new globalThis.window.WebSocket("wss://example.test/atomic-handler");
-    socket.addEventListener("message", () => undefined);
+    socket.addEventListener("message", () => {
+      handlerContexts.push(causality.getActiveContext());
+    });
     dispatchMessage(socket, "atomic-handler");
 
     expect(legacyDeltaTypes).toEqual([
@@ -234,6 +248,10 @@ describe("installWebSocketInterceptor", () => {
     ]);
 
     const trace = getInboundTrace(engine, "atomic-handler");
+    expect(startNotificationContexts).toEqual([undefined, undefined]);
+    expect(handlerContexts).toEqual([
+      { messageId: trace?.messageId, activeNodeId: trace?.nodes[1]?.id },
+    ]);
     expect(linkedEvidence).toEqual([
       {
         edgeId: trace?.edges[0]?.id,
@@ -435,6 +453,23 @@ describe("installWebSocketInterceptor", () => {
       "handler.returned",
     ]);
     expect(engine.causality.getActiveContext()).toBeUndefined();
+  });
+
+  it("invokes a throwing listener once after an earlier listener clears the trace", () => {
+    const engine = createDevtoolsEngine({ capacity: 1 });
+    installWebSocketInterceptor({ engine, target: globalThis.window });
+    const socket = new globalThis.window.WebSocket("wss://example.test/socket");
+    const failure = new Error("listener failed");
+    let calls = 0;
+
+    socket.addEventListener("message", () => engine.clear());
+    socket.addEventListener("message", () => {
+      calls += 1;
+      throw failure;
+    });
+
+    expect(() => dispatchMessage(socket, "cleared")).toThrow(failure);
+    expect(calls).toBe(1);
   });
 
   it("leaves EventTarget prototype bypass listeners outside handler causality", () => {

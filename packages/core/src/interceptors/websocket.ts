@@ -1,6 +1,6 @@
 import type { BrowseSentEventPayload } from "../runtime/events.js";
 import type { CausalityContext } from "../causality/model.js";
-import { hasBrowseSentEventCausalityLinkedEvidenceBridge } from "../causality/bridge.js";
+import { getDevtoolsEngineCausalityController } from "../runtime/engine.js";
 import type {
   BrowseSentEventInterceptorContext,
   InstalledBrowseSentEventInterceptor,
@@ -181,21 +181,18 @@ function recordHandlerEvidence(
     return invoke();
   }
 
-  const causality = state.context.engine.causality;
+  const causality = getDevtoolsEngineCausalityController(state.context.engine);
 
-  if (!hasBrowseSentEventCausalityLinkedEvidenceBridge(causality)) {
+  if (!causality) {
     return invoke();
   }
 
   let startedNodeId: string;
 
   try {
-    if (!causality.getTrace(activeContext.messageId)) {
-      return invoke();
-    }
-
-    const started = causality.runWithContext(activeContext, () =>
-      causality.recordLinkedNode({
+    // Recording the link must not make the transport context active for evidence subscribers.
+    const started = causality.recordLinkedNodeAtContext(
+      {
         node: {
           kind: "handler.started",
           source: { adapter: "websocket", instanceId: state.connectionId },
@@ -205,7 +202,8 @@ function recordHandlerEvidence(
           correlationMethod: "same-native-event",
           reason: "listener received the same native MessageEvent",
         },
-      }),
+      },
+      activeContext,
     );
     startedNodeId = started.node.id;
   } catch {
@@ -224,21 +222,17 @@ function recordHandlerEvidence(
           return invoke();
         } finally {
           try {
-            const trace = causality.getTrace(activeContext.messageId);
-
-            if (trace?.nodes.some((node) => node.id === startedNodeId)) {
-              causality.recordLinkedNode({
-                node: {
-                  kind: "handler.returned",
-                  source: { adapter: "websocket", instanceId: state.connectionId },
-                },
-                edge: {
-                  confidence: "definitive",
-                  correlationMethod: "same-call-stack",
-                  reason: "listener returned on the same synchronous call stack",
-                },
-              });
-            }
+            causality.recordLinkedNode({
+              node: {
+                kind: "handler.returned",
+                source: { adapter: "websocket", instanceId: state.connectionId },
+              },
+              edge: {
+                confidence: "definitive",
+                correlationMethod: "same-call-stack",
+                reason: "listener returned on the same synchronous call stack",
+              },
+            });
           } catch {
             // Evidence recording must not replace application return values or exceptions.
           }
