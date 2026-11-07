@@ -20,10 +20,9 @@ export interface TraceZustandMiddleware {
   dispose(): void;
 }
 
-interface SetEvidence<T> {
+interface SetEvidence {
   readonly activeContext: CausalityContext;
   readonly actionLabel?: string;
-  readonly beforeState: T;
   readonly bridge: BrowseSentEventCausalityLinkedEvidenceBridge;
   readonly startedNodeId: string;
   readonly replace: boolean;
@@ -57,34 +56,15 @@ function getActiveContext(
   }
 }
 
-function beginSetEvidence<T>(
+function beginSetEvidence(
   bridge: BrowseSentEventCausalityLinkedEvidenceBridge | undefined,
-  getState: () => T,
   storeId: string,
   replace: boolean,
   actionLabel: string | undefined,
-): SetEvidence<T> | undefined {
+): SetEvidence | undefined {
   const activeContext = getActiveContext(bridge);
 
   if (!bridge || !activeContext) {
-    return undefined;
-  }
-
-  try {
-    const trace = bridge.getTrace(activeContext.messageId);
-
-    if (!trace?.nodes.some((node) => node.id === activeContext.activeNodeId)) {
-      return undefined;
-    }
-  } catch {
-    return undefined;
-  }
-
-  let beforeState: T;
-
-  try {
-    beforeState = getState();
-  } catch {
     return undefined;
   }
 
@@ -111,7 +91,6 @@ function beginSetEvidence<T>(
     return {
       activeContext,
       actionLabel,
-      beforeState,
       bridge,
       startedNodeId: started.node.id,
       replace,
@@ -123,32 +102,14 @@ function beginSetEvidence<T>(
   }
 }
 
-function completeSetEvidence<T>(
-  evidence: SetEvidence<T> | undefined,
-  getState: () => T,
+function completeSetEvidence(
+  evidence: SetEvidence | undefined,
   storeId: string,
   didThrow: boolean,
+  rootIdentityChanged: boolean | null,
 ): void {
   if (!evidence) {
     return;
-  }
-
-  try {
-    const trace = evidence.bridge.getTrace(evidence.activeContext.messageId);
-
-    if (!trace?.nodes.some((node) => node.id === evidence.startedNodeId)) {
-      return;
-    }
-  } catch {
-    return;
-  }
-
-  let rootIdentityChanged: boolean | null = null;
-
-  try {
-    rootIdentityChanged = !Object.is(evidence.beforeState, getState());
-  } catch {
-    // Reading an exotic store must not surface an adapter error to the app.
   }
 
   try {
@@ -226,16 +187,11 @@ function createTracedSetState<T>(
 
   const tracedSetState = function tracedSetState(this: unknown, ...args: unknown[]) {
     const actionLabel = typeof args[2] === "string" ? args[2] : undefined;
-    const evidence = beginSetEvidence(
-      getBridge(),
-      getState,
-      storeId,
-      args[1] === true,
-      actionLabel,
-    );
+    const evidence = beginSetEvidence(getBridge(), storeId, args[1] === true, actionLabel);
     let callbackInvoked = false;
     let callbackThrew = false;
     let callbackResult: unknown;
+    let rootIdentityChanged: boolean | null = null;
 
     const invokeOriginalSetState = (): unknown => {
       callbackInvoked = true;
@@ -260,7 +216,26 @@ function createTracedSetState<T>(
             messageId: evidence.activeContext.messageId,
             activeNodeId: evidence.startedNodeId,
           },
-          invokeOriginalSetState,
+          () => {
+            let beforeState: T;
+
+            try {
+              // Start evidence observers may update the store before the setter runs.
+              beforeState = getState();
+            } catch {
+              return invokeOriginalSetState();
+            }
+
+            try {
+              return invokeOriginalSetState();
+            } finally {
+              try {
+                rootIdentityChanged = !Object.is(beforeState, getState());
+              } catch {
+                // Reading an exotic store must not replace the setter's result or error.
+              }
+            }
+          },
         );
       } catch (error) {
         if (!callbackInvoked) {
@@ -276,7 +251,7 @@ function createTracedSetState<T>(
         return callbackResult;
       }
     } finally {
-      completeSetEvidence(evidence, getState, storeId, callbackThrew);
+      completeSetEvidence(evidence, storeId, callbackThrew, rootIdentityChanged);
     }
   };
 

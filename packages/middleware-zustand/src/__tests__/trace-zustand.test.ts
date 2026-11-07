@@ -70,7 +70,9 @@ describe("traceZustand", () => {
     const target = {};
     const engine = createDevtoolsEngine({ capacity: 10 });
     const { middleware, store } = createCounterStore(target);
-    const published = installBrowseSentEventCausalityEnvelope(target, engine.causality);
+    const bridge = getLinkedCausalityBridge(engine);
+    const getTrace = vi.fn((messageId: string) => bridge.getTrace(messageId));
+    const published = installBrowseSentEventCausalityEnvelope(target, { ...bridge, getTrace });
     const context = createMessageContext(engine);
     const linkedEvidence: Array<{
       readonly childNodeId: string;
@@ -78,7 +80,7 @@ describe("traceZustand", () => {
       readonly parentNodeId: string;
     }> = [];
 
-    getLinkedCausalityBridge(engine).subscribeLinkedEvidence((delta) => {
+    bridge.subscribeLinkedEvidence((delta) => {
       if (delta.type === "linked-evidence-recorded") {
         linkedEvidence.push({
           childNodeId: delta.edge.toNodeId,
@@ -90,6 +92,7 @@ describe("traceZustand", () => {
 
     context.run(() => store.getState().increment());
 
+    expect(getTrace).not.toHaveBeenCalled();
     const trace = engine.causality.getTrace(context.messageId);
     expect(trace?.nodes.map((node) => node.kind)).toEqual([
       "transport.received",
@@ -136,6 +139,41 @@ describe("traceZustand", () => {
       rootIdentityChanged: false,
     });
 
+    middleware.dispose();
+    published.uninstall();
+  });
+
+  it("excludes reentrant updates from start evidence subscribers from the setter's identity change", () => {
+    const target = {};
+    const engine = createDevtoolsEngine({ capacity: 10 });
+    const published = installBrowseSentEventCausalityEnvelope(target, engine.causality);
+    const { middleware, store } = createCounterStore(target);
+    const context = createMessageContext(engine);
+    const unsubscribe = getLinkedCausalityBridge(engine).subscribeLinkedEvidence((delta) => {
+      if (
+        delta.type === "linked-evidence-recorded" &&
+        delta.node.kind === "zustand.set-started" &&
+        delta.node.attributes.actionLabel === "outer-noop"
+      ) {
+        store.getState().increment();
+      }
+    });
+
+    context.run(() => {
+      Reflect.apply(store.setState, store, [(state: CounterState) => state, true, "outer-noop"]);
+    });
+
+    expect(store.getState().count).toBe(1);
+    const trace = engine.causality.getTrace(context.messageId);
+    expect(trace?.nodes.filter((node) => node.kind === "state.root-changed")).toHaveLength(1);
+    expect(
+      trace?.nodes.filter((node) => node.attributes.actionLabel === "outer-noop"),
+    ).toMatchObject([
+      { kind: "zustand.set-started" },
+      { kind: "zustand.set-completed", attributes: { rootIdentityChanged: false } },
+    ]);
+
+    unsubscribe();
     middleware.dispose();
     published.uninstall();
   });

@@ -8,9 +8,18 @@ Opt-in Zustand middleware for the M1 causality truth spike. It observes only a
 import { create } from "zustand";
 import { traceZustand } from "@browse-sent-event/middleware-zustand";
 
+interface Trade {
+  readonly id: string;
+}
+
+interface TradesState {
+  readonly trades: readonly Trade[];
+  append(trade: Trade): void;
+}
+
 const trace = traceZustand({ storeId: "trades" });
 
-export const useTrades = create(
+export const useTrades = create<TradesState>()(
   trace((set) => ({
     trades: [],
     append: (trade) => set((state) => ({ trades: [...state.trades, trade] })),
@@ -26,9 +35,10 @@ HMR로 이 middleware instance를 더 이상 사용하지 않을 때만 해당 �
 When core is available and `set` runs in an active synchronous handler context,
 the middleware records `zustand.set-started` and `zustand.set-completed` with
 definitive `same-call-stack` edges. A `state.root-changed` node is recorded only
-when `Object.is(beforeState, afterState)` is false. Evidence contains `storeId`,
-`replace`, a boolean root-identity result, and an optional third-argument string
-action label; it never contains state values or top-level key comparisons.
+when `Object.is(beforeState, afterState)` is false for the setter invocation.
+Evidence contains only `storeId`, `replace`, a boolean root-identity result (`null`
+when the state cannot be read), and an optional third-argument string action
+label.
 
 Handler-external updates, unavailable/incompatible core, a disposed middleware,
 and bridge errors use the original setter without a causality assertion.
