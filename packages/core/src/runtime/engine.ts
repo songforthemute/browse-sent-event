@@ -13,7 +13,7 @@ import {
   createCausalityBridgeView,
   type BrowseSentEventCausalityBridge,
 } from "../causality/bridge.js";
-import { notifyObserver, type SynchronousObserver } from "../observer.js";
+import { notifyObserver } from "../observer.js";
 import { exportMessagesAsJsonl, exportMessagesAsLog } from "./export.js";
 import { createPayloadSummary } from "./payload.js";
 import { RingBuffer } from "./ring-buffer.js";
@@ -29,7 +29,7 @@ export interface BrowseSentEventEngineSnapshot {
   readonly metrics: BrowseSentEventMetrics;
 }
 
-export type BrowseSentEventEngineSubscriber = SynchronousObserver<BrowseSentEventEngineSnapshot>;
+export type BrowseSentEventEngineSubscriber = (snapshot: BrowseSentEventEngineSnapshot) => void;
 
 export type BrowseSentEventUnsubscribe = () => void;
 

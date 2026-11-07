@@ -1,5 +1,3 @@
-import type { SynchronousObserver } from "../observer.js";
-
 export type CausalityEventKind =
   | "transport.received"
   | "handler.started"
@@ -125,7 +123,7 @@ export type CausalityGraphDelta =
   | { readonly type: "cleared" }
   | { readonly type: "disposed" };
 
-export type CausalityGraphDeltaListener = SynchronousObserver<CausalityGraphDelta>;
+export type CausalityGraphDeltaListener = (delta: CausalityGraphDelta) => void;
 
 export interface CausalityLinkedEvidenceRecordedDelta {
   readonly type: "linked-evidence-recorded";
@@ -138,8 +136,9 @@ export type CausalityLinkedEvidenceGraphDelta =
   | CausalityGraphDelta
   | CausalityLinkedEvidenceRecordedDelta;
 
-export type CausalityLinkedEvidenceGraphDeltaListener =
-  SynchronousObserver<CausalityLinkedEvidenceGraphDelta>;
+export type CausalityLinkedEvidenceGraphDeltaListener = (
+  delta: CausalityLinkedEvidenceGraphDelta,
+) => void;
 
 export type CausalityLifecycleStatus =
   | "awaiting-handler"

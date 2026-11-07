@@ -2,7 +2,7 @@ import {
   hasBrowseSentEventCausalityLinkedEvidenceBridge,
   type BrowseSentEventCausalityBridge,
 } from "./bridge.js";
-import { notifyObserver, type SynchronousObserver } from "../observer.js";
+import { notifyObserver } from "../observer.js";
 
 /**
  * The stable discovery key for framework adapters. The value is deliberately an
@@ -55,8 +55,9 @@ export interface BrowseSentEventCausalityAvailabilityOptions {
   readonly capabilities?: readonly string[];
 }
 
-export type BrowseSentEventCausalityAvailabilityListener =
-  SynchronousObserver<BrowseSentEventCausalityAvailability>;
+export type BrowseSentEventCausalityAvailabilityListener = (
+  availability: BrowseSentEventCausalityAvailability,
+) => void;
 
 export interface InstalledBrowseSentEventCausalityEnvelope {
   readonly availability: BrowseSentEventCausalityAvailability;

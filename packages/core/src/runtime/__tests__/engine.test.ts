@@ -1,33 +1,10 @@
 import { describe, expect, expectTypeOf, it, vi } from "vitest";
 import * as selectors from "../selectors.js";
-import {
-  createDevtoolsEngine,
-  disposeDevtoolsEngine,
-  type BrowseSentEventEngineSubscriber,
-} from "../engine.js";
+import { createDevtoolsEngine, disposeDevtoolsEngine } from "../engine.js";
 
 vi.mock("../selectors.js", { spy: true });
 
-function sometimesAsyncSubscriber(): void | Promise<void> {
-  return undefined;
-}
-
-// @ts-expect-error 구독 함수 별칭에는 비동기 함수를 지정할 수 없다.
-const asyncEngineSubscriber: BrowseSentEventEngineSubscriber = async () => undefined;
-
-// @ts-expect-error 구독 함수 별칭에는 값을 반환하는 함수를 지정할 수 없다.
-const valueReturningEngineSubscriber: BrowseSentEventEngineSubscriber = () => "value";
-
-const normalEngineSubscriber: BrowseSentEventEngineSubscriber = () => {};
-
-void asyncEngineSubscriber;
-void valueReturningEngineSubscriber;
-
 describe("createDevtoolsEngine", () => {
-  it("accepts a normal synchronous subscriber alias", () => {
-    expectTypeOf(normalEngineSubscriber).toMatchTypeOf<BrowseSentEventEngineSubscriber>();
-  });
-
   it("records connections and messages", () => {
     const engine = createDevtoolsEngine({ capacity: 2 });
     const connection = engine.recordConnection({
@@ -123,9 +100,7 @@ describe("createDevtoolsEngine", () => {
   it("notifies subscribers when the snapshot changes", () => {
     const engine = createDevtoolsEngine({ capacity: 10 });
     const snapshots: unknown[] = [];
-    const unsubscribe = engine.subscribe((snapshot) => {
-      snapshots.push(snapshot);
-    });
+    const unsubscribe = engine.subscribe((snapshot) => snapshots.push(snapshot));
 
     const connection = engine.recordConnection({
       protocol: "websocket",
@@ -157,9 +132,7 @@ describe("createDevtoolsEngine", () => {
     engine.subscribe(() => {
       throw new Error("observer failed");
     });
-    engine.subscribe((snapshot) => {
-      observedSnapshots.push(snapshot);
-    });
+    engine.subscribe((snapshot) => observedSnapshots.push(snapshot));
 
     expect(() =>
       engine.recordConnection({
@@ -198,13 +171,10 @@ describe("createDevtoolsEngine", () => {
     const engine = createDevtoolsEngine({ capacity: 10 });
     const observedSnapshots: unknown[] = [];
 
-    // @ts-expect-error 구독 함수는 동기 호출만 지원한다.
     engine.subscribe(async () => {
       throw new Error("async observer failed");
     });
-    engine.subscribe((snapshot) => {
-      observedSnapshots.push(snapshot);
-    });
+    engine.subscribe((snapshot) => observedSnapshots.push(snapshot));
 
     const connection = engine.recordConnection({
       protocol: "websocket",
@@ -223,13 +193,6 @@ describe("createDevtoolsEngine", () => {
     expect(observedSnapshots).toHaveLength(2);
   });
 
-  it("rejects a subscriber that can return a promise", () => {
-    const engine = createDevtoolsEngine({ capacity: 10 });
-
-    // @ts-expect-error 구독 함수는 Promise를 반환할 가능성이 있으면 안 된다.
-    engine.subscribe(sometimesAsyncSubscriber);
-  });
-
   it("skips snapshot calculation until a subscriber exists", () => {
     const calculateMetrics = vi.mocked(selectors.calculateMetrics);
     calculateMetrics.mockClear();
@@ -243,9 +206,7 @@ describe("createDevtoolsEngine", () => {
     expect(calculateMetrics).not.toHaveBeenCalled();
 
     const snapshots: unknown[] = [];
-    engine.subscribe((snapshot) => {
-      snapshots.push(snapshot);
-    });
+    engine.subscribe((snapshot) => snapshots.push(snapshot));
     engine.recordMessage({
       connectionId: connection.id,
       direction: "in",
