@@ -1,3 +1,4 @@
+import { Window } from "happy-dom";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createDevtoolsEngine } from "../../runtime/engine.js";
 import { installXmlHttpRequestInterceptor } from "../xml-http-request.js";
@@ -1313,24 +1314,11 @@ describe("installXmlHttpRequestInterceptor", () => {
   });
 
   it("copies an ArrayBuffer created by another window", () => {
-    const iframe = globalThis.document.createElement("iframe");
-
-    globalThis.document.body.append(iframe);
+    const foreignWindow = new Window();
 
     try {
-      const foreignWindow = iframe.contentWindow;
+      const foreignBuffer = new foreignWindow.ArrayBuffer(3);
 
-      if (!foreignWindow) {
-        throw new Error("Expected iframe contentWindow");
-      }
-
-      const ForeignArrayBuffer: unknown = Reflect.get(foreignWindow, "ArrayBuffer");
-
-      if (typeof ForeignArrayBuffer !== "function") {
-        throw new Error("Expected iframe ArrayBuffer");
-      }
-
-      const foreignBuffer: unknown = Reflect.construct(ForeignArrayBuffer, [3]);
       const engine = createDevtoolsEngine({ capacity: 10 });
 
       installXmlHttpRequestInterceptor({
@@ -1347,7 +1335,7 @@ describe("installXmlHttpRequestInterceptor", () => {
       expect(engine.getMessages()[0]?.payload).toBeInstanceOf(globalThis.ArrayBuffer);
       expect(engine.getMessages()[0]?.size).toBe(3);
     } finally {
-      iframe.remove();
+      foreignWindow.close();
     }
   });
 
