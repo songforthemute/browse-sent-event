@@ -3,7 +3,13 @@ packages:
   - examples/*
 
 overrides:
+  "@changesets/parse@0.4.3>js-yaml": 4.3.2
   "esbuild@>=0.27.3 <0.28.1": 0.28.1
+  "oxfmt@0.51.0>tinypool": 2.1.2
+  "read-yaml-file@1.1.0>js-yaml": 3.15.2
+  "source-map-js": ^1.2.2
+  "vitepress@2.0.0-alpha.17>@vue/shared": 3.5.42
+  "vitepress@2.0.0-alpha.17>vue": 3.5.42
 
 minimumReleaseAge: 1440
 minimumReleaseAgeStrict: true

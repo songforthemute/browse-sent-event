@@ -2,6 +2,7 @@ import {
   hasBrowseSentEventCausalityLinkedEvidenceBridge,
   type BrowseSentEventCausalityBridge,
 } from "./bridge.js";
+import { notifyObserver } from "../observer.js";
 
 /**
  * The stable discovery key for framework adapters. The value is deliberately an
@@ -230,11 +231,7 @@ function notifyAvailability(
   const listeners = Array.from(registry.listeners);
 
   for (const listener of listeners) {
-    try {
-      listener(availability);
-    } catch {
-      // Adapter failures must not alter the app or runtime installation path.
-    }
+    notifyObserver(listener, availability);
   }
 }
 
@@ -262,31 +259,19 @@ export function subscribeBrowseSentEventCausalityAvailability(
   const registry = getRegistry(target);
 
   if (!registry) {
-    try {
-      listener(readAvailability(target, options));
-    } catch {
-      // The adapter owns its callback errors; discovery remains best-effort.
-    }
+    notifyObserver(listener, readAvailability(target, options));
 
     return () => {};
   }
 
   const scopedListener: BrowseSentEventCausalityAvailabilityListener = (availability) => {
-    try {
-      const current =
-        availability.status === "available" ? readAvailability(target, options) : availability;
-      listener(current);
-    } catch {
-      // Adapter failures must not break later listeners.
-    }
+    const current =
+      availability.status === "available" ? readAvailability(target, options) : availability;
+    notifyObserver(listener, current);
   };
   registry.listeners.add(scopedListener);
 
-  try {
-    scopedListener(readAvailability(target));
-  } catch {
-    // The adapter owns its callback errors; discovery remains best-effort.
-  }
+  notifyObserver(scopedListener, readAvailability(target));
 
   return () => {
     registry.listeners.delete(scopedListener);

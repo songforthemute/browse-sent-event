@@ -13,6 +13,7 @@ import {
   createCausalityBridgeView,
   type BrowseSentEventCausalityBridge,
 } from "../causality/bridge.js";
+import { notifyObserver } from "../observer.js";
 import { exportMessagesAsJsonl, exportMessagesAsLog } from "./export.js";
 import { createPayloadSummary } from "./payload.js";
 import { RingBuffer } from "./ring-buffer.js";
@@ -129,7 +130,7 @@ export function createDevtoolsEngine(options: BrowseSentEventEngineOptions): Bro
     const snapshot = getSnapshot();
 
     for (const subscriber of subscribers) {
-      subscriber(snapshot);
+      notifyObserver(subscriber, snapshot);
     }
   }
 

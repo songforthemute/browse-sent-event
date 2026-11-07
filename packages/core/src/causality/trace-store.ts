@@ -1,4 +1,5 @@
 import { getWeakestCausalityConfidence } from "./lifecycle.js";
+import { notifyObserver } from "../observer.js";
 import type {
   CausalityConfidence,
   CausalityContext,
@@ -170,20 +171,12 @@ export function createCausalityTraceStore(
 
         for (const delta of notification.baseDeltas) {
           for (const listener of baseListenerSnapshot) {
-            try {
-              listener(delta);
-            } catch {
-              // Evidence consumers must not change application or adapter behavior.
-            }
+            notifyObserver(listener, delta);
           }
         }
 
         for (const listener of linkedListenerSnapshot) {
-          try {
-            listener(notification.extensionDelta);
-          } catch {
-            // Evidence consumers must not change application or adapter behavior.
-          }
+          notifyObserver(listener, notification.extensionDelta);
         }
       }
     } finally {

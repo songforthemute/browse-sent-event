@@ -140,6 +140,37 @@ describe("installFetchStreamInterceptor", () => {
     ]);
   });
 
+  it("preserves a successful native fetch when an observer throws", async () => {
+    const engine = createDevtoolsEngine({ capacity: 10 });
+    engine.subscribe(() => {
+      throw new Error("observer failed");
+    });
+
+    Reflect.set(globalThis.window, "fetch", () =>
+      Promise.resolve(createStreamResponse(["native response"])),
+    );
+
+    installFetchStreamInterceptor({
+      engine,
+      target: globalThis.window,
+    });
+
+    const response = await globalThis.window.fetch("https://example.test/observer-failure");
+
+    await expect(response.text()).resolves.toBe("native response");
+    await waitForStreamTap();
+
+    expect(engine.getConnections()).toEqual([
+      expect.objectContaining({
+        state: "closed",
+        url: "https://example.test/observer-failure",
+      }),
+    ]);
+    expect(engine.getMessages()).toEqual([
+      expect.objectContaining({ payloadPreview: "native response" }),
+    ]);
+  });
+
   it("returns excluded fetch responses without cloning or recording them", async () => {
     const engine = createDevtoolsEngine({ capacity: 10 });
     const response = createStreamResponse(["native response"]);
